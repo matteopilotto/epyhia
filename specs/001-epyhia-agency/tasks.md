@@ -60,22 +60,22 @@ user story stands on.
 
 ### 2a · The Action Gate — `DESIGN.md` §12 step 2, "the door before the rooms"
 
-- [ ] T013 Define the `actions` model in `epyhia/models/actions.py` per [data-model.md](./data-model.md) — all columns, `UNIQUE(idempotency_key)`, and a CHECK constraint `state <> 'succeeded' OR evidence IS NOT NULL`
-- [ ] T014 Generate the Alembic migration for `actions` in `migrations/versions/` and confirm the CHECK constraint and unique index are present in the emitted DDL
-- [ ] T015 [P] Implement `epyhia/gate/keys.py` — the six derivations from [data-model.md](./data-model.md) "Idempotency keys". The `deploy` key MUST exclude the site artifact hash; the `video_render` key MUST include the pinned Remotion version (FR-045, FR-046)
-- [ ] T016 [P] Define the `Adapter` protocol and the `action_type → adapter` registry in `epyhia/gate/registry.py` per [contracts/action-gate.md](./contracts/action-gate.md) §3 — `action_type`, `requires_approval`, `async execute(request, ctx)`, `async verify(request, result, ctx)`
-- [ ] T017 [P] Define the gate's typed errors in `epyhia/gate/errors.py` — `CredentialNotConfigured(provider)` rendering as `credential not configured: <provider>`, `VerificationFailed`, `PreconditionFailed`
-- [ ] T018 Implement `epyhia/gate/gate.py` — `request()` in the exact order of [contracts/action-gate.md](./contracts/action-gate.md) §2: preconditions → `INSERT ... ON CONFLICT DO NOTHING RETURNING id` → short-circuit terminal rows → set `awaiting_approval` **durably before** raising `ApprovalRequired` → `executing` → `verifying` with backoff capped at 5 → `succeeded` with evidence stored. No `executing → succeeded` edge exists in the code (FR-035, R7)
-- [ ] T019 Implement the precondition table in `epyhia/gate/gate.py` — `deploy` requires the run's `site` artifact to be `clean`; `checkout_session` requires the run's `arm_charge_path` action to be `succeeded`; every action requires its credential (contracts/action-gate.md §5)
-- [ ] T020 Write the configurable fake adapter in `epyhia/gate/adapters/fake.py` — modes for succeed, fail-in-execute, always-fail-verify, and record-calls; used by every test below
-- [ ] T021 [P] Test in `tests/gate/test_approval.py`: an approval-required action lands `awaiting_approval` in Postgres **before** anything is raised, and the row survives a fresh session (FR-038, R7)
-- [ ] T022 [P] Test in `tests/gate/test_concurrency.py`: two concurrent `request()` calls on one key produce one execution and one row; the second reads the first's result (FR-044, SC-003)
-- [ ] T023 [P] Test in `tests/gate/test_verify_retry.py`: a `verify()` that always raises retries to the cap of 5 and lands `failed`, never `succeeded` (FR-041, SC-002)
-- [ ] T024 [P] Test in `tests/gate/test_evidence_constraint.py`: writing `state='succeeded'` with null `evidence` is rejected by the database, not by application code (FR-040)
-- [ ] T025 [P] Test in `tests/gate/test_deny.py`: deny is terminal — `state='denied'`, `approved_by` recorded, and a subsequent `request()` on the same key executes nothing, ever (FR-036)
-- [ ] T026 [P] Test in `tests/gate/test_credentials.py`: an action whose credential is absent raises `CredentialNotConfigured` and surfaces as `credential not configured: <provider>`, with no adapter registered and no stack trace (FR-064, SC-010)
-- [ ] T027 [P] Test in `tests/gate/test_crash_resume.py`: a row abandoned mid-`executing` resumes into `verifying` and the outcome comes from the probe, not the stored status (§7.4, SC-008)
-- [ ] T133 [P] Test in `tests/gate/test_keys.py`: the `deploy` key is unchanged when only the generated site bytes differ, and the `video_render` key changes when the pinned Remotion version is bumped — a version upgrade must never serve stale output as a cache hit (FR-045, FR-046)
+- [X] T013 Define the `actions` model in `epyhia/models/actions.py` per [data-model.md](./data-model.md) — all columns, `UNIQUE(idempotency_key)`, and a CHECK constraint `state <> 'succeeded' OR evidence IS NOT NULL`
+- [X] T014 Generate the Alembic migration for `actions` in `migrations/versions/` and confirm the CHECK constraint and unique index are present in the emitted DDL
+- [X] T015 [P] Implement `epyhia/gate/keys.py` — the six derivations from [data-model.md](./data-model.md) "Idempotency keys". The `deploy` key MUST exclude the site artifact hash; the `video_render` key MUST include the pinned Remotion version (FR-045, FR-046)
+- [X] T016 [P] Define the `Adapter` protocol and the `action_type → adapter` registry in `epyhia/gate/registry.py` per [contracts/action-gate.md](./contracts/action-gate.md) §3 — `action_type`, `requires_approval`, `async execute(request, ctx)`, `async verify(request, result, ctx)`
+- [X] T017 [P] Define the gate's typed errors in `epyhia/gate/errors.py` — `CredentialNotConfigured(provider)` rendering as `credential not configured: <provider>`, `VerificationFailed`, `PreconditionFailed`
+- [X] T018 Implement `epyhia/gate/gate.py` — `request()` in the exact order of [contracts/action-gate.md](./contracts/action-gate.md) §2: preconditions → `INSERT ... ON CONFLICT DO NOTHING RETURNING id` → short-circuit terminal rows → set `awaiting_approval` **durably before** raising `ApprovalRequired` → `executing` → `verifying` with backoff capped at 5 → `succeeded` with evidence stored. No `executing → succeeded` edge exists in the code (FR-035, R7)
+- [X] T019 Implement the precondition table in `epyhia/gate/gate.py` — `deploy` requires the run's `site` artifact to be `clean`; `checkout_session` requires the run's `arm_charge_path` action to be `succeeded`; every action requires its credential (contracts/action-gate.md §5)
+- [X] T020 Write the configurable fake adapter in `epyhia/gate/adapters/fake.py` — modes for succeed, fail-in-execute, always-fail-verify, and record-calls; used by every test below
+- [X] T021 [P] Test in `tests/gate/test_approval.py`: an approval-required action lands `awaiting_approval` in Postgres **before** anything is raised, and the row survives a fresh session (FR-038, R7)
+- [X] T022 [P] Test in `tests/gate/test_concurrency.py`: two concurrent `request()` calls on one key produce one execution and one row; the second reads the first's result (FR-044, SC-003)
+- [X] T023 [P] Test in `tests/gate/test_verify_retry.py`: a `verify()` that always raises retries to the cap of 5 and lands `failed`, never `succeeded` (FR-041, SC-002)
+- [X] T024 [P] Test in `tests/gate/test_evidence_constraint.py`: writing `state='succeeded'` with null `evidence` is rejected by the database, not by application code (FR-040)
+- [X] T025 [P] Test in `tests/gate/test_deny.py`: deny is terminal — `state='denied'`, `approved_by` recorded, and a subsequent `request()` on the same key executes nothing, ever (FR-036)
+- [X] T026 [P] Test in `tests/gate/test_credentials.py`: an action whose credential is absent raises `CredentialNotConfigured` and surfaces as `credential not configured: <provider>`, with no adapter registered and no stack trace (FR-064, SC-010)
+- [X] T027 [P] Test in `tests/gate/test_crash_resume.py`: a row abandoned mid-`executing` resumes into `verifying` and the outcome comes from the probe, not the stored status (§7.4, SC-008)
+- [X] T133 [P] Test in `tests/gate/test_keys.py`: the `deploy` key is unchanged when only the generated site bytes differ, and the `video_render` key changes when the pinned Remotion version is bumped — a version upgrade must never serve stale output as a cache hit (FR-045, FR-046)
 
 **Checkpoint**: `uv run pytest tests/gate/` passes with zero agents, zero credentials and zero
 network. If it needs any of those, the gate has been built wrong.
