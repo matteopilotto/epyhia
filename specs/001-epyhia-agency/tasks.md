@@ -103,7 +103,7 @@ network. If it needs any of those, the gate has been built wrong.
 - [X] T043 Implement the input guardrail in `epyhia/ingest/guardrail.py` — a bounded Haiku judge over the raw brief that logs its decision and reason on **both** outcomes and stops a rejected brief before expensive work (FR-007)
 - [X] T044 [P] Test in `tests/ingest/test_grounding.py`: the five derivation families are produced exactly, the same number written four ways all match after normalisation, the currency-label restatement matches without conversion, and a fabricated numeral is reported as a violation (FR-006, SC-004, R6)
 - [X] T045 [P] Test in `tests/ingest/test_extractors.py`: the site extractor ignores `#0a0a0a`, `1.5rem`, `0.3s`, `viewBox` and `data-product`, and the `video_props` extractor reads `content` leaves while skipping every `style` value (R5)
-- [ ] T132 [P] Test in `tests/ingest/test_guardrail.py` using PydanticAI `FunctionModel`: a brief carrying instructions aimed at the system is rejected before any expensive work begins, an accepted brief logs its decision and reason too, and the screening decision is retrievable from the record on **both** outcomes (FR-007, SC-012)
+- [X] T132 [P] Test in `tests/ingest/test_guardrail.py` using PydanticAI `FunctionModel`: a brief carrying instructions aimed at the system is rejected before any expensive work begins, an accepted brief logs its decision and reason too, and the screening decision is retrievable from the record on **both** outcomes (FR-007, SC-012)
 
 ### 2d · Shared API surface
 
