@@ -60,7 +60,7 @@ user story stands on.
 
 ### 2a · The Action Gate — `DESIGN.md` §12 step 2, "the door before the rooms"
 
-- [ ] T013 Define the `actions` model in `epyhia/models/actions.py` per [data-model.md](./data-model.md) — all columns, `UNIQUE(idempotency_key)`, and a CHECK constraint `state <> 'succeeded' OR evidence IS NOT NULL`
+- [X] T013 Define the `actions` model in `epyhia/models/actions.py` per [data-model.md](./data-model.md) — all columns, `UNIQUE(idempotency_key)`, and a CHECK constraint `state <> 'succeeded' OR evidence IS NOT NULL`
 - [ ] T014 Generate the Alembic migration for `actions` in `migrations/versions/` and confirm the CHECK constraint and unique index are present in the emitted DDL
 - [ ] T015 [P] Implement `epyhia/gate/keys.py` — the six derivations from [data-model.md](./data-model.md) "Idempotency keys". The `deploy` key MUST exclude the site artifact hash; the `video_render` key MUST include the pinned Remotion version (FR-045, FR-046)
 - [ ] T016 [P] Define the `Adapter` protocol and the `action_type → adapter` registry in `epyhia/gate/registry.py` per [contracts/action-gate.md](./contracts/action-gate.md) §3 — `action_type`, `requires_approval`, `async execute(request, ctx)`, `async verify(request, result, ctx)`
