@@ -18,3 +18,6 @@ out/
 
 # Working notes, deliberately untracked (see .claude/DECISIONS.md header)
 .claude/DECISIONS.md
+
+# macOS
+.DS_Store
