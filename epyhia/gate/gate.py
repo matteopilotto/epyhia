@@ -167,8 +167,6 @@ async def _run(
     if action.state in ("pending", "awaiting_approval"):
         action.state = "executing"
         await session.commit()
-
-    if action.state == "executing":
         try:
             result = await adapter.execute(action.request, ctx)
         except Exception as exc:
@@ -176,6 +174,11 @@ async def _run(
             action.error = str(exc)
             await session.commit()
             raise
+        action.state = "verifying"
+        await session.commit()
+    elif action.state == "executing":
+        # Resumed after a crash: the side effect may already have happened, so execute()
+        # is not called again — verify() proves the truth independently of it (§7.4).
         action.state = "verifying"
         await session.commit()
 
