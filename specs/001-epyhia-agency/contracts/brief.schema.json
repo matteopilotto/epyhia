@@ -1,0 +1,109 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://epyhia.dev/contracts/brief.schema.json",
+  "title": "Client brief",
+  "description": "EPYHIA's input contract. The ONLY channel through which client-specific facts enter the system (DESIGN.md 5.1, FR-001). Persisted verbatim as briefs.payload with a content_sha256. This schema is fixed; its contents vary entirely by client. Nothing in this file may name or presuppose any particular client.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "business_name",
+    "tagline",
+    "one_liner",
+    "positioning",
+    "products",
+    "voice",
+    "locale",
+    "established",
+    "contact"
+  ],
+  "properties": {
+    "business_name": { "type": "string", "minLength": 1 },
+    "tagline": { "type": "string", "minLength": 1 },
+    "one_liner": { "type": "string", "minLength": 1 },
+    "positioning": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["who_its_for", "what_problem", "why_them"],
+      "properties": {
+        "who_its_for": { "type": "string", "minLength": 1 },
+        "what_problem": { "type": "string", "minLength": 1 },
+        "why_them": { "type": "string", "minLength": 1 }
+      }
+    },
+    "products": {
+      "type": "array",
+      "minItems": 1,
+      "description": "The catalogue. Ops creates Stripe products and prices from this at run time; no product, price, currency or billing type may exist anywhere in EPYHIA's own code, config or fixtures (FR-027).",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "name",
+          "description",
+          "price_minor",
+          "currency_display",
+          "currency_charge",
+          "billing",
+          "features",
+          "not_covered"
+        ],
+        "properties": {
+          "name": { "type": "string", "minLength": 1 },
+          "description": { "type": "string", "minLength": 1 },
+          "price_minor": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Amount in minor units, so the grounding check and Stripe product creation read one number from one place (DESIGN.md 5.1)."
+          },
+          "currency_display": {
+            "type": "string",
+            "minLength": 1,
+            "description": "May differ from currency_charge. No conversion is ever performed (research.md R6)."
+          },
+          "currency_charge": {
+            "type": "string",
+            "minLength": 3,
+            "maxLength": 3,
+            "description": "ISO 4217. What Stripe actually charges in."
+          },
+          "billing": {
+            "type": "string",
+            "enum": ["subscription", "one_time"],
+            "description": "Per product, never a global setting (FR-003)."
+          },
+          "features": { "type": "array", "items": { "type": "string" } },
+          "not_covered": { "type": "array", "items": { "type": "string" } }
+        }
+      }
+    },
+    "voice": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["adjectives", "do", "dont"],
+      "properties": {
+        "adjectives": { "type": "array", "minItems": 1, "items": { "type": "string" } },
+        "do": { "type": "array", "items": { "type": "string" } },
+        "dont": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+    "locale": {
+      "type": "string",
+      "minLength": 2,
+      "description": "BCP 47. Scopes number-word normalisation (research.md R6)."
+    },
+    "established": {
+      "type": "integer",
+      "description": "Year. The literal, and the source of the (current_year - established) derivation."
+    },
+    "contact": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["email"],
+      "properties": {
+        "email": { "type": "string", "format": "email" },
+        "phone": { "type": "string" },
+        "address": { "type": "string" }
+      }
+    }
+  }
+}
