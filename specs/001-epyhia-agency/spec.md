@@ -303,9 +303,11 @@ confirm the two runs share no artifact content, no visual identity, and no publi
 - **FR-004**: At intake, the system MUST extract every numeral in the brief into a per-run
   grounding record before any expensive work begins.
 - **FR-005**: The system MUST expand the grounding record with a closed, code-defined set of
-  derivations (annualisations, sums and differences of stated prices, collection counts, and
-  elapsed time from a stated year). This set MUST NOT be extendable at runtime by any model
-  output.
+  derivations (annualisations, sums and differences of stated prices, collection counts,
+  elapsed time from a stated year, and the same minor-unit amount restated under the product's
+  other stated currency label — with no exchange-rate conversion, since inventing a rate would
+  be exactly the fabrication the check exists to prevent). This set MUST NOT be extendable at
+  runtime by any model output.
 - **FR-006**: The system MUST compare numerals after normalisation — separators and currency
   symbols removed, amounts reduced to minor units in a named currency, and number words mapped
   to digits.
