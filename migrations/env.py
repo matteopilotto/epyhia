@@ -9,6 +9,15 @@ from sqlalchemy.ext.asyncio import async_engine_from_config
 from epyhia.config import settings
 from epyhia.models import Base
 from epyhia.models import actions as _actions  # noqa: F401  registers the table with Base.metadata
+from epyhia.models import agent_cache as _agent_cache  # noqa: F401
+from epyhia.models import agent_calls as _agent_calls  # noqa: F401
+from epyhia.models import artifacts as _artifacts  # noqa: F401
+from epyhia.models import brand_docs as _brand_docs  # noqa: F401
+from epyhia.models import briefs as _briefs  # noqa: F401
+from epyhia.models import orders as _orders  # noqa: F401
+from epyhia.models import runs as _runs  # noqa: F401
+from epyhia.models import sink_posts as _sink_posts  # noqa: F401
+from epyhia.models import tasks as _tasks  # noqa: F401
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
