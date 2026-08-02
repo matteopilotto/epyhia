@@ -107,7 +107,7 @@ network. If it needs any of those, the gate has been built wrong.
 
 ### 2d · Shared API surface
 
-- [ ] T046 [P] Implement the Auth0 Bearer validator in `epyhia/api/auth.py` — JWKS validation on every operator route, with **no second path in**: no bypass key, no cookie session (FR-057)
+- [X] T046 [P] Implement the Auth0 Bearer validator in `epyhia/api/auth.py` — JWKS validation on every operator route, with **no second path in**: no bypass key, no cookie session (FR-057)
 - [ ] T047 [P] Implement the single error shape `{error, detail}` and its exception handlers in `epyhia/api/errors.py` (contracts/rest-api.md §Errors)
 - [ ] T048 [P] Implement `PromptService` in `epyhia/prompts_service.py` — renders `prompts/<agent>/<version>.jinja` and exposes the active `prompt_version`; no prompt text exists as a string literal in source (FR-060)
 - [ ] T049 [P] Implement the SSE helper in `epyhia/api/sse.py` emitting `task`, `action`, `artifact`, `agent_call` and `cost` events, designed for `fetch` + `ReadableStream` consumption (§10)
