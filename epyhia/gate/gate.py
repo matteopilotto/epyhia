@@ -3,7 +3,7 @@ import uuid
 from datetime import UTC, datetime
 
 from pydantic_ai.exceptions import ApprovalRequired
-from sqlalchemy import select
+from sqlalchemy import select, text
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -37,6 +37,21 @@ async def _check_preconditions(session: AsyncSession, action_type: str, run_id: 
     provider = _CREDENTIAL_BY_ACTION_TYPE.get(action_type)
     if provider is not None:
         settings.require(provider)
+
+    if action_type == "deploy":
+        # The gate refuses, not the agent (FR-016, §3.4) — queried against `artifacts`,
+        # which lands in Phase 2b; this branch is inert until then.
+        row = (
+            await session.execute(
+                text(
+                    "SELECT grounding_status FROM artifacts "
+                    "WHERE run_id = :run_id AND kind = 'site'"
+                ),
+                {"run_id": run_id},
+            )
+        ).first()
+        if row is None or row[0] != "clean":
+            raise PreconditionFailed("site artifact is not clean")
 
     if action_type == "checkout_session":
         stmt = select(Action.state).where(
