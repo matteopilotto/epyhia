@@ -109,7 +109,7 @@ network. If it needs any of those, the gate has been built wrong.
 
 - [X] T046 [P] Implement the Auth0 Bearer validator in `epyhia/api/auth.py` — JWKS validation on every operator route, with **no second path in**: no bypass key, no cookie session (FR-057)
 - [X] T047 [P] Implement the single error shape `{error, detail}` and its exception handlers in `epyhia/api/errors.py` (contracts/rest-api.md §Errors)
-- [ ] T048 [P] Implement `PromptService` in `epyhia/prompts_service.py` — renders `prompts/<agent>/<version>.jinja` and exposes the active `prompt_version`; no prompt text exists as a string literal in source (FR-060)
+- [X] T048 [P] Implement `PromptService` in `epyhia/prompts_service.py` — renders `prompts/<agent>/<version>.jinja` and exposes the active `prompt_version`; no prompt text exists as a string literal in source (FR-060)
 - [ ] T049 [P] Implement the SSE helper in `epyhia/api/sse.py` emitting `task`, `action`, `artifact`, `agent_call` and `cost` events, designed for `fetch` + `ReadableStream` consumption (§10)
 - [ ] T050 Implement `POST /briefs` in `epyhia/api/routers/briefs.py` — validate the payload against [contracts/brief.schema.json](./contracts/brief.schema.json), returning `400` with itemised violations; then synchronously canonicalise and hash, run the guardrail, extract the grounding set, open the run with its derived `alias`, enqueue the `plan` task; returns `201` or `422 {error: "guardrail_rejected"}` (FR-001, FR-004, FR-007)
 - [ ] T051 [P] Implement `GET /runs` and `GET /runs/{id}` in `epyhia/api/routers/runs.py` returning status, brand doc version, prompt version, spend against budget and alias
