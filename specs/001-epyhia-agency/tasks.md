@@ -36,7 +36,7 @@ Single repository, one installable Python package `epyhia/`, three sibling non-P
 **Purpose**: Reach a clean clone that starts, lints and tests — with no credentials configured
 (FR-064, FR-065, SC-010).
 
-- [ ] T001 Create the package skeleton per [plan.md](./plan.md) "Source Code": `epyhia/{gate/adapters,ingest,queue,agents,models,api,cost,artifacts}/__init__.py`, plus empty `prompts/`, `console/`, `video/`, `eval/`, `migrations/`, `tests/{gate,ingest,queue,cost,genericity,integration,fixtures/briefs}/`
+- [X] T001 Create the package skeleton per [plan.md](./plan.md) "Source Code": `epyhia/{gate/adapters,ingest,queue,agents,models,api,cost,artifacts}/__init__.py`, plus empty `prompts/`, `console/`, `video/`, `eval/`, `migrations/`, `tests/{gate,ingest,queue,cost,genericity,integration,fixtures/briefs}/`
 - [ ] T002 Author `pyproject.toml` — one distribution, `uv`-managed, pinning `pydantic-ai==2.22.0`, `logfire==4.39.0`, plus `fastapi`, `uvicorn`, `sqlalchemy>=2.0`, `alembic`, `asyncpg`, `jinja2`, `pyyaml`, `httpx`, `stripe`, `pytest`, `pytest-asyncio`, `ruff`
 - [ ] T003 [P] Configure `ruff` and `pytest` (`asyncio_mode = "auto"`) in the `[tool.ruff]` / `[tool.pytest.ini_options]` sections of `pyproject.toml`
 - [ ] T004 [P] Write `.gitignore` covering `.env`, `.env.*` (except `.env.example`), `.venv/`, `node_modules/`, `dist/`, `__pycache__/`, `video/out/`, and `.claude/DECISIONS.md` (Constitution §Git Workflow)
