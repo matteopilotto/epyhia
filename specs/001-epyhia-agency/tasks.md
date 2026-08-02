@@ -71,7 +71,7 @@ user story stands on.
 - [X] T021 [P] Test in `tests/gate/test_approval.py`: an approval-required action lands `awaiting_approval` in Postgres **before** anything is raised, and the row survives a fresh session (FR-038, R7)
 - [X] T022 [P] Test in `tests/gate/test_concurrency.py`: two concurrent `request()` calls on one key produce one execution and one row; the second reads the first's result (FR-044, SC-003)
 - [X] T023 [P] Test in `tests/gate/test_verify_retry.py`: a `verify()` that always raises retries to the cap of 5 and lands `failed`, never `succeeded` (FR-041, SC-002)
-- [ ] T024 [P] Test in `tests/gate/test_evidence_constraint.py`: writing `state='succeeded'` with null `evidence` is rejected by the database, not by application code (FR-040)
+- [X] T024 [P] Test in `tests/gate/test_evidence_constraint.py`: writing `state='succeeded'` with null `evidence` is rejected by the database, not by application code (FR-040)
 - [ ] T025 [P] Test in `tests/gate/test_deny.py`: deny is terminal — `state='denied'`, `approved_by` recorded, and a subsequent `request()` on the same key executes nothing, ever (FR-036)
 - [ ] T026 [P] Test in `tests/gate/test_credentials.py`: an action whose credential is absent raises `CredentialNotConfigured` and surfaces as `credential not configured: <provider>`, with no adapter registered and no stack trace (FR-064, SC-010)
 - [ ] T027 [P] Test in `tests/gate/test_crash_resume.py`: a row abandoned mid-`executing` resumes into `verifying` and the outcome comes from the probe, not the stored status (§7.4, SC-008)
