@@ -1,0 +1,28 @@
+app = "epyhia"
+primary_region = "iad"
+
+[build]
+
+[env]
+  PORT = "8000"
+
+[processes]
+  web = "uvicorn epyhia.api.app:app --host 0.0.0.0 --port 8000"
+  worker = "python -m epyhia.queue.worker"
+
+[deploy]
+  release_command = "alembic upgrade head"
+
+[http_service]
+  internal_port = 8000
+  force_https = true
+  auto_stop_machines = false
+  auto_start_machines = true
+  min_machines_running = 1
+  processes = ["web"]
+
+[[vm]]
+  processes = ["web"]
+
+[[vm]]
+  processes = ["worker"]

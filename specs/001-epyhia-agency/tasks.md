@@ -36,18 +36,18 @@ Single repository, one installable Python package `epyhia/`, three sibling non-P
 **Purpose**: Reach a clean clone that starts, lints and tests — with no credentials configured
 (FR-064, FR-065, SC-010).
 
-- [ ] T001 Create the package skeleton per [plan.md](./plan.md) "Source Code": `epyhia/{gate/adapters,ingest,queue,agents,models,api,cost,artifacts}/__init__.py`, plus empty `prompts/`, `console/`, `video/`, `eval/`, `migrations/`, `tests/{gate,ingest,queue,cost,genericity,integration,fixtures/briefs}/`
-- [ ] T002 Author `pyproject.toml` — one distribution, `uv`-managed, pinning `pydantic-ai==2.22.0`, `logfire==4.39.0`, plus `fastapi`, `uvicorn`, `sqlalchemy>=2.0`, `alembic`, `asyncpg`, `jinja2`, `pyyaml`, `httpx`, `stripe`, `pytest`, `pytest-asyncio`, `ruff`
-- [ ] T003 [P] Configure `ruff` and `pytest` (`asyncio_mode = "auto"`) in the `[tool.ruff]` / `[tool.pytest.ini_options]` sections of `pyproject.toml`
-- [ ] T004 [P] Write `.gitignore` covering `.env`, `.env.*` (except `.env.example`), `.venv/`, `node_modules/`, `dist/`, `__pycache__/`, `video/out/`, and `.claude/DECISIONS.md` (Constitution §Git Workflow)
-- [ ] T005 [P] Write `.env.example` — variable names and safe local defaults only, never a real key: `DATABASE_URL`, `ANTHROPIC_API_KEY`, `VERCEL_TOKEN`, `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `SMTP_HOST`, `SMTP_PORT`, `MAILPIT_API_URL`, `SINK_BASE_URL`, `SINK_TOKEN`, `AUTH0_DOMAIN`, `AUTH0_AUDIENCE`, `RUN_BUDGET_USD`, `DAILY_CEILING_USD`
-- [ ] T006 Implement `epyhia/config.py` — a `Settings` object where an absent credential is a stored `None`, never a start-time failure; expose `require(provider)` returning the value or raising `CredentialNotConfigured(provider)` (FR-064)
-- [ ] T007 Write `Dockerfile` — Python 3.13 + Node 22 + headless Chrome in one image; Node stage builds `console/` and installs `video/` deps; single image serves both Fly processes
-- [ ] T008 Write `docker-compose.yml` — Postgres, Mailpit, `web`, `worker`, all defaults from `.env.example` so `docker compose up` is the whole setup with no account signup (FR-065)
-- [ ] T009 [P] Write `fly.toml` — `[processes] web`/`worker` off one image, `release_command = "alembic upgrade head"`
-- [ ] T010 Initialise Alembic in `migrations/` with `migrations/env.py` reading the URL from `epyhia.config`
-- [ ] T011 Create the FastAPI app factory in `epyhia/api/app.py` — router mounting, Logfire init with `run_id` as a span field, and a static mount serving the built SPA from one origin (no CORS)
-- [ ] T012 [P] Write `tests/conftest.py` — a transactional Postgres session fixture and an `anyio`/asyncio event-loop fixture; no network, no API key, no credentials
+- [X] T001 Create the package skeleton per [plan.md](./plan.md) "Source Code": `epyhia/{gate/adapters,ingest,queue,agents,models,api,cost,artifacts}/__init__.py`, plus empty `prompts/`, `console/`, `video/`, `eval/`, `migrations/`, `tests/{gate,ingest,queue,cost,genericity,integration,fixtures/briefs}/`
+- [X] T002 Author `pyproject.toml` — one distribution, `uv`-managed, pinning `pydantic-ai==2.22.0`, `logfire==4.39.0`, plus `fastapi`, `uvicorn`, `sqlalchemy>=2.0`, `alembic`, `asyncpg`, `jinja2`, `pyyaml`, `httpx`, `stripe`, `pytest`, `pytest-asyncio`, `ruff`
+- [X] T003 [P] Configure `ruff` and `pytest` (`asyncio_mode = "auto"`) in the `[tool.ruff]` / `[tool.pytest.ini_options]` sections of `pyproject.toml`
+- [X] T004 [P] Write `.gitignore` covering `.env`, `.env.*` (except `.env.example`), `.venv/`, `node_modules/`, `dist/`, `__pycache__/`, `video/out/`, and `.claude/DECISIONS.md` (Constitution §Git Workflow)
+- [X] T005 [P] Write `.env.example` — variable names and safe local defaults only, never a real key: `DATABASE_URL`, `ANTHROPIC_API_KEY`, `VERCEL_TOKEN`, `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `SMTP_HOST`, `SMTP_PORT`, `MAILPIT_API_URL`, `SINK_BASE_URL`, `SINK_TOKEN`, `AUTH0_DOMAIN`, `AUTH0_AUDIENCE`, `RUN_BUDGET_USD`, `DAILY_CEILING_USD`
+- [X] T006 Implement `epyhia/config.py` — a `Settings` object where an absent credential is a stored `None`, never a start-time failure; expose `require(provider)` returning the value or raising `CredentialNotConfigured(provider)` (FR-064)
+- [X] T007 Write `Dockerfile` — Python 3.13 + Node 22 + headless Chrome in one image; Node stage builds `console/` and installs `video/` deps; single image serves both Fly processes
+- [X] T008 Write `docker-compose.yml` — Postgres, Mailpit, `web`, `worker`, all defaults from `.env.example` so `docker compose up` is the whole setup with no account signup (FR-065)
+- [X] T009 [P] Write `fly.toml` — `[processes] web`/`worker` off one image, `release_command = "alembic upgrade head"`
+- [X] T010 Initialise Alembic in `migrations/` with `migrations/env.py` reading the URL from `epyhia.config`
+- [X] T011 Create the FastAPI app factory in `epyhia/api/app.py` — router mounting, Logfire init with `run_id` as a span field, and a static mount serving the built SPA from one origin (no CORS)
+- [X] T012 [P] Write `tests/conftest.py` — a transactional Postgres session fixture and an `anyio`/asyncio event-loop fixture; no network, no API key, no credentials
 
 ---
 

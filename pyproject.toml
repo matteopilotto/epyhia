@@ -1,0 +1,45 @@
+[project]
+name = "epyhia"
+version = "0.1.0"
+description = "An agency staffed by agents"
+requires-python = ">=3.13"
+dependencies = [
+    "pydantic-ai==2.22.0",
+    "logfire[fastapi]==4.39.0",
+    "fastapi",
+    "uvicorn",
+    "sqlalchemy>=2.0",
+    "alembic",
+    "asyncpg",
+    "greenlet",
+    "jinja2",
+    "pyyaml",
+    "python-dotenv",
+    "httpx",
+    "stripe",
+]
+
+[dependency-groups]
+dev = [
+    "pytest",
+    "pytest-asyncio",
+    "ruff",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["epyhia"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py313"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
