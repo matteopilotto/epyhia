@@ -82,7 +82,7 @@ network. If it needs any of those, the gate has been built wrong.
 
 ### 2b · Schema, queue and cost ledger — `DESIGN.md` §12 step 3
 
-- [ ] T028 Define the remaining models per [data-model.md](./data-model.md) in `epyhia/models/`: `briefs.py`, `runs.py`, `brand_docs.py`, `tasks.py`, `agent_calls.py`, `artifacts.py`, `orders.py`, `agent_cache.py`, `sink_posts.py` — no column carries a client-specific default (Principle I)
+- [X] T028 Define the remaining models per [data-model.md](./data-model.md) in `epyhia/models/`: `briefs.py`, `runs.py`, `brand_docs.py`, `tasks.py`, `agent_calls.py`, `artifacts.py`, `orders.py`, `agent_cache.py`, `sink_posts.py` — no column carries a client-specific default (Principle I)
 - [ ] T029 Generate the Alembic migration for all remaining tables in `migrations/versions/`, including `UNIQUE(briefs.content_sha256)`, `UNIQUE(brand_docs.brief_id, version)` and `UNIQUE(orders.stripe_event_id)`
 - [ ] T030 [P] Implement the `ArtifactStore` interface and its Postgres `bytea` backend in `epyhia/artifacts/store.py`, writing in the same transaction as the task row that produced the artifact (§5.4)
 - [ ] T031 Implement task claiming in `epyhia/queue/claim.py` — the single `UPDATE ... WHERE id = (SELECT ... FOR UPDATE SKIP LOCKED LIMIT 1) RETURNING *` statement from [research.md R8](./research.md), with `depends_on` satisfaction and a **per-`kind`** lease interval
