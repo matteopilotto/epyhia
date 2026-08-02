@@ -36,7 +36,7 @@ Single repository, one installable Python package `epyhia/`, three sibling non-P
 **Purpose**: Reach a clean clone that starts, lints and tests — with no credentials configured
 (FR-064, FR-065, SC-010).
 
-- [ ] T001 Create the package skeleton per [plan.md](./plan.md) "Source Code": `epyhia/{gate/adapters,ingest,queue,agents,models,api,cost,artifacts}/__init__.py`, plus empty `prompts/`, `console/`, `video/`, `eval/`, `migrations/`, `tests/{gate,ingest,genericity,integration,fixtures/briefs}/`
+- [ ] T001 Create the package skeleton per [plan.md](./plan.md) "Source Code": `epyhia/{gate/adapters,ingest,queue,agents,models,api,cost,artifacts}/__init__.py`, plus empty `prompts/`, `console/`, `video/`, `eval/`, `migrations/`, `tests/{gate,ingest,queue,cost,genericity,integration,fixtures/briefs}/`
 - [ ] T002 Author `pyproject.toml` — one distribution, `uv`-managed, pinning `pydantic-ai==2.22.0`, `logfire==4.39.0`, plus `fastapi`, `uvicorn`, `sqlalchemy>=2.0`, `alembic`, `asyncpg`, `jinja2`, `pyyaml`, `httpx`, `stripe`, `pytest`, `pytest-asyncio`, `ruff`
 - [ ] T003 [P] Configure `ruff` and `pytest` (`asyncio_mode = "auto"`) in the `[tool.ruff]` / `[tool.pytest.ini_options]` sections of `pyproject.toml`
 - [ ] T004 [P] Write `.gitignore` covering `.env`, `.env.*` (except `.env.example`), `.venv/`, `node_modules/`, `dist/`, `__pycache__/`, `video/out/`, and `.claude/DECISIONS.md` (Constitution §Git Workflow)
@@ -75,6 +75,7 @@ user story stands on.
 - [ ] T025 [P] Test in `tests/gate/test_deny.py`: deny is terminal — `state='denied'`, `approved_by` recorded, and a subsequent `request()` on the same key executes nothing, ever (FR-036)
 - [ ] T026 [P] Test in `tests/gate/test_credentials.py`: an action whose credential is absent raises `CredentialNotConfigured` and surfaces as `credential not configured: <provider>`, with no adapter registered and no stack trace (FR-064, SC-010)
 - [ ] T027 [P] Test in `tests/gate/test_crash_resume.py`: a row abandoned mid-`executing` resumes into `verifying` and the outcome comes from the probe, not the stored status (§7.4, SC-008)
+- [ ] T133 [P] Test in `tests/gate/test_keys.py`: the `deploy` key is unchanged when only the generated site bytes differ, and the `video_render` key changes when the pinned Remotion version is bumped — a version upgrade must never serve stale output as a cache hit (FR-045, FR-046)
 
 **Checkpoint**: `uv run pytest tests/gate/` passes with zero agents, zero credentials and zero
 network. If it needs any of those, the gate has been built wrong.
@@ -323,8 +324,8 @@ businesses.
 ### Parallel Opportunities
 
 - **Phase 1**: T003, T004, T005, T009, T012 are independent files
-- **Phase 2a**: T015, T016, T017 in parallel after T014; then **T021–T027 all in parallel** — seven
-  separate test files against one fake adapter
+- **Phase 2a**: T015, T016, T017 in parallel after T014; then **T021–T027 and T133 all in
+  parallel** — eight separate test files against one fake adapter
 - **Phase 2b**: T030 and T035 in parallel; T034 and T038 in parallel
 - **Phase 2c**: T039 and T040 in parallel; T044, T045 and T132 in parallel
 - **Phase 2d**: T046, T047, T048, T049 are four independent modules
@@ -342,7 +343,7 @@ businesses.
 ## Parallel Example: Phase 2a gate tests
 
 ```bash
-# Seven independent test files, one fake adapter, zero credentials, zero network:
+# Eight independent test files, one fake adapter, zero credentials, zero network:
 Task: "Approval durable before raise in tests/gate/test_approval.py"
 Task: "Key collision under concurrency in tests/gate/test_concurrency.py"
 Task: "Verify retry cap in tests/gate/test_verify_retry.py"
@@ -350,6 +351,7 @@ Task: "succeeded ⇒ evidence CHECK in tests/gate/test_evidence_constraint.py"
 Task: "Denial is terminal in tests/gate/test_deny.py"
 Task: "Missing credential names the provider in tests/gate/test_credentials.py"
 Task: "Crash mid-executing → probe decides in tests/gate/test_crash_resume.py"
+Task: "Key stability and Remotion-version sensitivity in tests/gate/test_keys.py"
 ```
 
 ## Parallel Example: User Story 2
