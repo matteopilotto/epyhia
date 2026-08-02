@@ -75,7 +75,7 @@ user story stands on.
 - [X] T025 [P] Test in `tests/gate/test_deny.py`: deny is terminal — `state='denied'`, `approved_by` recorded, and a subsequent `request()` on the same key executes nothing, ever (FR-036)
 - [X] T026 [P] Test in `tests/gate/test_credentials.py`: an action whose credential is absent raises `CredentialNotConfigured` and surfaces as `credential not configured: <provider>`, with no adapter registered and no stack trace (FR-064, SC-010)
 - [X] T027 [P] Test in `tests/gate/test_crash_resume.py`: a row abandoned mid-`executing` resumes into `verifying` and the outcome comes from the probe, not the stored status (§7.4, SC-008)
-- [ ] T133 [P] Test in `tests/gate/test_keys.py`: the `deploy` key is unchanged when only the generated site bytes differ, and the `video_render` key changes when the pinned Remotion version is bumped — a version upgrade must never serve stale output as a cache hit (FR-045, FR-046)
+- [X] T133 [P] Test in `tests/gate/test_keys.py`: the `deploy` key is unchanged when only the generated site bytes differ, and the `video_render` key changes when the pinned Remotion version is bumped — a version upgrade must never serve stale output as a cache hit (FR-045, FR-046)
 
 **Checkpoint**: `uv run pytest tests/gate/` passes with zero agents, zero credentials and zero
 network. If it needs any of those, the gate has been built wrong.
