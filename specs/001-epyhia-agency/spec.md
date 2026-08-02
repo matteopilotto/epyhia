@@ -555,9 +555,7 @@ confirm the two runs share no artifact content, no visual identity, and no publi
 - **SC-012**: A brief containing instructions aimed at the system results in zero published
   artifacts carrying the injected content, and the screening decision is retrievable from the
   record whether it passed or failed.
-- **SC-013**: A full run from brief submission to live site, delivered pack, and armed checkout
-  completes within 30 minutes of wall-clock time.
-- **SC-014**: A reader of the evaluation report can tell, for every line, whether the result was
+- **SC-013**: A reader of the evaluation report can tell, for every line, whether the result was
   mechanically checked or left to human judgement.
 
 ## Assumptions
@@ -582,9 +580,11 @@ confirm the two runs share no artifact content, no visual identity, and no publi
 - **The numeric check deliberately over-holds.** Copy computing a value outside the enumerated
   derivation set is held and shown to the operator. This costs the operator a click; the opposite
   bias costs a customer a wrong price in public.
-- **The 30-minute run budget in SC-013** is a reasonable default for a pipeline containing a
-  long-form generation and a local video render; it is not derived from a stated requirement and
-  should be revisited if video render time proves dominant.
+- **Run duration is deliberately unconstrained.** No success criterion bounds how long a run
+  takes, because nothing in the architecture trades anything away for run latency — the video
+  render is a queued work item rather than a request-path operation, so a slow render costs
+  throughput, not correctness. The only latency that is user-facing is the buyer's, covered by
+  SC-009.
 - **A demonstration tenant exists purely as input data.** A fictional business is used to
   exercise the system once — recurring plus one-time products, split display and charge
   currencies, a distinctive voice — precisely because those properties stress the pipeline. It is
