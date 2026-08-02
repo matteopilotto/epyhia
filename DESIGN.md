@@ -100,10 +100,9 @@ about the *generated client site*, so that is where the design effort goes.
                      │  brand doc (read/edit/diff) · artifacts · $  │
                      └──────────────────┬───────────────────────────┘
                                         │ HTTPS + SSE, Bearer on both
-    Stripe webhook ────────────────────▶│
                      ┌──────────────────▼───────────────────────────┐
-                     │  web  ·  FastAPI                             │
-                     │  REST · SSE · webhook receiver · serves SPA  │
+    Stripe webhook ─▶│  web  ·  FastAPI                             │
+    buyer /checkout ▶│  REST · SSE · webhook receiver · serves SPA  │
                      └──────────────────┬───────────────────────────┘
                                         │ tasks table
                                         │ (FOR UPDATE SKIP LOCKED)
@@ -126,7 +125,7 @@ about the *generated client site*, so that is where the design effort goes.
                     (the live site) (test mode)    (catcher)
                           │              │
                           └──────────────┴─────▶ Postgres (Neon)
-                                                 orders · actions · artifacts
+                                     orders · actions · artifacts · agent_calls
 ```
 
 `web` and `worker` are two Fly processes running the **same image** with different
@@ -196,7 +195,7 @@ One orchestrator, three specialists, and a review pass that belongs to the Marke
 | Agent | Its one job | Tools | Model tier — and why | May **never** |
 |---|---|---|---|---|
 | **Strategist** (orchestrator) | Turn the brief into positioning, a brand doc, and a task list — then delegate | Write brand doc; enqueue tasks. **No gate handles at all** | `claude-opus-5` — this is the only genuinely open-ended judgement in the system: choosing a palette, a type pairing, a motion language and a composition archetype that fit a business it has never seen | Make any external call. Deploy, charge, send, or publish. Write copy or markup itself |
-| **Web Builder** | Generate the site and get it live | Read brand doc; write artifacts; `gate.deploy()` | `claude-sonnet-5` — long-form structured generation against a plan someone else made; a reasoning-tier model buys nothing here and costs 5× | Charge a card. Hold a credential. Emit a secret into the page |
+| **Web Builder** | Compose the site around approved copy and get it live | Read brand doc **and the reviewed landing-copy artifact**; write artifacts; `gate.deploy()` | `claude-sonnet-5` — long-form structured generation against a plan someone else made; a reasoning-tier model buys nothing here and costs 5× | Charge a card. Hold a credential. Emit a secret into the page. **Author a price, feature, or claim that is not in the copy artifact or the brief** |
 | **Marketer** | Demand — landing copy, 3–5 posts, launch email, video props | Read brand doc; write artifacts; `gate.send_email()`, `gate.publish()` | `claude-sonnet-5` — voice-constrained writing, same reasoning as above | Invent a fact, feature, or price that is not in the brief. Deploy |
 | **Reviewer** (the Marketer's self-review) | Grounding and voice | Read the draft, the brand doc, **and the raw brief** | `claude-haiku-4-5` — it grades text against an explicit checklist; that is the cheapest possible task shape | Approve output silently. Rewrite the draft itself |
 | **Ops** | The money | Read brand doc + `brief.products[]`; `gate.stripe_*()` | `claude-haiku-4-5` — near-mechanical translation of brief products into Stripe objects | Deploy. Publish. Touch the site's markup |
@@ -242,7 +241,33 @@ is orchestration whose shape is nondeterministic, which would mean idempotency k
 over work whose existence is itself uncertain — and a run timeline nobody can read twice the
 same way. "Delegates only" is about reach; this is about control flow, and both matter.
 
-### 3.4 Run flow
+### 3.4 The site's words are the Marketer's, and no artifact leaves ungrounded
+
+The most seen artifact is the deployed page, and the easiest way to lose the assignment
+quietly is to ground the *pack* and forget that the site is also copy. A price hallucinated
+into a marketing email is caught by the Reviewer; the same price hallucinated into an `<h2>`
+would sail past a probe that only asserts 200 and a brand name. So two changes to the naive
+"site and pack in parallel" shape:
+
+**Landing copy is a Marketer artifact, and the site task depends on it.** The Strategist
+enqueues three tasks, not two-plus-one: `copy` (the landing copy alone), `demand` (posts,
+launch email, video props), and `money`. `copy` runs first and blocks `site`; `demand` and
+`money` run in parallel with it. The Web Builder therefore never authors claims — it receives
+reviewed copy blocks and composes markup, type and motion around them. That also matches what
+the spec means by a marketing pack: landing copy is a pack deliverable, so it should carry the
+same review as the rest of the pack rather than being generated twice by two agents in two
+voices.
+
+**The grounding check is an artifact-boundary function, not a Reviewer feature.** The same
+deterministic set-difference from §5.2 runs over *every* artifact of kind `copy`, `posts`,
+`email`, `video_props` and `site` before it can be written `clean`, and for the site it is a
+**precondition of the deploy action** — the gate refuses `deploy` for a run whose site artifact
+is `flagged`. This is defence in depth on purpose: even with reviewed copy upstream, the Web
+Builder still emits a price table, a plan comparison and an `established` year into markup, and
+those numerals are exactly as fabricable as the ones in an email. The check costs nothing and
+does not care which agent produced the string.
+
+### 3.5 Run flow
 
 ```mermaid
 sequenceDiagram
@@ -258,28 +283,34 @@ sequenceDiagram
     participant G as Action Gate
 
     C->>W: POST /briefs  (JSON brief)
-    W->>W: hash payload, extract grounding_set, open run
+    W->>W: hash payload, extract grounding_set, guardrail, open run
     W->>Q: enqueue plan task
     Q->>S: claim
     S->>S: brand doc v1 (palette, type, motion, archetype, voice)
-    S->>Q: enqueue site / pack / money tasks
+    S->>Q: enqueue copy / demand / money tasks
+    Q->>M: claim copy
+    M->>R: landing copy + brand doc + brief
+    R-->>M: violations (numbers first, then voice)
+    M->>Q: copy artifact clean — unblocks site
     par
-        Q->>B: claim site
-        B->>G: deploy(files, key=sha(brief,site))
+        Q->>B: claim site (brand doc + copy artifact)
+        B->>B: grounding set-difference over rendered site
+        B->>G: deploy(files, key=sha(brief,brand_doc_v,prompt_v))
         G-->>C: awaiting_approval — target, cost, key
         C-->>G: APPROVE
-        G->>G: execute → verify (GET url, 200 + brand_doc.name) → succeeded
+        G->>G: execute → alias → verify (GET alias, 200 + brand_doc.name) → succeeded
     and
-        Q->>M: claim pack
-        M->>R: draft + brand doc + brief
-        R-->>M: violations (numbers first, then voice)
+        Q->>M: claim demand (posts, email, video props)
+        M->>R: drafts + brand doc + brief
+        R-->>M: violations
         M->>M: one revision, then flagged=true
         M->>G: send_email(launch mail → catcher)
     and
         Q->>O: claim money
         O->>G: create products/prices from brief.products[]
+        O->>G: arm_charge_path — awaiting_approval → APPROVE
     end
-    Note over W,G: Stripe webhook → order row (dedup on event id)
+    Note over W,G: buyer POST /checkout {slug} → session (auto-tier, keyed) → webhook → order (dedup on event id)
 ```
 
 ---
@@ -297,9 +328,18 @@ agent can read or forward.
 | Routes through the gate | Does **not** |
 |---|---|
 | Deploy the site to Vercel | Writing files into the `artifacts` table |
-| Create Stripe products, prices, Checkout Sessions | Reading or writing brand docs / runs / tasks |
-| Send the launch email (to a catcher) | Rendering the launch video locally |
-| Publish a social post | Model inference |
+| Create Stripe products and prices | Reading or writing brand docs / runs / tasks |
+| Arm a run's charge path (§4.4) | Rendering the launch video locally |
+| Create a Checkout Session | Model inference |
+| Send the launch email (to a catcher) | |
+| Publish a social post | |
+
+**What `publish` actually targets.** Real social publishing is out of scope (§1.4), so the
+publish adapter writes to a **recording sink** — a local endpoint that stores the payload and
+returns a permalink, verified by reading it back — exactly as Mailpit stands in for SMTP. It is
+a registered adapter pair with a real approval step, a real key and a real audit row, not a
+`pass` with a comment; that is the difference between a channel that is stubbed and one that is
+imaginary, and it is what makes swapping in a live API a one-adapter change (§4.6).
 
 ### 4.2 The Anthropic key is deliberately outside the gate
 
@@ -358,10 +398,27 @@ in the world before it is allowed to claim success — §4.5.
 
 ### 4.4 Approval — what is gated, and where the pending state lives
 
-Approval-gated: **going live** (the deploy that puts the site on its public URL), **any
-charge path** (creating a Checkout Session), and **anything outbound to a person** (the
-launch email, a published post). Not gated: creating draft artifacts, rendering the video,
-writing a brand doc.
+Approval-gated: **going live** (the deploy that puts the site on its public URL), **arming
+the charge path** (the action that makes this run's prices live and its checkout endpoint
+answerable), and **anything outbound to a person** (the launch email, a published post). Not
+gated: creating draft artifacts, rendering the video, writing a brand doc.
+
+**Approval attaches to arming the charge path, not to each Checkout Session — and that is a
+correctness point, not a convenience one.** A Checkout Session is created when a *buyer*
+clicks buy on the live site. Parking that behind an operator click means the buyer sits on a
+spinner until a human in another timezone notices, which is not an approval step; it is an
+outage with a review queue attached. It would also make the required demo impossible — the
+recording has a test card completing checkout, and no operator click belongs between the
+button and Stripe's form.
+
+So the human decision is the one a human can actually make in advance: *may this run take
+money at these prices?* `arm_charge_path` is a gated action whose approval screen shows the
+resolved catalogue — every product, amount, currency and billing type as it will be charged.
+Once armed, `POST /checkout` creates sessions auto-tier: still through the gate, still keyed
+(§7.2), still one audit row with cost each, still refused outright if the run is not armed.
+Nothing gets a path around the door; what changes is *when* the human is asked, which is the
+only moment their answer is worth anything. The same logic already applies to go-live: the
+operator approves the deploy, not each of the visitors who then load the page.
 
 The raise mechanism is PydanticAI's `ApprovalRequired`, used inside gate-backed tools only.
 But the framework's deferred-tool state is in-process, and **the `awaiting_approval` row
@@ -386,9 +443,11 @@ will write `succeeded`.
 
 | Action | What "it actually happened" means |
 |---|---|
-| Deploy | `GET` the returned URL: assert **200** *and* that **`brand_doc.name`** for this run appears in the response body |
+| Deploy | `GET` **the brief's alias** (§7.2), not the deployment URL the API returned: assert **200** *and* that **`brand_doc.name`** for this run appears in the response body |
+| Arm charge path | Re-read every price from Stripe: assert each is `active` and its `unit_amount` and `currency` match the brief |
 | Checkout | `SELECT` the order row by `stripe_session_id`: assert it exists and is paid |
 | Email | Assert the catcher's API shows the message |
+| Publish | `GET` the recording sink's permalink: assert the payload is stored and readable |
 
 Two details matter more than the list does.
 
@@ -397,6 +456,15 @@ A 200 alone is a false positive I have personally seen: a parked domain, a stale
 deployment, a Vercel error page. Asserting the client's own name appears in the body rules
 those out — and reading that name from the row rather than a literal is what keeps the check
 client-agnostic (§1.2).
+
+**And it probes the alias, which forces a second assertion.** The deployment can be flawless
+while the alias switch fails, leaving the URL everyone actually holds serving the previous
+build — a failure mode the name check cannot see, because both builds carry the same client
+name. So the deploy adapter injects a build marker (`brief_hash[:8] + brand_doc_version +
+prompt_version`) as a `<meta>` tag at upload time, and the probe asserts *that* string too.
+The marker is computed by the adapter, not the agent, so it stays out of the generated bytes
+and out of the key. Concretely: the v2 brand-doc deploy is only `succeeded` if the alias is
+serving v2.
 
 **The probe result is stored in the action row** — status code, matched string, order id.
 That column is what turns "evidence over vibes" into something queryable, and it is what
@@ -455,14 +523,34 @@ The submitted payload is persisted verbatim as JSONB in `briefs`, with a `conten
 ### 5.2 The grounding set is derived, never authored
 
 At ingest, EPYHIA extracts every numeral from the brief — prices, feature counts, durations,
-year established — and persists it as `runs.grounding_set`. The Reviewer set-differences
-numbers found in the Marketer's draft against **that row**. A number in the copy that is not
-in the brief is, by definition, a fabrication.
+year established — and persists it as `runs.grounding_set`. Every artifact that contains
+words or props (§3.4) is set-differenced against **that row**, deterministically, before any
+model is asked for an opinion. It is free, it is exact, and an LLM is unreliable at precisely
+this task; fabricated prices are named twice in the spec as the failure that hurt real
+customers, and they are not a judgement call.
 
-This is why the check is deterministic and runs *first*: it is free, it is exact, and an LLM
-is unreliable at precisely this task. Fabricated prices in outbound copy are called out
-twice in the spec as the failure that hurt real customers, and they are not a judgement
-call.
+But "every numeral not in the brief is a fabrication" is too strong to survive contact with
+real copy, and stating it that way would produce a check that cries wolf on its first honest
+sentence. Two refinements, both computed at ingest so they stay client-agnostic:
+
+**Normalisation before comparison.** Numerals are compared as canonical values, not as
+strings: separators and currency symbols stripped, amounts reduced to minor units in a named
+currency, and number words mapped to digits (`forty-five` → `45`) so spelling one out is not a
+way around the check. Without this the `currency_display` ≠ `currency_charge` split alone
+would generate constant false positives — `€$120`, `120.00`, `$120/mo` and "one hundred and
+twenty" are one fact in four costumes, and the demo tenant was chosen partly *because* it
+exercises that.
+
+**A derived set alongside the literal one.** Legitimate copy computes: `€$1,440 a year` from a
+€$120 month, `three plans` from `len(products)`, `since '69` becoming an age. So ingest also
+persists a closed set of derivations over the literal values — ×12 and ×52 annualisations,
+sums and differences of prices, collection counts, and `now − established` — and the check
+passes on `literal ∪ derived`. Closed is the operative word: the set is enumerated in code
+once, applies to any brief, and is not extended by anything a model says.
+
+A numeral outside both sets is **flagged**, which routes it to the revision loop and then to
+the console (§9.2). Calling it a fabrication is a claim the check cannot make; refusing to let
+it out unreviewed is one it can enforce, and that is the one the customer needs.
 
 ### 5.3 The brand doc is versioned rows, not a file
 
@@ -498,9 +586,11 @@ an FK, so the demo is a visible v1→v2 diff between two runs rather than a clai
 | `runs` | `brief_id`, `brand_doc_version`, `prompt_version`, `grounding_set`, budget, status | One run id, threaded through every agent call and action row |
 | `tasks` | The work queue and its state machine | Claimed with `FOR UPDATE SKIP LOCKED`; also the run timeline's source |
 | `actions` | Audit log **and** idempotency ledger | `UNIQUE(idempotency_key)`; verification evidence and cost per row |
+| `agent_calls` | One row per agent call: agent, model id, tier, prompt version, token counts by kind, derived cost, latency, task and run ids | The per-call half of "what did it do and what did it cost" — see below |
+| `agent_cache` | Memoised structured results, keyed by the §7.3 content hash | A cache: droppable at any time, never read for a correctness decision |
 | `orders` | Persisted test purchases | Written by the Stripe webhook, deduped on event id |
 | `brand_docs` | Versioned structured brand docs | §5.3 |
-| `artifacts` | `(run_id, kind, path, content_type, bytes, sha256)` | See below |
+| `artifacts` | `(run_id, kind, path, content_type, bytes, sha256, grounding_status, violations)` | `grounding_status` is `clean` \| `flagged` (§3.4); see below |
 
 **Artifacts live in Postgres `bytea` behind one `ArtifactStore` interface.** Object storage
 would be the reflexive choice; I am not using it because Neon + SQLAlchemy + Alembic are
@@ -536,6 +626,23 @@ Stripe hosts the card form → webhook lands on FastAPI → order row written. T
 never touches a key, and I never handle card data. Ops creates the products and prices from
 `brief.products[]` at run time, so the catalogue is data; subscriptions and one-time items go
 down the same path.
+
+**How the price id reaches the button, given that Ops may not touch markup and the two tasks
+run in parallel.** It doesn't. The button carries a **product slug** derived from the brief —
+`data-product="maintenance-standard"` — and posts `{run_id, slug}` to `POST /checkout`, which
+resolves slug → Stripe price id server-side from that run's Ops output at click time. Three
+things fall out of that, which is why it beats the obvious alternative of templating ids into
+the page:
+
+- **The parallelism survives.** Site and catalogue are both built against the same brief field,
+  not against each other, so neither task blocks the other and neither needs the other's output
+  to exist yet.
+- **Stripe identifiers never enter an artifact.** The deployed bytes stay pure client data,
+  which keeps §6.1's "nothing to leak" property intact, and re-creating the Stripe objects
+  never invalidates a deployed page.
+- **The failure is legible.** If the money task hasn't landed or the run isn't armed (§4.4),
+  `/checkout` returns a typed error and the button renders an unavailable state — not a 500,
+  and not a session against a price that doesn't exist.
 
 ### 6.3 Not-slop is art direction, not toolchain
 
@@ -610,7 +717,8 @@ bakery on the first try.
 
 | Action | Key derived from |
 |---|---|
-| Deploy | `sha256(brief_hash + site artifact hash)` |
+| Deploy | `sha256(brief_hash + brand_doc_version + prompt_version)` |
+| Arm charge path | `sha256(brief_hash + resolved catalogue hash)` |
 | Stripe product/price | `sha256(brief_hash + product name + price_minor + billing)` |
 | Checkout session | `sha256(brief_hash + product + buyer session)` |
 | Video render | `sha256(archetype_id + props + remotion_version)` |
@@ -619,6 +727,28 @@ bakery on the first try.
 The video key includes the **pinned Remotion version** on purpose: without it, a Remotion
 upgrade produces output that is legitimately different but keys identical, so the system
 serves a stale MP4 and calls it a cache hit.
+
+**The deploy key deliberately does not include the site artifact hash, and that inversion is
+the point.** Keying on the bytes sounds more precise and is in fact the bug: LLM generation is
+not deterministic, so a re-run whose memo (§7.3) misses produces a site that differs in a
+comment, a class name or a word order, hashes differently, keys differently — and deploys a
+second time. That would make the headline guarantee, *one site per brief*, contingent on a
+cache that is explicitly allowed to miss. It would be a duplicate under exactly the conditions
+the eval tests.
+
+What the key identifies is therefore the **deploy target's identity**: this brief, under this
+brand doc version, under these prompts. Those three are what should produce a different site;
+byte-level generation noise should not. Re-running an identical brief short-circuits regardless
+of what the model happened to emit. Editing the brand doc bumps `brand_doc_version`, which is a
+new key and a real second deploy — which is the §5.3 demo, and is supposed to fire.
+
+**One brief, one URL: the alias carries it.** Vercel gives every deployment its own immutable
+URL, so "one site" has to mean something stronger than "one deployment." Each brief owns a
+stable **alias** derived from `brief_hash`; every successful deploy for that brief points the
+alias at the new deployment, and that alias — not the per-deployment URL — is what the console
+shows, what `verify()` probes, and what the eval asserts on. So the v1→v2 brand-doc demo shows
+the same URL rendering differently, prior deployments stay reachable at their immutable URLs
+for the side-by-side, and a re-run that short-circuits leaves the alias exactly where it was.
 
 ### 7.3 The mechanism
 
@@ -645,7 +775,10 @@ So agent calls are memoised on a content hash of everything that determines the 
 `sha256(agent + model + prompt_version + brand_doc_version + scoped inputs)`. A hit replays
 the stored structured result instead of calling the provider. This is a cache, not a ledger —
 it is allowed to miss, and a miss costs money rather than correctness, which is the opposite
-posture from the `actions` table and why the two are separate mechanisms. Including
+posture from the `actions` table and why the two are separate mechanisms. That sentence is
+only true because no gate key is derived from generated bytes (§7.2); if the deploy key were,
+this cache would be load-bearing for idempotency, and a cache that is allowed to miss must
+never be load-bearing for a guarantee. Including
 `prompt_version` and `brand_doc_version` in the key is what keeps it honest: edit the brand
 doc and re-run, and the demo in §5.3 must actually re-generate rather than serve a stale hit.
 
@@ -659,16 +792,26 @@ doc and re-run, and the demo in §5.3 must actually re-generate rather than serv
 - **Crash while an action sits in `awaiting_approval`.** The row is in Postgres (§4.4); the
   console re-renders it on reload and the operator's click resumes the same keyed action.
 - **Re-run of an identical brief.** Same brief row, same keys, every gate action
-  short-circuits: one site, one set of Stripe objects, zero new orders. This is exactly what
-  the eval asserts and what the recording shows.
+  short-circuits: one site on one alias, one set of Stripe objects, zero new orders — and this
+  holds whether or not the generation memo hit, because no key is derived from generated bytes
+  (§7.2). This is exactly what the eval asserts and what the recording shows.
 
 ---
 
 ## 8 · Cost and traceability
 
 One `run_id` — a PydanticAI argument, so it is on every agent span — threads brief → agent
-call → gate action → cost. Logfire holds the traces; the `actions` and per-call usage rows
-hold the numbers.
+call → gate action → cost. Logfire holds the traces; **`actions` and `agent_calls` hold the
+numbers, in Postgres.**
+
+That split is deliberate. Tracing is for me, reading a run; the tables are the system of
+record, because everything downstream reads them rather than a vendor: the console's cost
+panel, the run timeline, the per-run budget check, and `eval.py`, which must be able to assert
+"every agent call logged a model tier and a cost" against the database with no Logfire account
+and no network. A requirement whose only evidence lives in a SaaS dashboard is a requirement I
+cannot test, and the spec asks for model tier and token cost **per call** — so a row per call
+it is. `agent_calls` is what turns §3.1's claim into an artifact: one Opus row for planning,
+Sonnet rows for drafting, Haiku rows for review and wiring, each with its own dollar figure.
 
 **`pricing.yaml` carries four rates per model** — input, output, cache-write, cache-read —
 because `RunUsage` reports cache reads and writes separately and they price very differently
@@ -741,16 +884,24 @@ system.
 **The harm.** Irreversible in the most literal way — you cannot unsend an email, and the
 customer is now committed to a price they did not set, or looks careless to someone they were
 trying to impress. The same fabrication in a video is worse: it is invisible until someone
-watches it, and it is the asset most likely to be reshared.
+watches it, and it is the asset most likely to be reshared. And the one easiest to forget when
+designing this control is the price on the **deployed page** — public, indexable, and the thing
+the customer forwards to a partner.
 
 **The control.** Two layers, deterministic first. Every numeral in the brief is extracted at
-ingest into `runs.grounding_set`; every numeral in the draft — copy *and* video props — is
-set-differenced against it. Anything outside the set fails the pass immediately, before any
-model is asked for an opinion, because this check is exact and free and an LLM is bad at it.
-Only then does a cheap model check voice and unsupported claims, returning structured
-violations. One revision loop, then the artifact is saved `flagged=true` and surfaced in the
-console rather than sent. And the send itself is a gated, approval-required action to a
-catcher, not a real inbox.
+ingest into `runs.grounding_set` and expanded with a closed derivation set (§5.2); every
+numeral in **every artifact** — landing copy, posts, the email, video props, *and the rendered
+site markup* — is normalised and set-differenced against it. Anything outside fails the pass
+immediately, before any model is asked for an opinion, because this check is exact and free
+and an LLM is bad at it. Only then does a cheap model check voice and unsupported claims,
+returning structured violations. One revision loop, then the artifact is saved
+`grounding_status = 'flagged'` and surfaced in the console rather than shipped.
+
+Two things make that cover the whole blast radius rather than the convenient part of it. The
+send is a gated, approval-required action to a catcher, not a real inbox — and **the gate
+refuses `deploy` for a run whose site artifact is flagged** (§3.4), so the public page is
+subject to the same check as the email. A control that guards outbound copy while the same
+fabricated price sits in an `<h2>` on the live site is not a control; it is a report.
 
 ### 3 · The customer is charged twice, or gets two sites.
 
@@ -775,8 +926,11 @@ dashboard shows you what happened; it does not ask permission before it happens.
 until an irreversible action is wrong, and going live, charging, and sending are all
 irreversible.
 
-**The control.** Go-live, any charge path, and anything outbound to a person stop at
-`awaiting_approval` and wait for a human click. The pending row is durable in Postgres, so a
+**The control.** Go-live, arming the charge path, and anything outbound to a person stop at
+`awaiting_approval` and wait for a human click. The unit matters: a human approves *these
+prices going live*, once, on a screen showing the resolved catalogue — not each buyer's
+session, which nobody can review in the two seconds a checkout button is allowed to take
+(§4.4). The pending row is durable in Postgres, so a
 redeploy during the pause does not lose it or double-fire it. The approval screen shows the
 concrete target, the projected cost, and the idempotency key — enough to decide, not just to
 acknowledge. And the reason approval is not theatre is structural: agents hold capability
@@ -864,11 +1018,16 @@ path.)
 
 It drives a full brief → site → pack → checkout run and then asserts against the database:
 
-- the deploy action succeeded **and** its stored evidence shows 200 plus that run's own
-  `brand_doc.name` — read from the row, not hardcoded;
+- the deploy action succeeded **and** its stored evidence shows 200, that run's own
+  `brand_doc.name` — read from the row, not hardcoded — and that run's build marker, proving
+  the alias serves this build (§4.5);
 - an order row exists for the test purchase, matching a product in that run's brief;
-- **re-running the same brief produces no second site and no second order**;
-- every action row carries a cost;
+- **re-running the same brief produces no second site and no second order** — asserted as one
+  `succeeded` deploy action and one alias, not merely as one order;
+- every action row carries a cost, and **every `agent_calls` row carries a model id, a tier and
+  a cost**, with exactly one top-tier call in the run (§3.1);
+- no artifact reached the deploy with `grounding_status = 'flagged'`, and no Checkout Session
+  exists for a run whose charge path was never armed (§4.4);
 - **zero gate actions attributed to the Strategist** — the mechanical proof of §3.3.
 
 ### 10.1 The genericity test
@@ -881,6 +1040,34 @@ This is the cheapest and by far the strongest evidence that EPYHIA is an agency 
 one-client script, and it is much harder to fake than the brand-doc-edit demo. If §1.2 has
 been violated anywhere — a hardcoded probe string, a seeded product, an aesthetic baked into a
 prompt — this is the test that finds it.
+
+### 10.2 `rubric.json` is the scoring surface, not a list of test names
+
+The rubric is the graded contract, so `rubric.json` mirrors it rather than inventing a private
+one. Each entry is a check bound to one of the six scored areas:
+
+```text
+{ id, area, points, title,
+  kind: "automated" | "evidence",
+  assertion,          ← what must be true
+  evidence,           ← the query or artifact that shows it
+  required: bool }
+```
+
+`area` and `points` come straight from the assignment's table, which means the totals add to
+100 and a reader can see which check earns which points. `eval.py` runs every `automated`
+check against the deployed agency and writes `PRODUCT_EVAL.md`: one row per check with
+pass/fail, the evidence it read (the action row, the probe result, the order id, the cost
+figures), and the area subtotals.
+
+**Checks of kind `evidence` are not self-scored, and that distinction is the point.** "Not
+slop" and "the design is argued" are human judgements; a script that awards itself 15 points
+for aesthetics is worth nothing to a grader and everything to my own self-deception. For those
+rows `PRODUCT_EVAL.md` emits the links and leaves the score blank — the live URL, both
+generated sites from the genericity run, the recording, the section of this document being
+claimed. Automated rows carry numbers; judged rows carry evidence. The document says which is
+which at the top, because a mixed report that hides the difference is exactly the "status
+field the system trusted more than reality" failure in report form.
 
 ---
 
@@ -903,6 +1090,15 @@ without them and fail only at the point of the gate action, with an explicit
 this repo gets a running console and a legible reason the deploy didn't fire, which is what
 that row actually tests.
 
+**Nothing secret or generated is tracked.** From the first scaffolding commit, `.gitignore`
+covers `.env` and `.env.*` (except `.env.example`), `.venv/`, `node_modules/`, `__pycache__/`,
+Remotion's render output, and any local artifact dump — the artifacts of record live in
+Postgres (§5.4), so a stray MP4 in the tree is by definition a leftover. `.env.example` carries
+variable names and safe local defaults only. Real keys exist in exactly two places: `fly
+secrets` for the deployed gate, and an untracked local `.env` for development. A committed key
+is not a mistake you fix later — you rotate it, and the audit trail this whole design rests on
+is worth less for having leaked its own credentials.
+
 ---
 
 ## 12 · Build order
@@ -913,22 +1109,32 @@ that row actually tests.
 2. The Action Gate with one trivial action: approval, idempotency, audit row, verification,
    cost. **The door before the rooms** — building it after the agents means retrofitting
    every call site and discovering the ones that went around it.
-3. Schema + migrations + the task queue.
-4. Brief ingest: hashing, grounding-set extraction, and the input guardrail (§9.6) — all
-   three at the same seam, before anything expensive runs.
+3. Schema + migrations + the task queue, including `agent_calls` — the cost ledger is cheaper
+   to write on day one than to backfill onto every call site later.
+4. Brief ingest: hashing, grounding-set extraction with its derivation set and normalisation,
+   and the input guardrail (§9.6) — all at the same seam, before anything expensive runs. The
+   set-difference ships here as a standalone function with its own tests, since §3.4 has four
+   callers for it.
 5. The Strategist: brief → brand doc, persisted.
-6. The Web Builder: generate and actually deploy through the gate.
+6. The Web Builder: consume a copy artifact, generate, and actually deploy through the gate —
+   alias, build marker, grounding precondition. **The copy artifact is stubbed from the brand
+   doc's copy points this week**, because the seam is what matters: the Marketer fills it in
+   step 8 without the Web Builder changing.
 7. *Demo:* submit a brief, get a live URL, show the audit row and its verification evidence.
 
 **Week 2 — marketing, money, proof**
 
-8. The Marketer + the Reviewer pass, grounded in the brief.
+8. The Marketer + the Reviewer pass, grounded in the brief — landing copy first, so the site
+   task's stub from step 6 is replaced by real reviewed copy, then posts, email, video props.
 9. The launch video: archetypes, props, local render, artifact.
-10. Ops: Stripe products from `brief.products[]`, Checkout Session, webhook → order row.
-11. Approval on go-live and charge; idempotency under re-run and forced crash.
+10. Ops: Stripe products from `brief.products[]`, `arm_charge_path`, slug → price resolution at
+    `POST /checkout`, webhook → order row.
+11. Approval on go-live and on arming the charge path; idempotency under re-run and forced
+    crash.
 12. Deploy the agency to Fly with real Auth0 auth; console polish limited to the approval
     view.
-13. `eval/`, including the second-brief genericity run; record the 60–90s demo.
+13. `eval/`: `rubric.json` mapped to the six scored areas, `eval.py` → `PRODUCT_EVAL.md`, the
+    second-brief genericity run; record the 60–90s demo.
 
 ---
 
@@ -939,9 +1145,16 @@ that row actually tests.
 - **Remotion's licence is not MIT** — it is free for individuals and organisations up to a
   small headcount, which covers this project comfortably, but the terms change in the next
   major version. Hence the pin, and hence this note rather than a silent dependency.
+- **The derivation set is closed, so the numeric check still over-flags.** Copy that computes
+  something I did not enumerate — a three-year total, a per-day figure — trips it. I am
+  accepting that deliberately: the failure mode is an artifact held at `flagged` and shown in
+  the console, which costs me a click, while the opposite bias costs a customer a wrong price
+  in public. An over-flagging check is a nuisance; an under-flagging one is the thing this
+  whole document exists to prevent.
 - **The Reviewer can be wrong about voice.** The deterministic numeric check cannot; that is
   why the split exists and why the failure mode is `flagged=true` plus console surfacing
   rather than an infinite revision loop. Two passes maximum.
 - **One approval step, not a compliance suite.** The spec asks for "light but real," and I
-  am taking it at its word: one gate, one approval, one audit trail. Multi-tenancy, role
-  separation, and approval policies per action type are deliberate non-goals (§1.4).
+  am taking it at its word: one gate, one approval tier, one audit trail. Which action types
+  are gated is fixed in code (§4.4) and small; multi-tenancy, role separation, and
+  operator-editable approval policies are deliberate non-goals (§1.4).
