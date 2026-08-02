@@ -5,6 +5,7 @@ from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 
 from epyhia.api.errors import register_exception_handlers
+from epyhia.api.routers import briefs
 
 CONSOLE_DIST = Path(__file__).resolve().parent.parent.parent / "console" / "dist"
 
@@ -16,9 +17,10 @@ def create_app() -> FastAPI:
     logfire.instrument_fastapi(app)
     register_exception_handlers(app)
 
-    # Routers are mounted here as they are implemented (briefs, runs, actions,
-    # checkout, webhooks, sink) — every span they open carries run_id, per
-    # DESIGN.md: "run_id ... is on every agent span".
+    # More routers are mounted here as they are implemented (runs, actions, checkout,
+    # webhooks, sink) — every span they open carries run_id, per DESIGN.md:
+    # "run_id ... is on every agent span".
+    app.include_router(briefs.router)
 
     # Serves the built SPA from the same origin as the API — no CORS.
     app.mount(

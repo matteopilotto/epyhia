@@ -9,7 +9,8 @@ _VERSION_RE = re.compile(r"^v(\d+)$")
 
 
 class PromptNotFound(Exception):
-    pass
+    """Raised by `render()` for a template that does not exist. `active_version()` never
+    raises this — 1-based versioning starts at v1 whether or not the file exists yet."""
 
 
 class PromptService:
@@ -26,12 +27,11 @@ class PromptService:
         )
 
     def active_version(self, agent: str) -> str:
-        """The highest version number on disk for `agent` — there is no separate pointer
-        to keep in sync, so the active version can never drift from what actually exists."""
+        """The highest version number on disk for `agent`, or `v1` before anything has
+        been authored — there is no separate pointer to keep in sync, so a run opened
+        before an agent's prompt exists still gets a coherent, single-sourced tag."""
         versions = self._versions(agent)
-        if not versions:
-            raise PromptNotFound(f"no prompt templates for agent: {agent}")
-        return f"v{max(versions)}"
+        return f"v{max(versions)}" if versions else "v1"
 
     def render(self, agent: str, version: str, **context: object) -> str:
         template = self._env.get_template(f"{agent}/{version}.jinja")

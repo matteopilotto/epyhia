@@ -18,6 +18,7 @@ dependencies = [
     "httpx",
     "stripe",
     "pyjwt[crypto]",
+    "jsonschema",
 ]
 
 [dependency-groups]
