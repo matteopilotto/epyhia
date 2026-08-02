@@ -87,7 +87,7 @@ network. If it needs any of those, the gate has been built wrong.
 - [X] T030 [P] Implement the `ArtifactStore` interface and its Postgres `bytea` backend in `epyhia/artifacts/store.py`, writing in the same transaction as the task row that produced the artifact (§5.4)
 - [X] T031 Implement task claiming in `epyhia/queue/claim.py` — the single `UPDATE ... WHERE id = (SELECT ... FOR UPDATE SKIP LOCKED LIMIT 1) RETURNING *` statement from [research.md R8](./research.md), with `depends_on` satisfaction and a **per-`kind`** lease interval
 - [X] T032 Implement the lease sweeper in `epyhia/queue/sweeper.py` — expired leases return to `pending` and increment `attempts`; past the cap the row lands `failed`; rows in `awaiting_approval` are never resurrected (R8, R7 step 4)
-- [ ] T033 Implement the worker loop in `epyhia/queue/worker.py` — claim, dispatch by `kind`, release the lease on `awaiting_approval`, and the `worker` process entrypoint
+- [X] T033 Implement the worker loop in `epyhia/queue/worker.py` — claim, dispatch by `kind`, release the lease on `awaiting_approval`, and the `worker` process entrypoint
 - [ ] T034 [P] Test in `tests/queue/test_claim.py`: two workers claiming concurrently each get a distinct row; an expired lease is re-claimable; an `awaiting_approval` row is left alone by the sweeper (FR-047)
 - [ ] T035 [P] Write `epyhia/cost/pricing.yaml` in the [research.md R9](./research.md) shape — per model a `tier` and a list of `effective_from` rate rows carrying `input`, `output`, `cache_write`, `cache_read`
 - [ ] T036 Implement `epyhia/cost/pricing.py` — load `pricing.yaml`, select the greatest `effective_from` not after a call's timestamp, and raise a hard error when no rate row applies (never a silent `0.00`)
