@@ -1,0 +1,86 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://epyhia.dev/contracts/video-props.schema.json",
+  "title": "Launch video props",
+  "description": "What the Marketer emits for the launch video. Props JSON only — never TSX, never any executable code authored by a model (FR-026, DESIGN.md 6.4). The `content` / `style` split is load-bearing: the grounding check runs over `content` and nothing else, so an on-screen price cannot be placed somewhere the checker does not look (research.md R5). The vertical cut is the same archetype at 1080x1920 consuming these same props.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["archetype_id", "content", "style"],
+  "properties": {
+    "archetype_id": {
+      "type": "string",
+      "description": "Selected by the Strategist in the brand doc; the Marketer does not choose it."
+    },
+    "content": {
+      "type": "object",
+      "description": "EVERYTHING that appears on screen as text or as a value. Every leaf here is set-differenced against runs.grounding_set before render (FR-022, FR-026).",
+      "additionalProperties": false,
+      "required": ["headline", "scenes"],
+      "properties": {
+        "headline": { "type": "string", "minLength": 1 },
+        "subhead": { "type": "string" },
+        "scenes": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["kind", "lines"],
+            "properties": {
+              "kind": { "type": "string" },
+              "lines": { "type": "array", "items": { "type": "string" } },
+              "values": {
+                "type": "array",
+                "description": "On-screen numeric values, e.g. a price row. Structured so the checker reads them as values rather than parsing them out of a rendered frame.",
+                "items": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": ["label", "amount_minor", "currency"],
+                  "properties": {
+                    "label": { "type": "string" },
+                    "amount_minor": { "type": "integer" },
+                    "currency": { "type": "string" }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "cta": { "type": "string" }
+      }
+    },
+    "style": {
+      "type": "object",
+      "description": "Presentation only. NOT grounding-checked, and therefore MUST NOT be able to carry a value that appears to the viewer as a fact. Every field here is copied from the brand doc or is a bounded render setting.",
+      "additionalProperties": false,
+      "required": ["palette", "type", "motion_intensity"],
+      "properties": {
+        "palette": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["bg", "fg", "accent", "muted"],
+          "properties": {
+            "bg": { "$ref": "#/$defs/hex" },
+            "fg": { "$ref": "#/$defs/hex" },
+            "accent": { "$ref": "#/$defs/hex" },
+            "muted": { "$ref": "#/$defs/hex" }
+          }
+        },
+        "type": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["display", "body"],
+          "properties": {
+            "display": { "type": "string" },
+            "body": { "type": "string" }
+          }
+        },
+        "motion_intensity": { "type": "string", "enum": ["low", "medium", "high"] },
+        "density": { "type": "string", "enum": ["sparse", "balanced", "dense"] }
+      }
+    }
+  },
+  "$defs": {
+    "hex": { "type": "string", "pattern": "^#[0-9a-fA-F]{6}$" }
+  }
+}
