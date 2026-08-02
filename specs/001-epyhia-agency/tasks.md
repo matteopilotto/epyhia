@@ -102,6 +102,7 @@ network. If it needs any of those, the gate has been built wrong.
 - [ ] T043 Implement the input guardrail in `epyhia/ingest/guardrail.py` — a bounded Haiku judge over the raw brief that logs its decision and reason on **both** outcomes and stops a rejected brief before expensive work (FR-007)
 - [ ] T044 [P] Test in `tests/ingest/test_grounding.py`: the five derivation families are produced exactly, the same number written four ways all match after normalisation, the currency-label restatement matches without conversion, and a fabricated numeral is reported as a violation (FR-006, SC-004, R6)
 - [ ] T045 [P] Test in `tests/ingest/test_extractors.py`: the site extractor ignores `#0a0a0a`, `1.5rem`, `0.3s`, `viewBox` and `data-product`, and the `video_props` extractor reads `content` leaves while skipping every `style` value (R5)
+- [ ] T132 [P] Test in `tests/ingest/test_guardrail.py` using PydanticAI `FunctionModel`: a brief carrying instructions aimed at the system is rejected before any expensive work begins, an accepted brief logs its decision and reason too, and the screening decision is retrievable from the record on **both** outcomes (FR-007, SC-012)
 
 ### 2d · Shared API surface
 
@@ -109,7 +110,7 @@ network. If it needs any of those, the gate has been built wrong.
 - [ ] T047 [P] Implement the single error shape `{error, detail}` and its exception handlers in `epyhia/api/errors.py` (contracts/rest-api.md §Errors)
 - [ ] T048 [P] Implement `PromptService` in `epyhia/prompts_service.py` — renders `prompts/<agent>/<version>.jinja` and exposes the active `prompt_version`; no prompt text exists as a string literal in source (FR-060)
 - [ ] T049 [P] Implement the SSE helper in `epyhia/api/sse.py` emitting `task`, `action`, `artifact`, `agent_call` and `cost` events, designed for `fetch` + `ReadableStream` consumption (§10)
-- [ ] T050 Implement `POST /briefs` in `epyhia/api/routers/briefs.py` — synchronously canonicalise and hash, run the guardrail, extract the grounding set, open the run with its derived `alias`, enqueue the `plan` task; returns `201`, or `422 {error: "guardrail_rejected"}`, or `400` (FR-004, FR-007)
+- [ ] T050 Implement `POST /briefs` in `epyhia/api/routers/briefs.py` — validate the payload against [contracts/brief.schema.json](./contracts/brief.schema.json), returning `400` with itemised violations; then synchronously canonicalise and hash, run the guardrail, extract the grounding set, open the run with its derived `alias`, enqueue the `plan` task; returns `201` or `422 {error: "guardrail_rejected"}` (FR-001, FR-004, FR-007)
 - [ ] T051 [P] Implement `GET /runs` and `GET /runs/{id}` in `epyhia/api/routers/runs.py` returning status, brand doc version, prompt version, spend against budget and alias
 - [ ] T052 [P] Add the first brief fixture at `tests/fixtures/briefs/one.json` conforming to [contracts/brief.schema.json](./contracts/brief.schema.json), with both a `subscription` and a `one_time` product and a `currency_display` differing from `currency_charge`. It is **input data**, so it carries real client-shaped values — no test may assert against a value copied out of it
 
@@ -174,7 +175,7 @@ Separately inject one into the *site* and confirm the **gate** refuses the deplo
 - [ ] T077 [US2] Replace the `copy` stub — delete `epyhia/agents/copy_stub.py` and its call site so the `copy` task produces real reviewed copy that **blocks** the `site` task, with the Web Builder unchanged (FR-021, US2 scenario 6)
 - [ ] T078 [P] [US2] Implement the email adapter in `epyhia/gate/adapters/email.py` — `execute()` sends SMTP to Mailpit; `verify()` reads the message **back out of Mailpit's API** and stores `{message_id, recipient, subject}` (FR-037, §4.5)
 - [ ] T079 [P] [US2] Implement the recording sink in `epyhia/api/routers/sink.py` — token-authenticated `POST /sink/posts` → `{id, permalink}` and `GET /sink/posts/{id}`, backed by `sink_posts` (R4)
-- [ ] T080 [US2] Implement the publish adapter in `epyhia/gate/adapters/publish.py` — a real HTTP round trip to the sink's configured base URL, never an in-process call; `verify()` fetches the permalink and asserts the stored `payload_sha256` matches (R4)
+- [ ] T080 [US2] Implement the publish adapter in `epyhia/gate/adapters/publish.py` — approval-gated (`requires_approval = true`: a stand-in channel still gets real approval, FR-043); a real HTTP round trip to the sink's configured base URL, never an in-process call; `verify()` fetches the permalink and asserts the stored `payload_sha256` matches (R4)
 - [ ] T081 [P] [US2] Create the Remotion project in `video/` — pinned `4.0.503`, 3–4 parameterised composition archetypes consuming [contracts/video-props.schema.json](./contracts/video-props.schema.json), each with a 1080×1920 vertical variant of the same archetype
 - [ ] T082 [US2] Implement the `video` task handler in `epyhia/queue/handlers/video.py` — render the primary and vertical cuts locally from **one** `video_props` artifact, store both as artifacts, and use the long per-`kind` lease from R8 (FR-025)
 - [ ] T083 [US2] Wire the `video_props` grounding check into `epyhia/queue/handlers/pack.py` — extract every leaf under `content`, set-difference it, and never render a `flagged` props artifact (FR-026, R5)
@@ -182,7 +183,7 @@ Separately inject one into the *site* and confirm the **gate** refuses the deplo
 - [ ] T085 [P] [US2] Build the artifacts view in `console/src/routes/artifacts.tsx`, rendering flagged artifacts with their violations rather than hiding them
 - [ ] T086 [P] [US2] Test in `tests/integration/test_us2_grounding_hold.py`: a fabricated numeral in a draft is held through two revisions then stored `flagged`; the Reviewer's output is itemised and is never a rewrite (FR-023, FR-024)
 - [ ] T087 [US2] Test in `tests/gate/test_deploy_precondition.py`: a run whose `site` artifact is `flagged` has its `deploy` **refused by the gate**, with no adapter invoked and no agent involved (FR-016, §3.4)
-- [ ] T088 [P] [US2] Test in `tests/integration/test_us2_send_verify.py`: `send_email` halts for approval, and after approval `verify()` proves delivery by reading Mailpit; `publish` proves it by fetching the sink permalink
+- [ ] T088 [P] [US2] Test in `tests/integration/test_us2_send_verify.py`: `send_email` and `publish` **each** halt for approval (FR-043), and after approval `verify()` proves the email by reading it back from Mailpit and the post by fetching the sink permalink
 
 **Checkpoint**: US1 and US2 both work independently. Nothing leaves the system carrying a number
 the brief did not give it — including the site.
@@ -230,7 +231,7 @@ site, one catalogue, one order, and short-circuited actions carrying the first r
 - [ ] T105 [P] [US4] Implement `GET /runs/{id}/brand-doc`, `PUT /runs/{id}/brand-doc` and `GET /briefs/{id}/brand-docs/diff?from=&to=` in `epyhia/api/routers/brand_docs.py` — `PUT` **inserts version + 1** and never updates in place (FR-012)
 - [ ] T106 [P] [US4] Build the brand doc read/edit/diff view in `console/src/routes/brand-doc.tsx`
 - [ ] T107 [P] [US4] Test in `tests/integration/test_us4_rerun.py`: a re-run whose generated bytes differ still produces **one** deploy, because the deploy key excludes the site artifact hash (FR-045, US4 scenario 2)
-- [ ] T108 [P] [US4] Test in `tests/integration/test_us4_brand_doc_edit.py`: editing the brand doc and re-running produces a **genuine second publication**, distinguishable in the audit trail from a duplicate (FR-012, US4 scenario 3)
+- [ ] T108 [P] [US4] Test in `tests/integration/test_us4_brand_doc_edit.py`: editing the brand doc and re-running produces a **genuine second publication**, distinguishable in the audit trail from a duplicate, and the first publication's immutable deployment URL still serves the first build marker after the second goes live (FR-012, FR-017, US1 scenario 5, US4 scenario 3)
 - [ ] T109 [P] [US4] Test in `tests/integration/test_us4_crash.py`: killing the worker while an action sits `awaiting_approval` leaves the pending action actionable after restart, and the operator's click resumes that same action rather than starting a second (FR-038, SC-008)
 - [ ] T110 [P] [US4] Test in `tests/integration/test_us4_memo.py`: dropping `agent_cache` entirely changes cost and nothing else — every idempotency key and every action outcome is unchanged (FR-048)
 
@@ -325,7 +326,7 @@ businesses.
 - **Phase 2a**: T015, T016, T017 in parallel after T014; then **T021–T027 all in parallel** — seven
   separate test files against one fake adapter
 - **Phase 2b**: T030 and T035 in parallel; T034 and T038 in parallel
-- **Phase 2c**: T039 and T040 in parallel; T044 and T045 in parallel
+- **Phase 2c**: T039 and T040 in parallel; T044, T045 and T132 in parallel
 - **Phase 2d**: T046, T047, T048, T049 are four independent modules
 - **Phase 3**: T053 and T057 (two prompt files) in parallel; T064 and T066 in parallel
 - **Phase 4**: T072, T073, T078, T079, T081 in parallel; T084, T085, T086, T088 in parallel
