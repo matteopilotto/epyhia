@@ -45,3 +45,7 @@ def get_adapter(action_type: str) -> Adapter:
 
 def unregister(action_type: str) -> None:
     _REGISTRY.pop(action_type, None)
+
+
+def clear() -> None:
+    _REGISTRY.clear()
