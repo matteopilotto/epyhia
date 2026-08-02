@@ -46,7 +46,7 @@ Single repository, one installable Python package `epyhia/`, three sibling non-P
 - [X] T008 Write `docker-compose.yml` — Postgres, Mailpit, `web`, `worker`, all defaults from `.env.example` so `docker compose up` is the whole setup with no account signup (FR-065)
 - [X] T009 [P] Write `fly.toml` — `[processes] web`/`worker` off one image, `release_command = "alembic upgrade head"`
 - [X] T010 Initialise Alembic in `migrations/` with `migrations/env.py` reading the URL from `epyhia.config`
-- [ ] T011 Create the FastAPI app factory in `epyhia/api/app.py` — router mounting, Logfire init with `run_id` as a span field, and a static mount serving the built SPA from one origin (no CORS)
+- [X] T011 Create the FastAPI app factory in `epyhia/api/app.py` — router mounting, Logfire init with `run_id` as a span field, and a static mount serving the built SPA from one origin (no CORS)
 - [ ] T012 [P] Write `tests/conftest.py` — a transactional Postgres session fixture and an `anyio`/asyncio event-loop fixture; no network, no API key, no credentials
 
 ---

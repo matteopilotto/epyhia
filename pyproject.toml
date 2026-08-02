@@ -5,7 +5,7 @@ description = "An agency staffed by agents"
 requires-python = ">=3.13"
 dependencies = [
     "pydantic-ai==2.22.0",
-    "logfire==4.39.0",
+    "logfire[fastapi]==4.39.0",
     "fastapi",
     "uvicorn",
     "sqlalchemy>=2.0",
