@@ -1,5 +1,9 @@
 import os
 
+from dotenv import load_dotenv
+
+load_dotenv()
+
 _CREDENTIAL_ATTRS = {
     "vercel": "vercel_token",
     "stripe": "stripe_secret_key",

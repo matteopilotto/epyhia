@@ -14,6 +14,7 @@ dependencies = [
     "greenlet",
     "jinja2",
     "pyyaml",
+    "python-dotenv",
     "httpx",
     "stripe",
 ]
