@@ -43,7 +43,7 @@ Single repository, one installable Python package `epyhia/`, three sibling non-P
 - [X] T005 [P] Write `.env.example` — variable names and safe local defaults only, never a real key: `DATABASE_URL`, `ANTHROPIC_API_KEY`, `VERCEL_TOKEN`, `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `SMTP_HOST`, `SMTP_PORT`, `MAILPIT_API_URL`, `SINK_BASE_URL`, `SINK_TOKEN`, `AUTH0_DOMAIN`, `AUTH0_AUDIENCE`, `RUN_BUDGET_USD`, `DAILY_CEILING_USD`
 - [X] T006 Implement `epyhia/config.py` — a `Settings` object where an absent credential is a stored `None`, never a start-time failure; expose `require(provider)` returning the value or raising `CredentialNotConfigured(provider)` (FR-064)
 - [X] T007 Write `Dockerfile` — Python 3.13 + Node 22 + headless Chrome in one image; Node stage builds `console/` and installs `video/` deps; single image serves both Fly processes
-- [ ] T008 Write `docker-compose.yml` — Postgres, Mailpit, `web`, `worker`, all defaults from `.env.example` so `docker compose up` is the whole setup with no account signup (FR-065)
+- [X] T008 Write `docker-compose.yml` — Postgres, Mailpit, `web`, `worker`, all defaults from `.env.example` so `docker compose up` is the whole setup with no account signup (FR-065)
 - [ ] T009 [P] Write `fly.toml` — `[processes] web`/`worker` off one image, `release_command = "alembic upgrade head"`
 - [ ] T010 Initialise Alembic in `migrations/` with `migrations/env.py` reading the URL from `epyhia.config`
 - [ ] T011 Create the FastAPI app factory in `epyhia/api/app.py` — router mounting, Logfire init with `run_id` as a span field, and a static mount serving the built SPA from one origin (no CORS)

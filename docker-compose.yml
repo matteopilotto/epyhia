@@ -1,0 +1,51 @@
+services:
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: epyhia
+      POSTGRES_PASSWORD: epyhia
+      POSTGRES_DB: epyhia
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U epyhia"]
+      interval: 2s
+      timeout: 2s
+      retries: 15
+
+  mailpit:
+    image: axllent/mailpit:latest
+    ports:
+      - "1025:1025"
+      - "8025:8025"
+
+  web:
+    build: .
+    command: uvicorn epyhia.api.app:app --host 0.0.0.0 --port 8000
+    env_file: .env.example
+    environment:
+      DATABASE_URL: postgresql+asyncpg://epyhia:epyhia@postgres:5432/epyhia
+      SMTP_HOST: mailpit
+      MAILPIT_API_URL: http://mailpit:8025
+    ports:
+      - "8000:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  worker:
+    build: .
+    command: python -m epyhia.queue.worker
+    env_file: .env.example
+    environment:
+      DATABASE_URL: postgresql+asyncpg://epyhia:epyhia@postgres:5432/epyhia
+      SMTP_HOST: mailpit
+      MAILPIT_API_URL: http://mailpit:8025
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+volumes:
+  postgres-data:
