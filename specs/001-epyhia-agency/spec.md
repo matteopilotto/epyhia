@@ -322,9 +322,12 @@ confirm the two runs share no artifact content, no visual identity, and no publi
   pairing, a named motion language, a selected composition archetype, and voice do/don't lists.
 - **FR-010**: The brand identity record MUST have a fixed schema with per-client contents; the
   schema MUST NOT change to accommodate a particular client.
-- **FR-011**: Every agent except the review pass MUST read the brand identity record and MUST
-  NOT read the raw brief. The review pass MUST read both, because it checks facts as well as
-  voice.
+- **FR-011**: The planning stage that derives the brand identity record is the only work that
+  reads the raw brief in order to write it. Every agent downstream MUST read the brand
+  identity record and MUST NOT read the raw brief, with two bounded exceptions: the review
+  pass MUST read both, because it checks facts as well as voice; and the money stage MUST
+  receive product facts through the run's resolved catalogue — structured product fields
+  extracted from the brief at intake — never by reading the raw brief itself.
 - **FR-012**: The brand identity record MUST be readable, editable, and diffable from the
   operator console, and editing it MUST produce a new version that a subsequent run treats as
   genuinely different work.
@@ -505,8 +508,8 @@ confirm the two runs share no artifact content, no visual identity, and no publi
 - **Brief**: The verbatim client input and its content hash. The sole boundary through which
   client facts enter the system.
 - **Run**: One execution against one brief. Carries the brand identity version, the instruction
-  version, the grounding record, the budget, and status. Its identifier threads through every
-  model call and every action.
+  version, the grounding record, the resolved catalogue derived from the brief's product list,
+  the budget, and status. Its identifier threads through every model call and every action.
 - **Brand identity record**: The versioned, structured parameterisation of a run — palette, type
   pairing, motion language, composition archetype, voice, business name. Read by every agent
   downstream.

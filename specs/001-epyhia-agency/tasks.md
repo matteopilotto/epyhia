@@ -199,7 +199,7 @@ catalogue, click buy on the live site, complete with a test card, and confirm an
 matching a product in that brief.
 
 - [ ] T089 [P] [US3] Write `prompts/ops/v1.jinja` — near-mechanical translation of `brief.products[]` into catalogue rows; no product, price, currency or billing type may appear in the template (FR-027)
-- [ ] T090 [US3] Implement Ops in `epyhia/agents/ops.py` — `claude-haiku-4-5`, reads the brand doc plus `brief.products[]`; gate handles are exactly `stripe_product`, `stripe_price` and `arm_charge_path`. It may never deploy, publish or touch markup
+- [ ] T090 [US3] Implement Ops in `epyhia/agents/ops.py` — `claude-haiku-4-5`, reads the brand doc plus the run's **resolved catalogue** from T091 (derived from `brief.products[]` at ingest — Ops never reads the raw brief, FR-011); gate handles are exactly `stripe_product`, `stripe_price` and `arm_charge_path`. It may never deploy, publish or touch markup. Depends on T091
 - [ ] T091 [US3] Implement slug derivation in `epyhia/ingest/catalogue.py` — `slugify(product.name)` computed at ingest and stored on the run's resolved catalogue, so the site's `data-product` and Ops's price rows both derive from the same brief field rather than from each other (R11, §6.2)
 - [ ] T092 [US3] Implement the `stripe_product` and `stripe_price` adapters in `epyhia/gate/adapters/stripe.py` — create from brief fields, `verify()` reads the object back by id and asserts it exists (contracts/action-gate.md §4)
 - [ ] T093 [US3] Implement the `arm_charge_path` adapter in `epyhia/gate/adapters/stripe.py` — approval-gated; `verify()` re-reads **every** price from Stripe and asserts each is `active` with a matching `unit_amount` and `currency` (FR-029)
