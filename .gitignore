@@ -1,0 +1,20 @@
+# Secrets — real keys live in `fly secrets` and an untracked local .env only
+.env
+.env.*
+!.env.example
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+
+# Node / console build
+node_modules/
+dist/
+
+# Remotion render output — artifacts of record live in Postgres, not the tree
+out/
+*.mp4
+
+# Working notes, deliberately untracked (see .claude/DECISIONS.md header)
+.claude/DECISIONS.md
