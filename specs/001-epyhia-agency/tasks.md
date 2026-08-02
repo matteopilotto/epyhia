@@ -91,7 +91,7 @@ network. If it needs any of those, the gate has been built wrong.
 - [X] T034 [P] Test in `tests/queue/test_claim.py`: two workers claiming concurrently each get a distinct row; an expired lease is re-claimable; an `awaiting_approval` row is left alone by the sweeper (FR-047)
 - [X] T035 [P] Write `epyhia/cost/pricing.yaml` in the [research.md R9](./research.md) shape — per model a `tier` and a list of `effective_from` rate rows carrying `input`, `output`, `cache_write`, `cache_read`
 - [X] T036 Implement `epyhia/cost/pricing.py` — load `pricing.yaml`, select the greatest `effective_from` not after a call's timestamp, and raise a hard error when no rate row applies (never a silent `0.00`)
-- [ ] T037 Implement `epyhia/cost/ledger.py` — write one `agent_calls` row per model call with agent, model id, `tier` read from `pricing.yaml`, four token counts from `RunUsage`, derived cost, latency and `cache_hit`; both columns NOT NULL (FR-049, R9)
+- [X] T037 Implement `epyhia/cost/ledger.py` — write one `agent_calls` row per model call with agent, model id, `tier` read from `pricing.yaml`, four token counts from `RunUsage`, derived cost, latency and `cache_hit`; both columns NOT NULL (FR-049, R9)
 - [ ] T038 [P] Test in `tests/cost/test_pricing.py`: effective-dated selection picks the right row across a rate change, and an unknown model id raises rather than costing zero (FR-051, R9)
 
 ### 2c · Brief ingest — `DESIGN.md` §12 step 4, before anything expensive runs
