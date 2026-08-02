@@ -1,0 +1,27 @@
+# USD per million tokens. Cache write/read derived from the standard ephemeral
+# (5-minute TTL) multipliers: write = 1.25x input, read = 0.1x input.
+models:
+  claude-opus-5:
+    tier: planning
+    rates:
+      - effective_from: 2026-01-01
+        input: 5.00
+        output: 25.00
+        cache_write: 6.25
+        cache_read: 0.50
+  claude-sonnet-5:
+    tier: writing
+    rates:
+      - effective_from: 2026-01-01
+        input: 3.00
+        output: 15.00
+        cache_write: 3.75
+        cache_read: 0.30
+  claude-haiku-4-5:
+    tier: checking
+    rates:
+      - effective_from: 2026-01-01
+        input: 1.00
+        output: 5.00
+        cache_write: 1.25
+        cache_read: 0.10
