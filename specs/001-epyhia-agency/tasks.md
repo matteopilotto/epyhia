@@ -150,7 +150,7 @@ changing.
 - [X] T067 [US1] Implement `POST /actions/{id}/approve` and `POST /actions/{id}/deny` in `epyhia/api/routers/actions.py` — write `approval_decision`, `approved_by` (Auth0 `sub`) and `approved_at`, enqueue the `resume` task carrying the action id, and return `409 {error: "not_awaiting_approval"}` on a second click (FR-038, R7 step 5)
 - [X] T068 [US1] Scaffold the console in `console/` — Vite + React + TanStack Router/Query + Tailwind + shadcn/ui + Auth0, consuming SSE via `fetch` + `ReadableStream` rather than `EventSource` (§10)
 - [X] T069 [US1] Build the brief submit form and the live run timeline in `console/src/routes/runs.tsx`
-- [ ] T070 [US1] Build the approval view in `console/src/routes/approvals.tsx` showing what is about to happen, the concrete target, the projected cost, **the idempotency key**, and approve/deny controls (FR-039, SC-005)
+- [X] T070 [US1] Build the approval view in `console/src/routes/approvals.tsx` showing what is about to happen, the concrete target, the projected cost, **the idempotency key**, and approve/deny controls (FR-039, SC-005)
 - [ ] T071 [US1] Integration test in `tests/integration/test_us1_brief_to_site.py` using PydanticAI `TestModel`/`FunctionModel` and the fake deploy adapter: submit → brand doc → site → `awaiting_approval` → approve → `succeeded` with `matched_name` read from the brand doc row, plus the deny path leaving nothing published (US1 scenarios 1–4)
 
 **Checkpoint**: US1 is fully functional. A brief becomes a proved-live URL, and the audit row
