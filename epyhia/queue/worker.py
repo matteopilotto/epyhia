@@ -46,6 +46,12 @@ async def run_once(session: AsyncSession, *, kind: str | None = None) -> bool:
 
     try:
         await handler(session, task)
+        await session.execute(
+            text(
+                "UPDATE tasks SET state = 'done', lease_expires_at = NULL WHERE id = :id"
+            ),
+            {"id": task.id},
+        )
     except ApprovalRequired as exc:
         action_id = (exc.metadata or {}).get("action_id")
         await session.execute(
