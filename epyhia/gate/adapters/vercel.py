@@ -4,8 +4,9 @@ import re
 
 import httpx
 
+from epyhia.gate.errors import VerificationFailed
 from epyhia.gate.keys import alias_for
-from epyhia.gate.registry import GateContext
+from epyhia.gate.registry import GateContext, register
 
 API_BASE = "https://api.vercel.com"
 
@@ -16,6 +17,10 @@ PROJECT_PREFIX = "epyhia-"
 
 MARKER_NAME = "epyhia-build"
 _HEAD_OPEN = re.compile(r"<head[^>]*>", re.IGNORECASE)
+_MARKER_TAG = re.compile(
+    rf"""<meta[^>]*name=["']?{MARKER_NAME}["']?[^>]*content=["']?(?P<marker>[^"'>\s]+)""",
+    re.IGNORECASE,
+)
 
 
 class DeployFailed(Exception):
@@ -87,6 +92,48 @@ class VercelAdapter:
             "url": deployment.get("url"),
         }
 
+    async def verify(self, request: dict, result: dict, ctx: GateContext) -> dict:
+        """Prove the page is live, independently of what `execute()` came back with.
+
+        The probe fetches the alias it **derives** from the brief hash — never
+        `result["url"]`. An adapter whose verify() only reads what execute() returned is the
+        "status field is not evidence" failure with extra steps (contracts/action-gate.md §3).
+        """
+        alias = alias_for(request["brief_hash"])
+        url = f"https://{alias}"
+        # Read from the run's own brand doc row at verify time, never a literal in source:
+        # the probe string varies by client, so it cannot live here (FR-018, FR-059).
+        name = (ctx.brand_doc or {}).get("name")
+        if not name:
+            raise VerificationFailed("no brand doc name to probe for")
+        expected = build_marker(request)
+
+        async with httpx.AsyncClient(transport=self._transport, timeout=30.0) as client:
+            response = await client.get(url, follow_redirects=True)
+
+        if response.status_code != 200:
+            raise VerificationFailed(f"{url} returned {response.status_code}")
+
+        body = response.text
+        if name not in body:
+            raise VerificationFailed(f"{url} does not present the brand doc name")
+
+        match = _MARKER_TAG.search(body)
+        served = match.group("marker") if match else None
+        if served != expected:
+            # A deploy that only checks for 200 passes here and is wrong: the alias can
+            # succeed while still serving the previous build (§4.5, R2, US1 scenario 6).
+            raise VerificationFailed(
+                f"{url} serves build {served!r}, expected {expected!r}"
+            )
+
+        return {
+            "status": response.status_code,
+            "matched_name": name,
+            "matched_build_marker": expected,
+            "url": url,
+        }
+
     async def _create_deployment(
         self, client: httpx.AsyncClient, project: str, request: dict
     ) -> dict:
@@ -149,3 +196,8 @@ class VercelAdapter:
         # 409 means the alias is already assigned to this deployment — success, not an error.
         if response.status_code >= 400 and response.status_code != 409:
             raise DeployFailed(f"assign alias: {response.status_code} {response.text}")
+
+
+# The pair, registered together — every action type registers exactly one execute()/verify()
+# (contracts/action-gate.md §3).
+register(VercelAdapter())

@@ -3,6 +3,7 @@ import json
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+import epyhia.gate.adapters  # noqa: F401  — registers the deploy pair
 from epyhia.agents.web_builder import build_site
 from epyhia.artifacts.store import PostgresArtifactStore
 from epyhia.gate import gate
