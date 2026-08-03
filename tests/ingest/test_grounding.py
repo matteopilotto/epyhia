@@ -1,7 +1,12 @@
+import json
 from decimal import Decimal
+from pathlib import Path
 
+from epyhia.ingest.extractors import extract_site_text
 from epyhia.ingest.grounding import build_grounding_set, set_difference
 from epyhia.ingest.normalise import GroundingEntry, find_amounts
+
+_FIXTURE = Path(__file__).parents[1] / "fixtures" / "briefs" / "one.json"
 
 _BRIEF = {
     "products": [
@@ -23,6 +28,7 @@ _BRIEF = {
         },
     ],
     "voice": {"adjectives": ["bold", "warm"], "do": ["show up"], "dont": ["shout", "lie"]},
+    "locale": "en-US",
     "established": 2015,
 }
 
@@ -81,6 +87,60 @@ def test_currency_label_restatement_matches_without_conversion() -> None:
     extracted = find_amounts("In Europe, Basic costs €120.00.", "en-US")
     assert extracted == [GroundingEntry(value=Decimal("12000"), currency="EUR")]
     assert set_difference(extracted, grounding_set) == []
+
+
+def _truthful_site(brief: dict) -> str:
+    """A site whose every numeral is drawn from the brief's own fields. Nothing is
+    typed by hand: T052 forbids a test asserting against a value copied out of the
+    fixture, and reading the values keeps this honest when the fixture changes."""
+    parts = [
+        f"<h1>{brief['business_name']}</h1>",
+        f"<p>{brief['tagline']}</p>",
+        f"<p>{brief['one_liner']}</p>",
+    ]
+    parts += [f"<p>{value}</p>" for value in brief["positioning"].values()]
+    for product in brief["products"]:
+        parts.append(f"<h2>{product['name']}</h2>")
+        parts.append(f"<p>{product['description']}</p>")
+        parts += [f"<li>{item}</li>" for item in product["features"]]
+        parts += [f"<li>{item}</li>" for item in product["not_covered"]]
+    parts += [f"<p>{value}</p>" for value in brief["contact"].values()]
+    return "<html><body>" + "".join(parts) + "</body></html>"
+
+
+def test_truthful_site_drawn_from_the_brief_reports_no_violations() -> None:
+    """The brief states durations, weights and counts in prose — `48 hours`, `340g`,
+    `every four weeks`. Grounding only the structured fields makes the honest site a
+    forgery and the gate refuses its deploy, so FR-004 says *every* numeral."""
+    brief = json.loads(_FIXTURE.read_text())
+    grounding_set = build_grounding_set(brief, current_year=2026)
+
+    extracted = []
+    for chunk in extract_site_text(_truthful_site(brief)):
+        extracted += find_amounts(chunk, brief["locale"])
+
+    assert extracted, "expected the brief's own prose to carry numerals"
+    assert set_difference(extracted, grounding_set) == []
+
+
+def test_phone_numbers_are_identifiers_on_both_sides_of_the_difference() -> None:
+    """A phone number is spelled with digits but claims nothing, so it must not enter
+    the grounding set as three arbitrary values, nor be extracted from a site that
+    prints it. Excluded on both sides, never grounded on one."""
+    brief = json.loads(_FIXTURE.read_text())
+
+    for shape in ("+1-503-555-0142", "(503) 555-0142", "503-555-0142"):
+        assert find_amounts(f"Call us on {shape} today.", "en-US") == []
+
+    # The brief's own phone contributes nothing to the grounding set: blanking it
+    # changes nothing, so no arbitrary digit run of its becomes sayable.
+    without_phone = json.loads(_FIXTURE.read_text())
+    without_phone["contact"]["phone"] = ""
+    assert build_grounding_set(brief, 2026) == build_grounding_set(without_phone, 2026)
+
+    # A street number is not structurally distinguishable from a quantity, so it stays
+    # grounded as a literal rather than being guessed at.
+    assert find_amounts(brief["contact"]["address"], brief["locale"])
 
 
 def test_fabricated_numeral_reported_as_violation() -> None:
