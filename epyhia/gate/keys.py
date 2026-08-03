@@ -36,3 +36,9 @@ def video_render_key(archetype_id: str, props: str, remotion_version: str) -> st
 
 def send_email_key(brief_hash: str, template: str, recipient: str) -> str:
     return _digest("send_email", brief_hash, template, recipient)
+
+
+def alias_for(brief_hash: str) -> str:
+    """`epyhia-<brief_hash[:12]>.vercel.app` — a pure function of the brief hash, so the
+    deploy adapter's `verify()` derives the URL it probes rather than being told it (R2)."""
+    return f"epyhia-{brief_hash[:12]}.vercel.app"

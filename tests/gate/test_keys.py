@@ -21,3 +21,14 @@ def test_video_render_key_changes_when_pinned_remotion_version_is_bumped() -> No
     key_after = keys.video_render_key("archetype_1", "props_json", "4.0.504")
 
     assert key_before != key_after
+
+
+def test_alias_is_a_pure_function_of_the_brief_hash() -> None:
+    alias_a = keys.alias_for("brief_hash_1")
+    alias_b = keys.alias_for("brief_hash_1")
+    assert alias_a == alias_b
+    assert alias_a != keys.alias_for("brief_hash_2")
+
+    # No parameter for brand doc version, prompt version, or generated site bytes —
+    # verify() must be able to compute this without trusting anything handed to it.
+    assert keys.alias_for("brief_hash_1") == "epyhia-brief_hash_1.vercel.app"

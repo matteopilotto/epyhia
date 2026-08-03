@@ -11,6 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from epyhia.api.auth import require_operator
 from epyhia.api.db import get_session
 from epyhia.config import settings
+from epyhia.gate.keys import alias_for
 from epyhia.ingest.grounding import build_grounding_set
 from epyhia.ingest.guardrail import screen_brief
 from epyhia.ingest.hashing import content_sha256
@@ -31,12 +32,6 @@ _SCHEMA_PATH = (
     / "brief.schema.json"
 )
 _VALIDATOR = jsonschema.Draft202012Validator(json.loads(_SCHEMA_PATH.read_text()))
-
-
-def _alias_for(brief_hash: str) -> str:
-    """`epyhia-<brief_hash[:12]>.vercel.app` — a pure function of the brief hash, so the
-    deploy adapter's `verify()` derives the URL it probes rather than being told it (R2)."""
-    return f"epyhia-{brief_hash[:12]}.vercel.app"
 
 
 @router.post("/briefs", status_code=201, response_model=None)
@@ -75,7 +70,7 @@ async def submit_brief(
             content={"error": "guardrail_rejected", "detail": verdict.reason},
         )
 
-    alias = _alias_for(brief_hash)
+    alias = alias_for(brief_hash)
     run = Run(
         id=uuid.uuid4(),
         brief_id=brief.id,
