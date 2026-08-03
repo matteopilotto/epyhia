@@ -91,24 +91,33 @@ def _parse_digit_token(token: str) -> Decimal:
     return Decimal(re.sub(f"[{re.escape(_SEPARATOR_CHARS)}]", "", token))
 
 
+def _detect_currency(text: str) -> tuple[str | None, str]:
+    """Finds a currency symbol or ISO code and strips it out, returning the
+    currency (if any) and the remaining text."""
+    for symbol, code in _CURRENCY_SYMBOLS.items():
+        if symbol in text:
+            return code, text.replace(symbol, "").strip()
+
+    iso_match = _ISO_CODE_RE.search(text)
+    if iso_match:
+        currency = iso_match.group(0)
+        return currency, text.replace(currency, "").strip()
+
+    return None, text.strip()
+
+
+def _to_minor(value: Decimal, currency: str | None) -> Decimal:
+    """Reduces an amount to minor units when a currency is present (FR-006)."""
+    if currency is None:
+        return value
+    minor_exponent = _MINOR_EXPONENT.get(currency, 2)
+    return (value * (10**minor_exponent)).quantize(Decimal(1))
+
+
 def normalise_amount(raw: str, locale: str) -> GroundingEntry | None:
     """Strips separators and currency symbols, maps number words to digits, and
     reduces the amount to minor units when a currency is present (FR-006)."""
-    text = raw.strip()
-    currency = None
-
-    for symbol, code in _CURRENCY_SYMBOLS.items():
-        if symbol in text:
-            currency = code
-            text = text.replace(symbol, "")
-            break
-    else:
-        iso_match = _ISO_CODE_RE.search(text)
-        if iso_match:
-            currency = iso_match.group(0)
-            text = text.replace(currency, "")
-
-    text = text.strip()
+    currency, text = _detect_currency(raw.strip())
 
     digit_match = _DIGIT_TOKEN_RE.search(text)
     if digit_match:
@@ -118,11 +127,7 @@ def normalise_amount(raw: str, locale: str) -> GroundingEntry | None:
         if value is None:
             return None
 
-    if currency is not None:
-        minor_exponent = _MINOR_EXPONENT.get(currency, 2)
-        value = (value * (10**minor_exponent)).quantize(Decimal(1))
-
-    return GroundingEntry(value=value, currency=currency)
+    return GroundingEntry(value=_to_minor(value, currency), currency=currency)
 
 
 def find_amounts(text: str, locale: str) -> list[GroundingEntry]:
@@ -162,10 +167,7 @@ def find_amounts(text: str, locale: str) -> list[GroundingEntry]:
             currency = _CURRENCY_WORDS.get(tokens[j + 1].group(0).lower())
 
         if value is not None:
-            if currency is not None:
-                minor_exponent = _MINOR_EXPONENT.get(currency, 2)
-                value = (value * (10**minor_exponent)).quantize(Decimal(1))
-            entries.append(GroundingEntry(value=value, currency=currency))
+            entries.append(GroundingEntry(value=_to_minor(value, currency), currency=currency))
 
         i = j + 1
 
