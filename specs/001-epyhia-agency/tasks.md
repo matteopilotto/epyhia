@@ -133,7 +133,7 @@ returned URL, then read `actions.evidence` and confirm `matched_name` equals
 (`DESIGN.md` §12 step 6). The seam is what matters — US2 fills it in without the Web Builder
 changing.
 
-- [ ] T053 [P] [US1] Write `prompts/strategist/v1.jinja` — reads the brief as named fields, emits a brand doc conforming to [contracts/brand-doc.schema.json](./contracts/brand-doc.schema.json). Contains **no aesthetic direction for any client** and no client token of any kind
+- [X] T053 [P] [US1] Write `prompts/strategist/v1.jinja` — reads the brief as named fields, emits a brand doc conforming to [contracts/brand-doc.schema.json](./contracts/brand-doc.schema.json). Contains **no aesthetic direction for any client** and no client token of any kind
 - [ ] T054 [US1] Implement the Strategist in `epyhia/agents/strategist.py` — `claude-opus-5`, brief passed as a **typed object** never as prose (FR-008), toolset is exactly `write_brand_doc` + `enqueue_tasks` and **nothing else** (FR-042). Never set `temperature`/`top_p`/`top_k`
 - [ ] T055 [US1] Implement the fixed pipeline in `epyhia/queue/pipeline.py` — the task set `plan → {copy → site, demand, money}` is constructed in code; `enqueue_tasks` selects from it and cannot compose a graph (FR-013, Principle III)
 - [ ] T056 [US1] Implement the interim `copy` artifact stub in `epyhia/agents/copy_stub.py`, derived from `brand_doc.composition_plan`, writing a `copy` artifact of the same shape the Marketer will later write (§12 step 6)
