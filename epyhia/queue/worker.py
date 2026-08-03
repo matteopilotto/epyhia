@@ -75,6 +75,11 @@ async def run_once(session: AsyncSession, *, kind: str | None = None) -> bool:
 
 async def run_worker(*, poll_interval_seconds: float = 1.0) -> None:
     """The `worker` Fly process entrypoint (fly.toml `[processes] worker`)."""
+    # Imported here rather than at module scope: each handler module registers itself by
+    # calling `register_handler` above, so importing the package from the top would close
+    # a cycle back onto this one.
+    import epyhia.queue.handlers  # noqa: F401
+
     engine = create_async_engine(settings.database_url)
     session_factory = async_sessionmaker(bind=engine, expire_on_commit=False)
     try:
