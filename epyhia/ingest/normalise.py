@@ -142,9 +142,9 @@ def find_amounts(text: str, locale: str) -> list[GroundingEntry]:
     for match in _DIGIT_TOKEN_RE.finditer(text):
         start, end = match.span()
         window = text[max(0, start - 4) : min(len(text), end + 4)]
-        entry = normalise_amount(window, locale)
-        if entry is not None:
-            entries.append(entry)
+        currency, _ = _detect_currency(window)
+        value = _to_minor(_parse_digit_token(match.group(0)), currency)
+        entries.append(GroundingEntry(value=value, currency=currency))
 
     lang = locale.split("-")[0].lower()
     words_map = _WORD_MAPS.get(lang, {})
