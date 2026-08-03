@@ -25,6 +25,14 @@ _SCALES = {"hundred": 100, "thousand": 1_000, "million": 1_000_000}
 
 _WORD_MAPS = {"en": {**_ONES, **_TENS, **_SCALES}}
 
+# A phone number is a label that happens to be spelled with digits, not a quantity.
+# Shredding one into 1 / 503 / 555 grounds three arbitrary values *and* flags a site
+# for printing its own number. Masking it here puts the exclusion on both sides of the
+# set difference at once, since brief and artifact are scanned by this same function.
+# Hyphen- and paren-separated only: thousands separators are dots and spaces, so no
+# number format can collide with this.
+_PHONE_RE = re.compile(r"\+?\d+(?:-\d+){2,}|\(\d+\)[\s-]*\d+(?:-\d+)*")
+
 _CURRENCY_WORDS = {
     "dollars": "USD", "dollar": "USD",
     "euros": "EUR", "euro": "EUR",
@@ -121,8 +129,10 @@ def find_amounts(text: str, locale: str) -> list[GroundingEntry]:
     """Scans free text for every numeral it carries — digit tokens with a nearby
     currency marker, and spelled-out runs of number words — so a fabricated
     amount cannot hide in prose (FR-006, spec.md "spelling a number out is not
-    a way around the check")."""
+    a way around the check"). Phone-shaped tokens are identifiers rather than
+    quantities and are excluded from both sides of the comparison."""
     entries = []
+    text = _PHONE_RE.sub(" ", text)
 
     for match in _DIGIT_TOKEN_RE.finditer(text):
         start, end = match.span()
