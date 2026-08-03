@@ -1,5 +1,6 @@
 import uuid
 from collections.abc import AsyncIterator
+from datetime import datetime
 
 import pytest_asyncio
 from sqlalchemy import text
@@ -54,3 +55,33 @@ async def make_run(session: AsyncSession) -> uuid.UUID:
     )
     await session.commit()
     return run_id
+
+
+async def _insert_task(
+    session: AsyncSession,
+    run_id: uuid.UUID,
+    *,
+    kind: str = "plan",
+    state: str = "pending",
+    lease_expires_at: datetime | None = None,
+    attempts: int = 0,
+    depends_on: list[uuid.UUID] | None = None,
+) -> uuid.UUID:
+    task_id = uuid.uuid4()
+    await session.execute(
+        text(
+            "INSERT INTO tasks (id, run_id, kind, state, lease_expires_at, attempts, depends_on) "
+            "VALUES (:id, :run_id, :kind, :state, :lease_expires_at, :attempts, :depends_on)"
+        ),
+        {
+            "id": task_id,
+            "run_id": run_id,
+            "kind": kind,
+            "state": state,
+            "lease_expires_at": lease_expires_at,
+            "attempts": attempts,
+            "depends_on": depends_on,
+        },
+    )
+    await session.commit()
+    return task_id

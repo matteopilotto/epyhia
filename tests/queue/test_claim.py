@@ -7,35 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from epyhia.queue.claim import claim_task
 from epyhia.queue.sweeper import sweep_expired_leases
-from tests.queue.conftest import make_run
-
-
-async def _insert_task(
-    session: AsyncSession,
-    run_id: uuid.UUID,
-    *,
-    kind: str = "plan",
-    state: str = "pending",
-    lease_expires_at: datetime | None = None,
-    attempts: int = 0,
-) -> uuid.UUID:
-    task_id = uuid.uuid4()
-    await session.execute(
-        text(
-            "INSERT INTO tasks (id, run_id, kind, state, lease_expires_at, attempts) "
-            "VALUES (:id, :run_id, :kind, :state, :lease_expires_at, :attempts)"
-        ),
-        {
-            "id": task_id,
-            "run_id": run_id,
-            "kind": kind,
-            "state": state,
-            "lease_expires_at": lease_expires_at,
-            "attempts": attempts,
-        },
-    )
-    await session.commit()
-    return task_id
+from tests.queue.conftest import _insert_task, make_run
 
 
 async def test_two_concurrent_claims_get_distinct_rows(queue_session: AsyncSession) -> None:
