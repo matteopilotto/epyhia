@@ -8,7 +8,12 @@ DEFAULT_LEASE_MINUTES = 2
 # Per-`kind` lease interval (research.md R8): the video render task is the one legitimate
 # long lease, so the interval is chosen by `kind` rather than global.
 LEASE_MINUTES_BY_KIND: dict[str, int] = {
-    "video": 15,
+    "plan": 10,  # Strategist, Opus 5, extended thinking on by default
+    "copy": 15,  # Marketer + Reviewer, up to two revisions (T076)
+    "site": 15,  # Web Builder, streamed ~64K max_tokens
+    "demand": 15,
+    "money": 10,
+    "video": 15,  # unchanged
 }
 
 _LEASE_CASE = "CASE kind {whens} ELSE interval '{default} minutes' END".format(
