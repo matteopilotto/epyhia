@@ -1,0 +1,65 @@
+{
+  "business_name": "Meridian Coffee Roasters",
+  "tagline": "Small batches, honest sourcing, no burnt beans.",
+  "one_liner": "A neighbourhood roastery shipping freshly roasted single-origin coffee direct to your door.",
+  "positioning": {
+    "who_its_for": "People who care where their coffee comes from and drink it before it goes stale.",
+    "what_problem": "Supermarket bags sit on shelves for months and taste like cardboard by the time they're opened.",
+    "why_them": "We roast to order in small batches and ship within 48 hours of roasting, every time."
+  },
+  "products": [
+    {
+      "name": "Roaster's Choice Subscription",
+      "description": "A rotating 340g bag of our current favourite single-origin, roasted fresh and delivered every four weeks.",
+      "price_minor": 1800,
+      "currency_display": "EUR",
+      "currency_charge": "USD",
+      "billing": "subscription",
+      "features": [
+        "Fresh 340g bag every 4 weeks",
+        "Rotating single-origin selection",
+        "Roasted within 48 hours of shipping",
+        "Skip or cancel anytime"
+      ],
+      "not_covered": [
+        "Espresso machine rental",
+        "Same-week delivery"
+      ]
+    },
+    {
+      "name": "Origins Gift Box",
+      "description": "A one-time gift box with three 200g bags from three different origins, plus a tasting card.",
+      "price_minor": 4200,
+      "currency_display": "EUR",
+      "currency_charge": "USD",
+      "billing": "one_time",
+      "features": [
+        "Three 200g bags, three origins",
+        "Printed tasting notes card",
+        "Gift-ready packaging"
+      ],
+      "not_covered": [
+        "Brewing equipment",
+        "International shipping"
+      ]
+    }
+  ],
+  "voice": {
+    "adjectives": ["warm", "direct", "unpretentious"],
+    "do": [
+      "Talk about the farmers and the roast, not just the flavour notes",
+      "Keep sentences short"
+    ],
+    "dont": [
+      "Use wine-tasting jargon",
+      "Claim health benefits we can't back up"
+    ]
+  },
+  "locale": "en-US",
+  "established": 2016,
+  "contact": {
+    "email": "hello@meridiancoffeeroasters.example",
+    "phone": "+1-503-555-0142",
+    "address": "118 Alder Street, Portland, OR"
+  }
+}

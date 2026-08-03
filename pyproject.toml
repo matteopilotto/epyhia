@@ -17,6 +17,8 @@ dependencies = [
     "python-dotenv",
     "httpx",
     "stripe",
+    "pyjwt[crypto]",
+    "jsonschema",
 ]
 
 [dependency-groups]
