@@ -11,6 +11,7 @@ __pycache__/
 # Node / console build
 node_modules/
 dist/
+*.tsbuildinfo
 
 # Remotion render output — artifacts of record live in Postgres, not the tree
 out/
