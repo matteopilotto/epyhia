@@ -1,7 +1,8 @@
 from decimal import Decimal
 from itertools import combinations
 
-from epyhia.ingest.normalise import GroundingEntry
+from epyhia.ingest.extractors import extract_structured_strings
+from epyhia.ingest.normalise import GroundingEntry, find_amounts
 
 # The closed derivation set (research.md R6). Exactly these five families, enumerated
 # once, here — nothing at runtime, least of all a model, may extend it (FR-005,
@@ -22,6 +23,13 @@ def _literal_entries(brief: dict) -> list[GroundingEntry]:
         for product in brief["products"]
     ]
     entries.append(GroundingEntry(value=Decimal(brief["established"]), currency=None))
+
+    # FR-004 is "every numeral in the brief", not every numeric field. The brief states
+    # durations, weights and counts in its prose as well — a numeral the client gave us
+    # that is missing here makes the client's own words read as a fabrication.
+    for text in extract_structured_strings(brief):
+        entries.extend(find_amounts(text, brief["locale"]))
+
     return entries
 
 

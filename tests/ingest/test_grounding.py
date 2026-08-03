@@ -28,6 +28,7 @@ _BRIEF = {
         },
     ],
     "voice": {"adjectives": ["bold", "warm"], "do": ["show up"], "dont": ["shout", "lie"]},
+    "locale": "en-US",
     "established": 2015,
 }
 
