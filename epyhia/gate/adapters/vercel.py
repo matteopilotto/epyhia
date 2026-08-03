@@ -1,5 +1,6 @@
 import asyncio
 import base64
+import re
 
 import httpx
 
@@ -13,10 +14,39 @@ API_BASE = "https://api.vercel.com"
 # the brief hash alone — which is what lets verify() compute the URL it probes.
 PROJECT_PREFIX = "epyhia-"
 
+MARKER_NAME = "epyhia-build"
+_HEAD_OPEN = re.compile(r"<head[^>]*>", re.IGNORECASE)
+
 
 class DeployFailed(Exception):
     """`execute()` could not put the files in the world. The gate marks the action failed
     and no verification runs (contracts/action-gate.md §7)."""
+
+
+def build_marker(request: dict) -> str:
+    """`<brief_hash[:8]>.<brand_doc_version>.<prompt_version>` — computed by the adapter,
+    deterministically, from the request. Both halves of the pair derive it the same way, so
+    what `verify()` looks for is exactly what `execute()` put there (R3)."""
+    return (
+        f"{request['brief_hash'][:8]}"
+        f".{request['brand_doc_version']}"
+        f".{request['prompt_version']}"
+    )
+
+
+def inject_marker(html: str, marker: str) -> str:
+    """Insert the build marker into `<head>` **on the wire**, not into the stored artifact.
+
+    The memoisation cache is keyed on the artifact's inputs and its `sha256` is a dedup key,
+    so a generated marker would change the artifact hash every time the brand doc was edited
+    — for a reason unrelated to the page's content. Injecting here keeps the artifact a pure
+    function of the brief and brand doc, and keeps the difference auditable (R3, FR-019).
+    """
+    match = _HEAD_OPEN.search(html)
+    if match is None:
+        raise DeployFailed("site markup has no <head> to carry the build marker")
+    tag = f'<meta name="{MARKER_NAME}" content="{marker}">'
+    return html[: match.end()] + tag + html[match.end() :]
 
 
 class VercelAdapter:
@@ -60,14 +90,19 @@ class VercelAdapter:
     async def _create_deployment(
         self, client: httpx.AsyncClient, project: str, request: dict
     ) -> dict:
-        files = [
-            {
-                "file": item["file"],
-                "data": base64.b64encode(item["data"].encode("utf-8")).decode("ascii"),
-                "encoding": "base64",
-            }
-            for item in request["files"]
-        ]
+        marker = build_marker(request)
+        files = []
+        for item in request["files"]:
+            data = item["data"]
+            if item["file"].lower().endswith(".html"):
+                data = inject_marker(data, marker)
+            files.append(
+                {
+                    "file": item["file"],
+                    "data": base64.b64encode(data.encode("utf-8")).decode("ascii"),
+                    "encoding": "base64",
+                }
+            )
         response = await client.post(
             "/v13/deployments",
             json={
