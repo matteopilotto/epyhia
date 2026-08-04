@@ -103,8 +103,11 @@ def stub_web_builder() -> FunctionModel:
         html = f"""<!doctype html><html lang="en"><head><meta charset="utf-8">
 <title>{doc['name']}</title><style>
 :root{{--bg:{doc['palette']['bg']};--fg:{doc['palette']['fg']};--accent:{doc['palette']['accent']};--muted:{doc['palette']['muted']}}}
-body{{background:var(--bg);color:var(--fg);font-family:system-ui;margin:0;padding:4rem 2rem;max-width:52rem}}
-h1{{font-size:3rem;margin:0 0 .5rem}} h2{{color:var(--accent)}} p{{color:var(--muted);line-height:1.6}}
+body{{background:var(--bg);color:var(--fg);font-family:system-ui}}
+body{{margin:0;padding:4rem 2rem;max-width:52rem}}
+h1{{font-size:3rem;margin:0 0 .5rem}}
+h2{{color:var(--accent)}}
+p{{color:var(--muted);line-height:1.6}}
 </style></head><body><h1>{doc['name']}</h1><p>{doc['descriptor']}</p>{sections}
 <script>console.log("stub build");</script></body></html>"""
         for i in range(0, len(html), 64):
