@@ -1,0 +1,39 @@
+{#
+  EPYHIA's own libraries, single-sourced so the Strategist cannot select a page or section
+  archetype the Web Builder does not implement (DESIGN.md 6.3, 6.4). Imported, never
+  rendered directly:
+
+      {% import "_archetypes.jinja" as lib %}
+
+  These are EPYHIA infrastructure names, not client data — nothing here varies by client,
+  and nothing client-specific may ever be added to it (Principle I).
+#}
+{%- set page_archetypes = [
+  {"id": "editorial_stack",
+   "for": "long vertical rhythm, generous whitespace, one accent used sparingly"},
+  {"id": "split_technical",
+   "for": "two-column, dense, ruled; specifications and detail carry the page"},
+  {"id": "catalogue_grid",
+   "for": "offering-forward and modular; the catalogue is the argument"},
+  {"id": "manifesto_minimal",
+   "for": "few sections, large type, near-monochrome; conviction over detail"}
+] -%}
+{%- set section_layouts = [
+  {"id": "hero_stacked", "for": "headline, sub, one action, centred"},
+  {"id": "hero_split", "for": "headline and action beside a single visual field"},
+  {"id": "feature_rows", "for": "alternating full-width rows, one idea each"},
+  {"id": "feature_grid", "for": "an even grid of short parallel items"},
+  {"id": "offer_table", "for": "the catalogue side by side, one column per offering"},
+  {"id": "proof_strip", "for": "a single band of short attributions or credentials"},
+  {"id": "manifesto_block", "for": "one long statement set large, no adornment"},
+  {"id": "faq_accordion", "for": "questions that open and close"},
+  {"id": "contact_block", "for": "how to reach them, and nothing else"}
+] -%}
+{%- set video_archetypes = [
+  {"id": "technical_spec_sheet",
+   "for": "precise, ruled, numeric; type and rules do the work"},
+  {"id": "editorial_warm",
+   "for": "slow, human, photographic; long holds and soft transitions"},
+  {"id": "kinetic_product",
+   "for": "fast cuts, strong motion, the offering front and centre"}
+] -%}

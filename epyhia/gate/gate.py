@@ -119,12 +119,39 @@ async def request(
     return await _run(session, action, adapter, brand_doc)
 
 
+def _assert_undecided(action: Action | None) -> None:
+    """A second click is not a second action (FR-038).
+
+    The decision, not the state, is what settles this: an approved row deliberately stays
+    `awaiting_approval` until a worker picks it up (R7 step 5), so a state check alone would
+    wave a double-click straight through.
+    """
+    if (
+        action is None
+        or action.state != "awaiting_approval"
+        or action.approval_decision is not None
+    ):
+        raise PreconditionFailed("not_awaiting_approval")
+
+
+async def record_approval(
+    session: AsyncSession, action_id: uuid.UUID, approved_by: str
+) -> dict:
+    """Write the decision and stop there, leaving the row `awaiting_approval` for a worker
+    to resume (R7 step 5). The operator's click must not run a deploy on the request thread,
+    and the decision has to be durable before anything acts on it."""
+    _assert_undecided(action := await session.get(Action, action_id))
+    action.approval_decision = "approved"
+    action.approved_by = approved_by
+    action.approved_at = datetime.now(UTC)
+    await session.commit()
+    return _result(action)
+
+
 async def approve(
     session: AsyncSession, action_id: uuid.UUID, approved_by: str, brand_doc: dict | None = None
 ) -> dict:
-    action = await session.get(Action, action_id)
-    if action.state != "awaiting_approval":
-        raise PreconditionFailed("not_awaiting_approval")
+    _assert_undecided(action := await session.get(Action, action_id))
     action.approval_decision = "approved"
     action.approved_by = approved_by
     action.approved_at = datetime.now(UTC)
@@ -135,9 +162,7 @@ async def approve(
 
 
 async def deny(session: AsyncSession, action_id: uuid.UUID, approved_by: str) -> dict:
-    action = await session.get(Action, action_id)
-    if action.state != "awaiting_approval":
-        raise PreconditionFailed("not_awaiting_approval")
+    _assert_undecided(action := await session.get(Action, action_id))
     action.state = "denied"
     action.approval_decision = "denied"
     action.approved_by = approved_by

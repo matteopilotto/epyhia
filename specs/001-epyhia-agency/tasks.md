@@ -133,25 +133,25 @@ returned URL, then read `actions.evidence` and confirm `matched_name` equals
 (`DESIGN.md` §12 step 6). The seam is what matters — US2 fills it in without the Web Builder
 changing.
 
-- [ ] T053 [P] [US1] Write `prompts/strategist/v1.jinja` — reads the brief as named fields, emits a brand doc conforming to [contracts/brand-doc.schema.json](./contracts/brand-doc.schema.json). Contains **no aesthetic direction for any client** and no client token of any kind
-- [ ] T054 [US1] Implement the Strategist in `epyhia/agents/strategist.py` — `claude-opus-5`, brief passed as a **typed object** never as prose (FR-008), toolset is exactly `write_brand_doc` + `enqueue_tasks` and **nothing else** (FR-042). Never set `temperature`/`top_p`/`top_k`
-- [ ] T055 [US1] Implement the fixed pipeline in `epyhia/queue/pipeline.py` — the task set `plan → {copy → site, demand, money}` is constructed in code; `enqueue_tasks` selects from it and cannot compose a graph (FR-013, Principle III)
-- [ ] T056 [US1] Implement the interim `copy` artifact stub in `epyhia/agents/copy_stub.py`, derived from `brand_doc.composition_plan`, writing a `copy` artifact of the same shape the Marketer will later write (§12 step 6)
-- [ ] T057 [P] [US1] Write `prompts/web_builder/v1.jinja` — describes the composition mechanism and the anti-slop bar, consumes the section-level `composition_plan` and the reviewed `copy` artifact, and forbids authoring any price, feature or claim not present in them (FR-015)
-- [ ] T058 [US1] Implement the Web Builder in `epyhia/agents/web_builder.py` — `claude-sonnet-5`, **streamed** at ~64K `max_tokens` because non-streaming truncates into plausible HTML that would then be deployed; emits a single-page HTML + CSS + one vanilla JS artifact with no build step and no credentials (FR-014, §8.1)
-- [ ] T059 [US1] Wire the site-artifact grounding check into the `site` task in `epyhia/queue/handlers/site.py` — run `extractors.site` then `set_difference` against `runs.grounding_set`, storing `grounding_status` and itemised `violations` before any model is asked an opinion (FR-016, FR-022)
-- [ ] T060 [US1] Implement `runs.alias` derivation in `epyhia/gate/keys.py` — `epyhia-<brief_hash[:12]>.vercel.app`, a pure function of the brief hash so `verify()` computes the URL it probes rather than being told it (R2)
-- [ ] T061 [US1] Implement `execute()` in `epyhia/gate/adapters/vercel.py` — `POST /v13/deployments` with inline files, `target: "production"`, `projectSettings: {framework: null, buildCommand: null, outputDirectory: "."}`; poll `readyState` to `READY`/`ERROR`; `POST /v2/deployments/{id}/aliases`, treating `409` as success (R2)
-- [ ] T062 [US1] Implement build-marker injection in `epyhia/gate/adapters/vercel.py` — the adapter inserts `<meta name="epyhia-build" content="<brief_hash[:8]>.<brand_doc_version>.<prompt_version>">` into `<head>` **at upload time**, so the stored artifact's `sha256` stays a pure function of the brief and brand doc (R3, FR-019)
-- [ ] T063 [US1] Implement `verify()` in `epyhia/gate/adapters/vercel.py` — `GET` the **derived alias**, not the URL the API returned; assert `200`, that `brand_doc.name` read from the run's row appears in the body, and that this build's marker is present; store `{status, matched_name, matched_build_marker, url}` (FR-018, FR-019)
-- [ ] T064 [P] [US1] Test in `tests/gate/test_vercel_adapter.py` against a stubbed HTTP transport: the happy path, the `409`-on-alias path, and the **stale-alias** path where the body lacks this build's marker and the action must land `failed` rather than `succeeded` (US1 scenario 6)
-- [ ] T065 [US1] Implement `GET /runs/{id}/events` in `epyhia/api/routers/runs.py` — the live timeline sourced from `tasks`, `actions`, `artifacts` and `agent_calls` ordering
-- [ ] T066 [P] [US1] Implement `GET /runs/{id}/actions` in `epyhia/api/routers/actions.py` — every action with state, idempotency key, projected and actual cost, and **its stored evidence** (FR-040)
-- [ ] T067 [US1] Implement `POST /actions/{id}/approve` and `POST /actions/{id}/deny` in `epyhia/api/routers/actions.py` — write `approval_decision`, `approved_by` (Auth0 `sub`) and `approved_at`, enqueue the `resume` task carrying the action id, and return `409 {error: "not_awaiting_approval"}` on a second click (FR-038, R7 step 5)
-- [ ] T068 [US1] Scaffold the console in `console/` — Vite + React + TanStack Router/Query + Tailwind + shadcn/ui + Auth0, consuming SSE via `fetch` + `ReadableStream` rather than `EventSource` (§10)
-- [ ] T069 [US1] Build the brief submit form and the live run timeline in `console/src/routes/runs.tsx`
-- [ ] T070 [US1] Build the approval view in `console/src/routes/approvals.tsx` showing what is about to happen, the concrete target, the projected cost, **the idempotency key**, and approve/deny controls (FR-039, SC-005)
-- [ ] T071 [US1] Integration test in `tests/integration/test_us1_brief_to_site.py` using PydanticAI `TestModel`/`FunctionModel` and the fake deploy adapter: submit → brand doc → site → `awaiting_approval` → approve → `succeeded` with `matched_name` read from the brand doc row, plus the deny path leaving nothing published (US1 scenarios 1–4)
+- [X] T053 [P] [US1] Write `prompts/strategist/v1.jinja` — reads the brief as named fields, emits a brand doc conforming to [contracts/brand-doc.schema.json](./contracts/brand-doc.schema.json). Contains **no aesthetic direction for any client** and no client token of any kind
+- [X] T054 [US1] Implement the Strategist in `epyhia/agents/strategist.py` — `claude-opus-5`, brief passed as a **typed object** never as prose (FR-008), toolset is exactly `write_brand_doc` + `enqueue_tasks` and **nothing else** (FR-042). Never set `temperature`/`top_p`/`top_k`
+- [X] T055 [US1] Implement the fixed pipeline in `epyhia/queue/pipeline.py` — the task set `plan → {copy → site, demand, money}` is constructed in code; `enqueue_tasks` selects from it and cannot compose a graph (FR-013, Principle III)
+- [X] T056 [US1] Implement the interim `copy` artifact stub in `epyhia/agents/copy_stub.py`, derived from `brand_doc.composition_plan`, writing a `copy` artifact of the same shape the Marketer will later write (§12 step 6)
+- [X] T057 [P] [US1] Write `prompts/web_builder/v1.jinja` — describes the composition mechanism and the anti-slop bar, consumes the section-level `composition_plan` and the reviewed `copy` artifact, and forbids authoring any price, feature or claim not present in them (FR-015)
+- [X] T058 [US1] Implement the Web Builder in `epyhia/agents/web_builder.py` — `claude-sonnet-5`, **streamed** at ~64K `max_tokens` because non-streaming truncates into plausible HTML that would then be deployed; emits a single-page HTML + CSS + one vanilla JS artifact with no build step and no credentials (FR-014, §8.1)
+- [X] T059 [US1] Wire the site-artifact grounding check into the `site` task in `epyhia/queue/handlers/site.py` — run `extractors.site` then `set_difference` against `runs.grounding_set`, storing `grounding_status` and itemised `violations` before any model is asked an opinion (FR-016, FR-022)
+- [X] T060 [US1] Implement `runs.alias` derivation in `epyhia/gate/keys.py` — `epyhia-<brief_hash[:12]>.vercel.app`, a pure function of the brief hash so `verify()` computes the URL it probes rather than being told it (R2)
+- [X] T061 [US1] Implement `execute()` in `epyhia/gate/adapters/vercel.py` — `POST /v13/deployments` with inline files, `target: "production"`, `projectSettings: {framework: null, buildCommand: null, outputDirectory: "."}`; poll `readyState` to `READY`/`ERROR`; `POST /v2/deployments/{id}/aliases`, treating `409` as success (R2)
+- [X] T062 [US1] Implement build-marker injection in `epyhia/gate/adapters/vercel.py` — the adapter inserts `<meta name="epyhia-build" content="<brief_hash[:8]>.<brand_doc_version>.<prompt_version>">` into `<head>` **at upload time**, so the stored artifact's `sha256` stays a pure function of the brief and brand doc (R3, FR-019)
+- [X] T063 [US1] Implement `verify()` in `epyhia/gate/adapters/vercel.py` — `GET` the **derived alias**, not the URL the API returned; assert `200`, that `brand_doc.name` read from the run's row appears in the body, and that this build's marker is present; store `{status, matched_name, matched_build_marker, url}` (FR-018, FR-019)
+- [X] T064 [P] [US1] Test in `tests/gate/test_vercel_adapter.py` against a stubbed HTTP transport: the happy path, the `409`-on-alias path, and the **stale-alias** path where the body lacks this build's marker and the action must land `failed` rather than `succeeded` (US1 scenario 6)
+- [X] T065 [US1] Implement `GET /runs/{id}/events` in `epyhia/api/routers/runs.py` — the live timeline sourced from `tasks`, `actions`, `artifacts` and `agent_calls` ordering
+- [X] T066 [P] [US1] Implement `GET /runs/{id}/actions` in `epyhia/api/routers/actions.py` — every action with state, idempotency key, projected and actual cost, and **its stored evidence** (FR-040)
+- [X] T067 [US1] Implement `POST /actions/{id}/approve` and `POST /actions/{id}/deny` in `epyhia/api/routers/actions.py` — write `approval_decision`, `approved_by` (Auth0 `sub`) and `approved_at`, enqueue the `resume` task carrying the action id, and return `409 {error: "not_awaiting_approval"}` on a second click (FR-038, R7 step 5)
+- [X] T068 [US1] Scaffold the console in `console/` — Vite + React + TanStack Router/Query + Tailwind + shadcn/ui + Auth0, consuming SSE via `fetch` + `ReadableStream` rather than `EventSource` (§10)
+- [X] T069 [US1] Build the brief submit form and the live run timeline in `console/src/routes/runs.tsx`
+- [X] T070 [US1] Build the approval view in `console/src/routes/approvals.tsx` showing what is about to happen, the concrete target, the projected cost, **the idempotency key**, and approve/deny controls (FR-039, SC-005)
+- [X] T071 [US1] Integration test in `tests/integration/test_us1_brief_to_site.py` using PydanticAI `TestModel`/`FunctionModel` and the fake deploy adapter: submit → brand doc → site → `awaiting_approval` → approve → `succeeded` with `matched_name` read from the brand doc row, plus the deny path leaving nothing published (US1 scenarios 1–4)
 
 **Checkpoint**: US1 is fully functional. A brief becomes a proved-live URL, and the audit row
 carries the evidence that the check ran.
@@ -168,12 +168,39 @@ failing held rather than sent.
 `runs.grounding_set`, then inject a fabricated price into a draft and confirm the piece is held.
 Separately inject one into the *site* and confirm the **gate** refuses the deploy.
 
+**⚠️ Ordering, revised after the US1 smoke run**: T072–T077 are a **blocking prefix**. Nothing
+in 4b starts until the copy stub is gone.
+
+A real-model US1 run showed why. The interim stub (T056) can only emit the composition plan's
+layout intent, so the Web Builder was handed a section whose own intent read *"this is the
+page's argument"* with no argument in it — and it invented one: offering names, pickup days and
+inclusions that contradicted the brief, with none of the brief's prices anywhere. The page still
+stored `grounding_status = clean`, because the grounding check is **numeral-only by design**
+(FR-004, R6) and every fabricated fact was a word.
+
+That is the stub starving the seam, not a defect in US1 — but it means every judgement about
+site quality made before T077 is made through a starved input, and the pack work in 4b neither
+depends on that nor tells us anything about it.
+
+### 4a · Close the copy seam first (blocking)
+
 - [ ] T072 [P] [US2] Write `prompts/marketer/v1.jinja` — brand doc in; landing copy, 3–5 posts, launch email and video props out. No client token, no fixed archetype, no numeral
 - [ ] T073 [P] [US2] Write `prompts/reviewer/v1.jinja` — emits itemised violations `{kind, quote, why}`, never a rewrite and never a bare approval (FR-023)
 - [ ] T074 [US2] Implement the Marketer in `epyhia/agents/marketer.py` — `claude-sonnet-5`, reads only the brand doc, writes `copy`, `posts`, `email` and `video_props` artifacts; gate handles are exactly `send_email` and `publish`
 - [ ] T075 [US2] Implement the Reviewer in `epyhia/agents/reviewer.py` — `claude-haiku-4-5`, inputs scoped to draft + brand doc + **raw brief** and explicitly **not** the run transcript; returns the structured violation list (FR-011, FR-023)
 - [ ] T076 [US2] Implement the revision loop in `epyhia/queue/handlers/pack.py` — the deterministic numeric check runs first, then the Reviewer; at most **two** revisions, after which the artifact is stored `flagged` with its violations and surfaced rather than delivered (FR-024)
-- [ ] T077 [US2] Replace the `copy` stub — delete `epyhia/agents/copy_stub.py` and its call site so the `copy` task produces real reviewed copy that **blocks** the `site` task, with the Web Builder unchanged (FR-021, US2 scenario 6)
+- [ ] T077 [US2] Replace the `copy` stub — delete `epyhia/agents/copy_stub.py` and its call site (`epyhia/queue/handlers/copy.py`) so the `copy` task produces real reviewed copy that **blocks** the `site` task, with the Web Builder unchanged (FR-021, US2 scenario 6)
+
+**Checkpoint 4a — re-run the US1 smoke before going further.** Drive one brief through
+`plan → copy → site` against real models and read the rendered page against **that brief's own
+`products[]`**: every offering name, every stated day, time and inclusion, and every price on
+the page must trace to the brief. This is the assertion the pre-T077 run failed, and it is not
+covered by the numeral check — so it is read here, once, by a person. If the page still states
+facts the brief did not give it, that is a prompt or a copy-shape problem and it is cheaper to
+find now than after 4b exists.
+
+### 4b · The rest of the pack
+
 - [ ] T078 [P] [US2] Implement the email adapter in `epyhia/gate/adapters/email.py` — `execute()` sends SMTP to Mailpit; `verify()` reads the message **back out of Mailpit's API** and stores `{message_id, recipient, subject}` (FR-037, §4.5)
 - [ ] T079 [P] [US2] Implement the recording sink in `epyhia/api/routers/sink.py` — token-authenticated `POST /sink/posts` → `{id, permalink}` and `GET /sink/posts/{id}`, backed by `sink_posts` (R4)
 - [ ] T080 [US2] Implement the publish adapter in `epyhia/gate/adapters/publish.py` — approval-gated (`requires_approval = true`: a stand-in channel still gets real approval, FR-043); a real HTTP round trip to the sink's configured base URL, never an in-process call; `verify()` fetches the permalink and asserts the stored `payload_sha256` matches (R4)
@@ -303,7 +330,9 @@ businesses.
   2a is first by constitutional mandate, not convenience
 - **US1 (Phase 3)**: Depends on Phase 2 only
 - **US2 (Phase 4)**: Depends on Phase 2. Touches US1's `site` task once (T077, removing the copy
-  stub) — that is the seam §12 step 6 designed for, and the Web Builder itself does not change
+  stub) — that is the seam §12 step 6 designed for, and the Web Builder itself does not change.
+  Internally ordered 4a (T072–T077, the copy seam) → 4b (everything else); 4a blocks 4b because
+  until the stub is gone the `site` artifact is built from layout intent rather than facts
 - **US3 (Phase 5)**: Depends on Phase 2. Needs a published site for the *buyer* path (T096–T097
   write into the site's markup and JS), so full end-to-end validation follows US1
 - **US4 (Phase 6)**: Depends on Phase 2 and on real actions existing to be repeated — meaningfully
@@ -330,7 +359,9 @@ businesses.
 - **Phase 2c**: T039 and T040 in parallel; T044, T045 and T132 in parallel
 - **Phase 2d**: T046, T047, T048, T049 are four independent modules
 - **Phase 3**: T053 and T057 (two prompt files) in parallel; T064 and T066 in parallel
-- **Phase 4**: T072, T073, T078, T079, T081 in parallel; T084, T085, T086, T088 in parallel
+- **Phase 4**: within the 4a prefix, only T072 and T073 are parallel — T078, T079 and T081 are
+  4b and **must not** be pulled forward, however independent their files look. Then within 4b:
+  T078, T079, T081 in parallel; T084, T085, T086, T088 in parallel
 - **Phase 5**: T099, T100, T101 in parallel
 - **Phase 6**: T105, T106 in parallel; T107–T110 are four independent test files
 - **Phase 7**: T113, T114, T115, T116, T117 in parallel
@@ -356,10 +387,17 @@ Task: "Key stability and Remotion-version sensitivity in tests/gate/test_keys.py
 
 ## Parallel Example: User Story 2
 
+The 4a prefix is deliberately narrow — two prompt files, then a sequence. Separate files are
+not a reason to start 4b, because the point of 4a is to close the copy seam before anything
+else is judged through it:
+
 ```bash
-# Prompts and adapters are all separate files:
+# 4a, the only parallelism available before T077 lands:
 Task: "Write prompts/marketer/v1.jinja"
 Task: "Write prompts/reviewer/v1.jinja"
+# then T074 → T075 → T076 → T077 in order, and re-run the US1 smoke.
+
+# 4b, only after checkpoint 4a passes:
 Task: "Email adapter in epyhia/gate/adapters/email.py"
 Task: "Recording sink router in epyhia/api/routers/sink.py"
 Task: "Remotion archetypes in video/"
