@@ -4,7 +4,8 @@
     uv run python scripts/preview_site.py --brief path/to.json # any brief
     ANTHROPIC_API_KEY=sk-... uv run python scripts/preview_site.py --real
 
-`--real` calls Opus 5 and Sonnet 5 and costs money. Everything else runs offline: the deploy
+`--real` calls Opus 5, Sonnet 5 and Haiku 4.5 and costs money. Everything else runs offline:
+the deploy
 is a fake adapter, so no Vercel token is used and nothing reaches the world.
 """
 
@@ -23,7 +24,7 @@ from sqlalchemy import select, text
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 
 import epyhia.queue.handlers  # noqa: F401  — registers every task handler
-from epyhia.agents import strategist, web_builder
+from epyhia.agents import marketer, reviewer, strategist, web_builder
 from epyhia.config import settings
 from epyhia.gate import gate, registry
 from epyhia.gate.keys import alias_for
@@ -88,6 +89,25 @@ def stub_strategist(brief: dict) -> FunctionModel:
             ToolCallPart("write_brand_doc", {"doc": doc}),
             ToolCallPart("enqueue_tasks", {"stages": ["site"]}),
         ])
+
+    return FunctionModel(respond)
+
+
+def stub_marketer() -> FunctionModel:
+    def respond(messages, info) -> ModelResponse:
+        doc = json.loads(messages[-1].parts[-1].content)["brand_doc"]
+        copy = {"sections": [
+            {"section": e["section"], "headline": doc["descriptor"], "body": doc["positioning"]}
+            for e in doc["composition_plan"]
+        ]}
+        return ModelResponse(parts=[TextPart(json.dumps(copy))])
+
+    return FunctionModel(respond)
+
+
+def stub_reviewer() -> FunctionModel:
+    def respond(messages, info) -> ModelResponse:
+        return ModelResponse(parts=[TextPart(json.dumps({"violations": []}))])
 
     return FunctionModel(respond)
 
@@ -165,7 +185,11 @@ async def main(brief_path: Path, real: bool, open_browser: bool) -> int:
     else:
         with strategist.agent.override(model=stub_strategist(brief_payload)):
             assert await run_once(session, kind="plan"), "plan did not run"
-        assert await run_once(session, kind="copy"), "copy did not run"
+        with (
+            marketer.agent.override(model=stub_marketer()),
+            reviewer.agent.override(model=stub_reviewer()),
+        ):
+            assert await run_once(session, kind="copy"), "copy did not run"
         with web_builder.agent.override(model=stub_web_builder()):
             assert await run_once(session, kind="site"), "site did not run"
 
