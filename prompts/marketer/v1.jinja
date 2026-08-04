@@ -65,13 +65,17 @@ and a `body` that stands alone without the others.
 **Launch email** — a `subject`, a `preheader` that adds to the subject instead of repeating
 it, and a `body`. One thing to read and one thing to do.
 
-**Video props** — the on-screen text of the launch video, as structured data. Copy
-`archetype_id` from the brand document's `video_archetype`; you do not select it. Everything
-that a viewer reads goes under `content`: the `headline`, an optional `subhead`, the ordered
+**Video props** — the on-screen text of the launch video, as structured data. Everything a
+viewer reads goes under `content`: the `headline`, an optional `subhead`, the ordered
 `scenes` with their `lines`, and an optional `cta`. Any on-screen number goes in that scene's
 `values` as a labelled amount — never inside a line of text, because the check that reads
-values does not read prose. `style` is copied from the brand document's palette, type pairing
-and motion, and may never carry anything a viewer would read as a fact.
+values does not read prose.
+
+You do not select the video archetype and you do not restate the palette or the type
+pairing: those are taken from the brand document and assembled around your content, so that
+the video's presentation has no way to carry a fact. What you do choose is how the piece
+carries itself — a `motion_intensity` that matches the named motion language, and a
+`density` that matches how much there is to say.
 
 ## When a revision comes back
 
