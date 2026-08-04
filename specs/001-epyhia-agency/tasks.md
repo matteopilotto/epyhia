@@ -188,7 +188,7 @@ depends on that nor tells us anything about it.
 - [X] T073 [P] [US2] Write `prompts/reviewer/v1.jinja` — emits itemised violations `{kind, quote, why}`, never a rewrite and never a bare approval (FR-023)
 - [X] T074 [US2] Implement the Marketer in `epyhia/agents/marketer.py` — `claude-sonnet-5`, reads only the brand doc, writes `copy`, `posts`, `email` and `video_props` artifacts; gate handles are exactly `send_email` and `publish`
 - [X] T075 [US2] Implement the Reviewer in `epyhia/agents/reviewer.py` — `claude-haiku-4-5`, inputs scoped to draft + brand doc + **raw brief** and explicitly **not** the run transcript; returns the structured violation list (FR-011, FR-023)
-- [ ] T076 [US2] Implement the revision loop in `epyhia/queue/handlers/pack.py` — the deterministic numeric check runs first, then the Reviewer; at most **two** revisions, after which the artifact is stored `flagged` with its violations and surfaced rather than delivered (FR-024)
+- [X] T076 [US2] Implement the revision loop in `epyhia/queue/handlers/pack.py` — the deterministic numeric check runs first, then the Reviewer; at most **two** revisions, after which the artifact is stored `flagged` with its violations and surfaced rather than delivered (FR-024)
 - [ ] T077 [US2] Replace the `copy` stub — delete `epyhia/agents/copy_stub.py` and its call site (`epyhia/queue/handlers/copy.py`) so the `copy` task produces real reviewed copy that **blocks** the `site` task, with the Web Builder unchanged (FR-021, US2 scenario 6)
 
 **Checkpoint 4a — re-run the US1 smoke before going further.** Drive one brief through
