@@ -1,0 +1,85 @@
+{
+    "business_name": "Ashgrove Bakehouse",
+    "tagline": "Order the night before, collect it still warm.",
+    "one_liner": "A neighbourhood bakery that takes preorders online and has your bread, pastries and cakes bagged and waiting at the counter.",
+    "positioning": {
+        "who_its_for": "Locals who want good bread on a weekend morning without queueing for it, and who plan a day or two ahead.",
+        "what_problem": "The good loaves sell out by 9am, and everything left after that is what nobody else wanted.",
+        "why_them": "We bake to the preorder list first, so what you reserved is set aside under your name before the doors open."
+    },
+    "products": [
+        {
+            "name": "Weekend Loaf Preorder",
+            "description": "Reserve a wild-yeast sourdough loaf for Saturday or Sunday pickup, baked the morning you collect it.",
+            "price_minor": 650,
+            "currency_display": "GBP",
+            "currency_charge": "GBP",
+            "billing": "one_time",
+            "features": [
+                "900g wild-yeast sourdough, baked the morning of pickup",
+                "Reserved under your name until 2pm",
+                "Choose Saturday or Sunday at checkout",
+                "Order up to 24 hours ahead"
+            ],
+            "not_covered": ["Delivery", "Slicing", "Gluten-free loaves"]
+        },
+        {
+            "name": "Pastry Box Preorder",
+            "description": "A box of six pastries from whatever we are laminating that week, collected on the morning you choose.",
+            "price_minor": 1500,
+            "currency_display": "GBP",
+            "currency_charge": "GBP",
+            "billing": "one_time",
+            "features": [
+                "Six pastries, baker's selection",
+                "Made the morning of pickup",
+                "Nut-free box on request in the order notes",
+                "Collect any weekday from 7am"
+            ],
+            "not_covered": [
+                "Individual pastry choices",
+                "Delivery",
+                "Custom decorating"
+            ]
+        },
+        {
+            "name": "Standing Bread Order",
+            "description": "A weekly standing preorder — two loaves put aside for the same pickup day every week.",
+            "price_minor": 1200,
+            "currency_display": "GBP",
+            "currency_charge": "GBP",
+            "billing": "subscription",
+            "features": [
+                "Two loaves reserved every week",
+                "Same pickup day each week",
+                "Pause or cancel any week before Thursday",
+                "First refusal on seasonal bakes"
+            ],
+            "not_covered": [
+                "Delivery",
+                "Cakes and celebration bakes",
+                "Holiday-week collections"
+            ]
+        }
+    ],
+    "voice": {
+        "adjectives": ["warm", "plain-spoken", "unhurried"],
+        "do": [
+            "Talk about the bake and the pickup time in concrete terms",
+            "Write the way a baker would say it across the counter",
+            "Keep sentences short"
+        ],
+        "dont": [
+            "Use artisanal marketing jargon",
+            "Promise delivery or shipping of any kind",
+            "Claim health or dietary benefits we can't back up"
+        ]
+    },
+    "locale": "en-GB",
+    "established": 2011,
+    "contact": {
+        "email": "orders@ashgrovebakehouse.example",
+        "phone": "+44-161-555-0148",
+        "address": "42 Ashgrove Lane, Manchester"
+    }
+}
