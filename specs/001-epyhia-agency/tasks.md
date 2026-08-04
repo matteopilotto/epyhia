@@ -184,7 +184,7 @@ depends on that nor tells us anything about it.
 
 ### 4a · Close the copy seam first (blocking)
 
-- [ ] T072 [P] [US2] Write `prompts/marketer/v1.jinja` — brand doc in; landing copy, 3–5 posts, launch email and video props out. No client token, no fixed archetype, no numeral
+- [X] T072 [P] [US2] Write `prompts/marketer/v1.jinja` — brand doc in; landing copy, 3–5 posts, launch email and video props out. No client token, no fixed archetype, no numeral
 - [ ] T073 [P] [US2] Write `prompts/reviewer/v1.jinja` — emits itemised violations `{kind, quote, why}`, never a rewrite and never a bare approval (FR-023)
 - [ ] T074 [US2] Implement the Marketer in `epyhia/agents/marketer.py` — `claude-sonnet-5`, reads only the brand doc, writes `copy`, `posts`, `email` and `video_props` artifacts; gate handles are exactly `send_email` and `publish`
 - [ ] T075 [US2] Implement the Reviewer in `epyhia/agents/reviewer.py` — `claude-haiku-4-5`, inputs scoped to draft + brand doc + **raw brief** and explicitly **not** the run transcript; returns the structured violation list (FR-011, FR-023)
