@@ -5,7 +5,7 @@ from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 
 from epyhia.api.errors import register_exception_handlers
-from epyhia.api.routers import actions, briefs, runs, sink
+from epyhia.api.routers import actions, artifacts, briefs, runs, sink
 
 CONSOLE_DIST = Path(__file__).resolve().parent.parent.parent / "console" / "dist"
 
@@ -22,6 +22,7 @@ def create_app() -> FastAPI:
     app.include_router(briefs.router)
     app.include_router(runs.router)
     app.include_router(actions.router)
+    app.include_router(artifacts.router)
     app.include_router(sink.router)
 
     # Serves the built SPA from the same origin as the API — no CORS.
