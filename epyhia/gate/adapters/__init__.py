@@ -1,3 +1,3 @@
 """Importing this package registers every adapter pair with the gate."""
 
-from epyhia.gate.adapters import email, vercel  # noqa: F401
+from epyhia.gate.adapters import email, publish, vercel  # noqa: F401
