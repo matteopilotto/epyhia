@@ -1,0 +1,20 @@
+{
+  "name": "epyhia-video",
+  "private": true,
+  "description": "The launch-video archetype library. Props in, MP4 out — no model ever authors code here (DESIGN.md 6.4, FR-026).",
+  "scripts": {
+    "studio": "remotion studio",
+    "render": "remotion render"
+  },
+  "dependencies": {
+    "@remotion/cli": "4.0.503",
+    "react": "18.3.1",
+    "react-dom": "18.3.1",
+    "remotion": "4.0.503"
+  },
+  "devDependencies": {
+    "@types/react": "^18.3.17",
+    "@types/react-dom": "^18.3.5",
+    "typescript": "^5.7.2"
+  }
+}
