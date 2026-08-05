@@ -10,7 +10,7 @@ from sqlalchemy import select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 import epyhia.queue.handlers  # noqa: F401  — registers every task handler
-from epyhia.agents import strategist, web_builder
+from epyhia.agents import marketer, reviewer, strategist, web_builder
 from epyhia.config import settings
 from epyhia.gate import gate, registry
 from epyhia.gate.adapters.vercel import build_marker
@@ -114,6 +114,38 @@ def _strategist_model(brief: dict) -> FunctionModel:
     return FunctionModel(respond)
 
 
+def _marketer_model() -> FunctionModel:
+    """Writes one copy block per planned section from the brand doc it is handed. Every
+    string it emits is one the brand doc already carried, so it states no fact of its own
+    and the deterministic check has nothing to flag."""
+
+    def respond(messages: list[ModelMessage], info: AgentInfo) -> ModelResponse:
+        doc = _prompt_json(messages)["brand_doc"]
+        copy = {
+            "sections": [
+                {
+                    "section": entry["section"],
+                    "headline": doc["descriptor"],
+                    "body": doc["positioning"],
+                }
+                for entry in doc["composition_plan"]
+            ]
+        }
+        return ModelResponse(parts=[TextPart(json.dumps(copy))])
+
+    return FunctionModel(respond)
+
+
+def _reviewer_model() -> FunctionModel:
+    """Finds nothing wrong. What the loop does when it *does* find something is US2's to
+    prove (T086); here the point is only that the copy stage now runs through it."""
+
+    def respond(messages: list[ModelMessage], info: AgentInfo) -> ModelResponse:
+        return ModelResponse(parts=[TextPart(json.dumps({"violations": []}))])
+
+    return FunctionModel(respond)
+
+
 def _web_builder_model() -> FunctionModel:
     """Composes a page from the brand doc and copy it is handed, carrying no numeral of its
     own — so the grounding check has nothing to flag and the deploy precondition holds."""
@@ -174,7 +206,11 @@ async def _drive_to_approval(
 
     with strategist.agent.override(model=_strategist_model(brief_payload)):
         assert await run_once(session, kind="plan")
-    assert await run_once(session, kind="copy")
+    with (
+        marketer.agent.override(model=_marketer_model()),
+        reviewer.agent.override(model=_reviewer_model()),
+    ):
+        assert await run_once(session, kind="copy")
     with web_builder.agent.override(model=_web_builder_model()):
         assert await run_once(session, kind="site")
 
