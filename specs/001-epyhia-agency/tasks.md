@@ -202,7 +202,7 @@ find now than after 4b exists.
 ### 4b · The rest of the pack
 
 - [X] T078 [P] [US2] Implement the email adapter in `epyhia/gate/adapters/email.py` — `execute()` sends SMTP to Mailpit; `verify()` reads the message **back out of Mailpit's API** and stores `{message_id, recipient, subject}` (FR-037, §4.5)
-- [ ] T079 [P] [US2] Implement the recording sink in `epyhia/api/routers/sink.py` — token-authenticated `POST /sink/posts` → `{id, permalink}` and `GET /sink/posts/{id}`, backed by `sink_posts` (R4)
+- [X] T079 [P] [US2] Implement the recording sink in `epyhia/api/routers/sink.py` — token-authenticated `POST /sink/posts` → `{id, permalink}` and `GET /sink/posts/{id}`, backed by `sink_posts` (R4)
 - [ ] T080 [US2] Implement the publish adapter in `epyhia/gate/adapters/publish.py` — approval-gated (`requires_approval = true`: a stand-in channel still gets real approval, FR-043); a real HTTP round trip to the sink's configured base URL, never an in-process call; `verify()` fetches the permalink and asserts the stored `payload_sha256` matches (R4)
 - [ ] T081 [P] [US2] Create the Remotion project in `video/` — pinned `4.0.503`, 3–4 parameterised composition archetypes consuming [contracts/video-props.schema.json](./contracts/video-props.schema.json), each with a 1080×1920 vertical variant of the same archetype
 - [ ] T082 [US2] Implement the `video` task handler in `epyhia/queue/handlers/video.py` — render the primary and vertical cuts locally from **one** `video_props` artifact, store both as artifacts, and use the long per-`kind` lease from R8 (FR-025)
