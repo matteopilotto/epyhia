@@ -13,7 +13,9 @@ LEASE_MINUTES_BY_KIND: dict[str, int] = {
     "site": 15,  # Web Builder, streamed ~64K max_tokens
     "demand": 15,
     "money": 10,
-    "video": 15,  # unchanged
+    # Two cuts through headless Chrome, CPU-bound for minutes — the one legitimate long
+    # lease, and the whole reason the interval is per-`kind` rather than global (R8).
+    "video": 30,
 }
 
 _LEASE_CASE = "CASE kind {whens} ELSE interval '{default} minutes' END".format(
