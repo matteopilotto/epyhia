@@ -210,7 +210,7 @@ find now than after 4b exists.
 - [X] T084 [P] [US2] Implement `GET /runs/{id}/artifacts` and `GET /artifacts/{id}` in `epyhia/api/routers/artifacts.py` — including `grounding_status` and itemised `violations`; flagged artifacts are **listed and readable**, read-only (FR-024)
 - [X] T085 [P] [US2] Build the artifacts view in `console/src/routes/artifacts.tsx`, rendering flagged artifacts with their violations rather than hiding them
 - [X] T086 [P] [US2] Test in `tests/integration/test_us2_grounding_hold.py`: a fabricated numeral in a draft is held through two revisions then stored `flagged`; the Reviewer's output is itemised and is never a rewrite (FR-023, FR-024)
-- [ ] T087 [US2] Test in `tests/gate/test_deploy_precondition.py`: a run whose `site` artifact is `flagged` has its `deploy` **refused by the gate**, with no adapter invoked and no agent involved (FR-016, §3.4)
+- [X] T087 [US2] Test in `tests/gate/test_deploy_precondition.py`: a run whose `site` artifact is `flagged` has its `deploy` **refused by the gate**, with no adapter invoked and no agent involved (FR-016, §3.4)
 - [ ] T088 [P] [US2] Test in `tests/integration/test_us2_send_verify.py`: `send_email` and `publish` **each** halt for approval (FR-043), and after approval `verify()` proves the email by reading it back from Mailpit and the post by fetching the sink permalink
 
 **Checkpoint**: US1 and US2 both work independently. Nothing leaves the system carrying a number
