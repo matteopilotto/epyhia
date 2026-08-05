@@ -2,6 +2,7 @@ import { createRootRoute, createRoute, createRouter } from "@tanstack/react-rout
 import { RootLayout } from "@/routes/root";
 import { RunsRoute, RunDetailRoute } from "@/routes/runs";
 import { ApprovalsRoute } from "@/routes/approvals";
+import { ArtifactsRoute } from "@/routes/artifacts";
 
 const rootRoute = createRootRoute({ component: RootLayout });
 
@@ -23,6 +24,12 @@ const runDetailRoute = createRoute({
   component: RunDetailRoute,
 });
 
+const runArtifactsRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/runs/$runId/artifacts",
+  component: ArtifactsRoute,
+});
+
 const approvalsRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/approvals",
@@ -33,6 +40,7 @@ const routeTree = rootRoute.addChildren([
   indexRoute,
   runsRoute,
   runDetailRoute,
+  runArtifactsRoute,
   approvalsRoute,
 ]);
 

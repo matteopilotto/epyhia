@@ -183,6 +183,13 @@ export function RunDetailRoute() {
           <>
             <Badge variant={statusVariant(run.data.status)}>{run.data.status}</Badge>
             <span className="font-mono text-xs">{run.data.alias}</span>
+            <Link
+              to="/runs/$runId/artifacts"
+              params={{ runId }}
+              className="text-sm text-ink-muted hover:text-ink"
+            >
+              Artifacts
+            </Link>
             <span className="ml-auto text-xs text-ink-muted">
               brand doc v{run.data.brand_doc_version ?? "—"} · prompts {run.data.prompt_version}
             </span>
