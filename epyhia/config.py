@@ -8,6 +8,7 @@ _CREDENTIAL_ATTRS = {
     "vercel": "vercel_token",
     "stripe": "stripe_secret_key",
     "smtp": "smtp_host",
+    "mailpit": "mailpit_api_url",
     "sink": "sink_token",
     "auth0": "auth0_domain",
 }
