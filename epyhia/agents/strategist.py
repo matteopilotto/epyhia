@@ -52,6 +52,21 @@ class PlannedSection(BaseModel):
     intent: str
 
 
+class Offering(BaseModel):
+    """One entry from the brief's `products[]`, carried across field-for-field minus
+    `currency_charge` — Ops' charging detail, which belongs on no page. This is the only
+    route by which what the business sells reaches the agents that sell it, since none of
+    them but the Reviewer ever reads the brief (FR-011)."""
+
+    name: str = Field(min_length=1)
+    description: str = Field(min_length=1)
+    price_minor: int = Field(ge=0)
+    currency_display: str = Field(min_length=1)
+    billing: Literal["subscription", "one_time"]
+    features: list[str]
+    not_covered: list[str]
+
+
 class BrandDocument(BaseModel):
     name: str = Field(min_length=1)
     descriptor: str = Field(min_length=1)
@@ -63,6 +78,9 @@ class BrandDocument(BaseModel):
     video_archetype: str
     voice: Voice
     composition_plan: list[PlannedSection] = Field(min_length=1)
+    # Required, not optional: an optional fact channel is one the Strategist omits, leaving
+    # every downstream "state the offerings" rule pointing at nothing.
+    offerings: list[Offering] = Field(min_length=1)
 
 
 @dataclass

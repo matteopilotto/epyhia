@@ -103,6 +103,13 @@ def _strategist_model(brief: dict) -> FunctionModel:
                 {"section": "opening", "layout": "hero_stacked", "intent": "state what this is"},
                 {"section": "reach", "layout": "contact_block", "intent": "how to get in touch"},
             ],
+            # Carried across from the brief's own products, field-for-field minus the
+            # charging currency — the copy the Strategist is asked for, expressed as code
+            # rather than as a literal.
+            "offerings": [
+                {k: v for k, v in product.items() if k != "currency_charge"}
+                for product in payload["products"]
+            ],
         }
         return ModelResponse(
             parts=[
