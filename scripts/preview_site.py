@@ -80,6 +80,13 @@ def stub_strategist(brief: dict) -> FunctionModel:
             "composition_archetype": "editorial_stack",
             "video_archetype": "technical_spec_sheet",
             "voice": brief["voice"],
+            # Copied field-for-field from the brief minus the charge currency, which is what
+            # the real Strategist is asked to do. Deriving it here rather than writing one
+            # out keeps every client fact in the brief where it belongs.
+            "offerings": [
+                {k: v for k, v in product.items() if k != "currency_charge"}
+                for product in brief["products"]
+            ],
             "composition_plan": [
                 {"section": "opening", "layout": "hero_stacked", "intent": "state what this is"},
                 {"section": "reach", "layout": "contact_block", "intent": "how to get in touch"},
