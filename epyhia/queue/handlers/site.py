@@ -23,6 +23,11 @@ _store = PostgresArtifactStore()
 AGENT = "web_builder"
 
 
+class UpstreamNotClean(Exception):
+    """The copy this page would be built from is not fit to be rendered. The task fails and
+    the sweeper decides whether it is worth another attempt (R8)."""
+
+
 def check_grounding(html: str, grounding_set: dict, locale: str) -> list[dict]:
     """Every numeral on the rendered page, set-differenced against what the brief actually
     said. Deterministic, and it runs before any model is asked an opinion about the page
@@ -51,6 +56,18 @@ async def handle_site(session: AsyncSession, task: Task) -> None:
             .order_by(Artifact.revision.desc())
         )
     ).scalars().first()
+
+    # `copy → site` is an ordering edge, not a gate: without this the Reviewer's held claim
+    # is rendered into a page and parked one operator click from deploy. The refusal sits
+    # ahead of `build_site`, so a flagged copy costs no model call, produces no site
+    # artifact, and requests no deploy.
+    if copy_artifact is None:
+        raise UpstreamNotClean("no copy artifact for this run")
+    if copy_artifact.grounding_status != "clean":
+        raise UpstreamNotClean(
+            f"copy artifact is {copy_artifact.grounding_status}, not clean"
+        )
+
     copy = json.loads(copy_artifact.bytes)
 
     html = await build_site(
