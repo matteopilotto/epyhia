@@ -19,8 +19,8 @@ _store = PostgresArtifactStore()
 MAX_REVISIONS = 2
 
 # Sent to the Marketer as the `why` of a numeral violation. Not a prompt — the instructions
-# live in `prompts/marketer/v1.jinja`; this is the one sentence that explains a machine
-# finding, and it carries no client data by construction.
+# live in the versioned `prompts/marketer/` tree; this is the one sentence that explains a
+# machine finding, and it carries no client data by construction.
 UNGROUNDED_NUMERAL_WHY = "this amount is not among the numbers the business stated"
 
 

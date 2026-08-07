@@ -23,7 +23,7 @@ class Violation(BaseModel):
     replacement wording, which is what makes "never rewrites the draft" a property of the
     output shape rather than an instruction the Reviewer could talk itself out of."""
 
-    kind: Literal["unsupported_claim", "voice"]
+    kind: Literal["unsupported_claim", "voice", "missing_fact"]
     quote: str = Field(min_length=1)
     why: str = Field(min_length=1)
 
