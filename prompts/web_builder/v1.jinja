@@ -75,6 +75,29 @@ number, an email or an address.
 While a click is in flight the button is disabled and says so, so a second click cannot open
 a second session.
 
+### When buying is not available yet
+
+The endpoint answers with a typed body, and one of its answers is ordinary rather than
+exceptional. A `409` whose body is `{"error": "not_armed"}` means this page is live but its
+charge path has not been switched on yet — a state the agency reaches on purpose, because
+taking money waits on a human decision that the page does not get to make.
+
+Handle it as a state of the page, not as a failure of it:
+
+- Replace that button in place with a short, plainly worded unavailable state — the offering
+  still readable, the button no longer clickable, and one line saying buying is not open yet.
+  Write that line in the brand document's voice, the way the rest of the page is written.
+- **Not an error page**, not a redirect, not an alert box, not a stack trace, not a retry
+  loop, and not a console message left as the only trace. The rest of the page keeps working:
+  someone who arrived to read about the business can still read about it.
+- Say nothing about the cause. No status code, no endpoint, no internal wording of any kind —
+  "not armed" is our vocabulary, not a buyer's.
+
+Any other non-`200` — including a `404` whose body is `{"error": "unknown_product"}` — gets
+the same restrained treatment: the button stops offering something that cannot happen, and it
+says so in one line. Never send the buyer onward on a response you did not get a
+`checkout_url` in.
+
 ## The section layout library
 
 {% for item in lib.section_layouts -%}
