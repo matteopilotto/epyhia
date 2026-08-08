@@ -239,7 +239,7 @@ matching a product in that brief.
 - [X] T098 [US3] Implement `POST /webhooks/stripe` in `epyhia/api/routers/webhooks.py` — signature-verified, writing the `orders` row in the **same transaction** that records `stripe_event_id`, so a repeat arriving mid-flight cannot produce a second order (FR-032)
 - [X] T099 [P] [US3] Build the arm-charge-path approval screen in `console/src/routes/approvals.tsx`, showing every product, amount, currency and billing type as it will be charged (FR-028)
 - [X] T100 [P] [US3] Test in `tests/integration/test_us3_checkout.py` with a stubbed Stripe client: clicking buy before arming returns `409 not_armed`; after arming a session is created with zero operator interaction; a replayed webhook event id writes exactly one order (FR-031, FR-032, SC-009)
-- [ ] T101 [P] [US3] Test in `tests/integration/test_us3_currency.py`: a product whose `currency_display` differs from `currency_charge` is displayed and charged from the brief's own fields, with no conversion performed anywhere (FR-003, R6)
+- [X] T101 [P] [US3] Test in `tests/integration/test_us3_currency.py`: a product whose `currency_display` differs from `currency_charge` is displayed and charged from the brief's own fields, with no conversion performed anywhere (FR-003, R6)
 
 **Checkpoint**: All three deliverables — site, pack, checkout — work independently.
 
