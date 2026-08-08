@@ -47,6 +47,23 @@ def test_a_number_word_run_stops_at_the_end_of_a_sentence() -> None:
     assert [str(e.value) for e in entries] == ["9", "3"]
 
 
+def test_a_digit_run_stops_at_the_end_of_a_line() -> None:
+    """The same defect on the digit side, and this one raised rather than lying: the token
+    could span any whitespace but the stripper only knew a literal space, so a line break
+    reached `Decimal` intact and took the whole stage down with a ConversionSyntax. Found on
+    a real pack whose copy was correct."""
+    entries = find_amounts("ready 6.50\n15.00 box", "en-GB")
+
+    assert [str(e.value) for e in entries] == ["6.50", "15.00"]
+    assert [str(e.value) for e in find_amounts("from 7\n2 loaves", "en-GB")] == ["7", "2"]
+
+
+def test_a_digit_run_still_spans_a_thousands_space() -> None:
+    """The other side of that fix: a space between digits is a thousands separator and must
+    keep reading as one number."""
+    assert [str(e.value) for e in find_amounts("1 000 000 loaves", "en-GB")] == ["1000000"]
+
+
 def test_a_written_number_still_spans_its_own_spaces_and_hyphen() -> None:
     """The other side of that fix: the separators that do belong inside one written number
     must keep reading as one, or spelling a number out becomes a way around the check."""

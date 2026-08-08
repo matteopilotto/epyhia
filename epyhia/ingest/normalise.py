@@ -9,7 +9,12 @@ _MINOR_EXPONENT = {"JPY": 0, "KRW": 0, "BHD": 3, "KWD": 3, "OMR": 3}
 _CURRENCY_SYMBOLS = {"$": "USD", "€": "EUR", "£": "GBP", "¥": "JPY"}
 _ISO_CODE_RE = re.compile(r"\b[A-Z]{3}\b")
 _SEPARATOR_CHARS = ",. '"
-_DIGIT_TOKEN_RE = re.compile(r"\d[\d,.\s']*\d|\d")
+# The class between the two digits is exactly `_SEPARATOR_CHARS`, and has to stay that way:
+# whatever the token may contain, `_parse_digit_token` strips with that string and hands the
+# rest to `Decimal`. `\s` here read wider than the stripper — a line break survived it and
+# turned "6.50\n15.00" into one unparseable token — and it is the wrong reading anyway. A
+# space separates thousands; a newline ends the number, exactly as it does for number words.
+_DIGIT_TOKEN_RE = re.compile(r"\d[\d,. ']*\d|\d")
 
 _ONES = {
     "zero": 0, "one": 1, "two": 2, "three": 3, "four": 4, "five": 5, "six": 6,
