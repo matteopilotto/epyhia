@@ -21,6 +21,15 @@ COMPLETED = "checkout.session.completed"
 PAID = "paid"
 
 
+def field(obj, name: str, default=None):
+    """Read one field off a parsed Stripe object, which supports indexing and nothing else —
+    it is not a mapping, so `.get` is not available on it."""
+    try:
+        return obj[name]
+    except (KeyError, TypeError):
+        return default
+
+
 def construct_event(payload: bytes, signature: str) -> dict:
     """Verify and parse, in that order. An unsigned or mis-signed body never reaches the
     order table — this endpoint is public, and the event is what writes money-shaped rows."""
@@ -42,7 +51,11 @@ async def stripe_webhook(
         return {"received": True, "recorded": False}
 
     checkout = event["data"]["object"]
-    metadata = checkout.get("metadata") or {}
+    metadata = field(checkout, "metadata") or {}
+    if not field(metadata, "run_id") or not field(metadata, "slug"):
+        # Signed, so it is genuinely Stripe's — but not a session this agency opened. It is
+        # acknowledged rather than retried forever, and it writes nothing.
+        return {"received": True, "recorded": False}
 
     # The order row and the event id are the same row, so recording that this event was
     # handled and recording the sale cannot come apart. Stripe delivers at least once, and a
@@ -74,7 +87,9 @@ async def stripe_webhook(
     # session id comes from the processor's own signed event (contracts/action-gate.md §4).
     action = (
         await session.execute(
-            select(Action).where(Action.idempotency_key == checkout.get("client_reference_id"))
+            select(Action).where(
+                Action.idempotency_key == field(checkout, "client_reference_id")
+            )
         )
     ).scalars().first()
     if action is not None:

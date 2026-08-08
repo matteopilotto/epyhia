@@ -16,6 +16,7 @@ from epyhia.gate.adapters.stripe import (
 from epyhia.gate.errors import VerificationFailed
 from epyhia.gate.registry import GateContext
 from epyhia.ingest.catalogue import resolve_catalogue
+from tests.stripe_stub import FakeStripe
 
 BRIEF_HASH = "0123456789ab" + "f" * 52
 
@@ -27,59 +28,6 @@ def catalogue() -> list[dict]:
     here: a price or a currency written into a test is the same violation as one written into
     source (Principle I, FR-059)."""
     return resolve_catalogue(json.loads(_FIXTURE.read_text())["products"])
-
-
-class FakeStripe:
-    """The two resources the pair touches, in memory. No key, no network, no account."""
-
-    def __init__(self) -> None:
-        self.products = FakeResource(assigns_ids=False)
-        self.prices = FakeResource(assigns_ids=True)
-        self.checkout = FakeCheckout()
-        # `client.v1.products` reaches the same store as `client.products`, as on the real
-        # client.
-        self.v1 = self
-
-
-class FakeCheckout:
-    def __init__(self) -> None:
-        self.sessions = FakeSessions()
-
-
-class FakeSessions:
-    def __init__(self) -> None:
-        self.rows: dict[str, dict] = {}
-
-    async def create_async(self, params: dict) -> dict:
-        obj = {
-            **params,
-            "id": f"cs_test_{len(self.rows)}",
-            "url": f"https://checkout.stripe.test/{len(self.rows)}",
-        }
-        self.rows[obj["id"]] = obj
-        return obj
-
-
-class FakeResource:
-    def __init__(self, *, assigns_ids: bool) -> None:
-        self.rows: dict[str, dict] = {}
-        self._assigns_ids = assigns_ids
-
-    async def create_async(self, params: dict) -> dict:
-        obj = {**params, "active": True}
-        if self._assigns_ids:
-            # Stripe names prices itself, which is why the price pair verifies through a
-            # derived lookup key rather than an id.
-            obj["id"] = f"price_{len(self.rows)}"
-        self.rows[obj["id"]] = obj
-        return obj
-
-    async def retrieve_async(self, object_id: str) -> dict | None:
-        return self.rows.get(object_id)
-
-    async def list_async(self, params: dict) -> dict:
-        wanted = params["lookup_keys"]
-        return {"data": [p for p in self.rows.values() if p.get("lookup_key") in wanted]}
 
 
 class _Credentials:
