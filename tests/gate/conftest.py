@@ -4,8 +4,8 @@ import pytest_asyncio
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
-from epyhia.config import settings
 from epyhia.gate import registry
+from tests.conftest import test_database_url
 
 
 @pytest_asyncio.fixture
@@ -17,9 +17,7 @@ async def gate_session() -> AsyncIterator[AsyncSession]:
     cannot exercise, since it rolls back everything at teardown. Isolation between tests here
     comes from truncating `actions`, not from a rolled-back transaction.
     """
-    engine = create_async_engine(
-        settings.database_url or "postgresql+asyncpg://epyhia:epyhia@localhost:5432/epyhia"
-    )
+    engine = create_async_engine(test_database_url())
     async with engine.begin() as conn:
         await conn.execute(text("TRUNCATE actions"))
 
@@ -38,9 +36,7 @@ async def gate_session() -> AsyncIterator[AsyncSession]:
 @pytest_asyncio.fixture
 async def fresh_session(gate_session: AsyncSession) -> AsyncIterator[AsyncSession]:
     """A second, independent session against the same database as `gate_session`."""
-    engine = create_async_engine(
-        settings.database_url or "postgresql+asyncpg://epyhia:epyhia@localhost:5432/epyhia"
-    )
+    engine = create_async_engine(test_database_url())
     session_factory = async_sessionmaker(bind=engine, expire_on_commit=False)
     session = session_factory()
     try:

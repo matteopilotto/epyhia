@@ -9,7 +9,12 @@ _MINOR_EXPONENT = {"JPY": 0, "KRW": 0, "BHD": 3, "KWD": 3, "OMR": 3}
 _CURRENCY_SYMBOLS = {"$": "USD", "€": "EUR", "£": "GBP", "¥": "JPY"}
 _ISO_CODE_RE = re.compile(r"\b[A-Z]{3}\b")
 _SEPARATOR_CHARS = ",. '"
-_DIGIT_TOKEN_RE = re.compile(r"\d[\d,.\s']*\d|\d")
+# The class between the two digits is exactly `_SEPARATOR_CHARS`, and has to stay that way:
+# whatever the token may contain, `_parse_digit_token` strips with that string and hands the
+# rest to `Decimal`. `\s` here read wider than the stripper — a line break survived it and
+# turned "6.50\n15.00" into one unparseable token — and it is the wrong reading anyway. A
+# space separates thousands; a newline ends the number, exactly as it does for number words.
+_DIGIT_TOKEN_RE = re.compile(r"\d[\d,. ']*\d|\d")
 
 _ONES = {
     "zero": 0, "one": 1, "two": 2, "three": 3, "four": 4, "five": 5, "six": 6,
@@ -40,6 +45,11 @@ _CURRENCY_WORDS = {
     "yen": "JPY",
 }
 _WORD_RE = re.compile(r"[A-Za-z]+")
+# What may sit between two number words and still leave them one written number: the space
+# of "one hundred twenty three" and the hyphen of "twenty-three", and nothing else. A full
+# stop or a line break ends the run, so "gone by nine." followed by "Three ways" stays two
+# numbers instead of summing into a twelve that nobody wrote.
+_RUN_GAP_RE = re.compile(r"[ \t-]*")
 
 
 @dataclass(frozen=True)
@@ -157,7 +167,11 @@ def find_amounts(text: str, locale: str) -> list[GroundingEntry]:
             continue
 
         j = i
-        while j + 1 < len(tokens) and tokens[j + 1].group(0).lower() in words_map:
+        while (
+            j + 1 < len(tokens)
+            and tokens[j + 1].group(0).lower() in words_map
+            and _RUN_GAP_RE.fullmatch(text[tokens[j].end() : tokens[j + 1].start()])
+        ):
             j += 1
 
         run_text = " ".join(t.group(0) for t in tokens[i : j + 1])

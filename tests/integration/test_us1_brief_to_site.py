@@ -1,6 +1,7 @@
 import json
 import uuid
 from datetime import UTC, datetime
+from decimal import Decimal
 from pathlib import Path
 
 import pytest
@@ -18,6 +19,7 @@ from epyhia.gate.errors import VerificationFailed
 from epyhia.gate.keys import alias_for
 from epyhia.ingest.grounding import build_grounding_set
 from epyhia.ingest.hashing import content_sha256
+from epyhia.ingest.normalise import _MINOR_EXPONENT
 from epyhia.models.actions import Action
 from epyhia.models.artifacts import Artifact
 from epyhia.models.brand_docs import BrandDoc
@@ -103,6 +105,13 @@ def _strategist_model(brief: dict) -> FunctionModel:
                 {"section": "opening", "layout": "hero_stacked", "intent": "state what this is"},
                 {"section": "reach", "layout": "contact_block", "intent": "how to get in touch"},
             ],
+            # Carried across from the brief's own products, field-for-field minus the
+            # charging currency — the copy the Strategist is asked for, expressed as code
+            # rather than as a literal.
+            "offerings": [
+                {k: v for k, v in product.items() if k != "currency_charge"}
+                for product in payload["products"]
+            ],
         }
         return ModelResponse(
             parts=[
@@ -114,13 +123,24 @@ def _strategist_model(brief: dict) -> FunctionModel:
     return FunctionModel(respond)
 
 
+def _major_form(offering: dict) -> str:
+    """`price_minor` as a customer would see it written. The exponent comes from the same
+    table the normaliser reduces by, so the two sides cannot drift apart into a test that
+    passes for the wrong reason."""
+    exponent = _MINOR_EXPONENT.get(offering["currency_display"], 2)
+    amount = Decimal(offering["price_minor"]).scaleb(-exponent)
+    return f"{offering['currency_display']} {amount}"
+
+
 def _marketer_model() -> FunctionModel:
-    """Writes one copy block per planned section from the brand doc it is handed. Every
-    string it emits is one the brand doc already carried, so it states no fact of its own
-    and the deterministic check has nothing to flag."""
+    """Writes one copy block per planned section from the brand doc it is handed, and states
+    the first offering by name and price. Every string it emits is one the brand doc already
+    carried, so it states no fact of its own and the deterministic check has nothing to flag
+    — which is the point: the offerings are given facts, so using them stays clean."""
 
     def respond(messages: list[ModelMessage], info: AgentInfo) -> ModelResponse:
         doc = _prompt_json(messages)["brand_doc"]
+        offering = doc["offerings"][0]
         copy = {
             "sections": [
                 {
@@ -131,6 +151,7 @@ def _marketer_model() -> FunctionModel:
                 for entry in doc["composition_plan"]
             ]
         }
+        copy["sections"][0]["body"] = f"{offering['name']}, {_major_form(offering)}."
         return ModelResponse(parts=[TextPart(json.dumps(copy))])
 
     return FunctionModel(respond)
@@ -147,8 +168,12 @@ def _reviewer_model() -> FunctionModel:
 
 
 def _web_builder_model() -> FunctionModel:
-    """Composes a page from the brand doc and copy it is handed, carrying no numeral of its
-    own — so the grounding check has nothing to flag and the deploy precondition holds."""
+    """Composes a page from the brand doc and copy it is handed, carrying no fact of its
+    own — so the grounding check has nothing to flag and the deploy precondition holds.
+
+    Every offering reaches the page, by exact name and price, because that is what the
+    brand doc's `offerings` list is: the checklist the finished page is read against.
+    """
 
     async def stream(messages: list[ModelMessage], info: AgentInfo):
         payload = _prompt_json(messages)
@@ -157,10 +182,14 @@ def _web_builder_model() -> FunctionModel:
             f"<section><h2>{item['headline']}</h2><p>{item['body']}</p></section>"
             for item in payload["copy"]["sections"]
         )
+        offerings = "".join(
+            f"<li><h3>{item['name']}</h3><p>{_major_form(item)}</p></li>"
+            for item in payload["brand_doc"]["offerings"]
+        )
         html = (
             "<!doctype html><html lang='en'><head><title>"
             f"{name}</title><style>:root{{--bg:#101014}}.h{{padding:1.5rem}}</style>"
-            f"</head><body><h1>{name}</h1>{sections}"
+            f"</head><body><h1>{name}</h1>{sections}<ul>{offerings}</ul>"
             "<script>document.title = document.title;</script></body></html>"
         )
         for index in range(0, len(html), 64):
@@ -250,6 +279,15 @@ async def test_brief_becomes_a_proved_live_site_once_approved(
     }
     assert artifacts["copy"].grounding_status == "clean"
     assert artifacts["site"].grounding_status == "clean"
+
+    # The facts reached the page. Both sides of this are read from the run's own rows — the
+    # brand doc the Strategist wrote and the site artifact that came out of it — so it holds
+    # for any brief, and it is the check that was missing when a page could go out stating
+    # nothing the business sells (FR-010).
+    published = artifacts["site"].bytes.decode("utf-8")
+    for offering in brand_doc.doc["offerings"]:
+        assert offering["name"] in published
+        assert _major_form(offering) in published
 
     # The deploy halted for a human, durably, before anything reached the world.
     assert action.state == "awaiting_approval"

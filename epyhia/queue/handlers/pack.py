@@ -5,7 +5,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from epyhia.agents import marketer, reviewer
 from epyhia.artifacts.store import PostgresArtifactStore
-from epyhia.ingest.extractors import extract_structured_strings
+from epyhia.ingest.extractors import extract_structured_strings, extract_video_props_content
 from epyhia.ingest.grounding import set_difference
 from epyhia.ingest.normalise import GroundingEntry, find_amounts
 from epyhia.models.artifacts import Artifact
@@ -19,24 +19,32 @@ _store = PostgresArtifactStore()
 MAX_REVISIONS = 2
 
 # Sent to the Marketer as the `why` of a numeral violation. Not a prompt — the instructions
-# live in `prompts/marketer/v1.jinja`; this is the one sentence that explains a machine
-# finding, and it carries no client data by construction.
+# live in the versioned `prompts/marketer/` tree; this is the one sentence that explains a
+# machine finding, and it carries no client data by construction.
 UNGROUNDED_NUMERAL_WHY = "this amount is not among the numbers the business stated"
 
 
-def numeral_violations(payload: dict, grounding_set: dict, locale: str) -> list[dict]:
+def numeral_violations(
+    payload: dict, grounding_set: dict, locale: str, deliverable: str
+) -> list[dict]:
     """The deterministic half of the check, and it runs before the Reviewer is called at
     all (FR-022, Principle VI). Exact, free, and not a matter of opinion — so asking a
     model about a draft that already fails it would be spending money to be told something
     already known.
 
-    Scope here is the structured-artifact rule from research.md R5: every string value in
-    the draft. `video_props` reads its leaves under `content` instead, wired in T083.
+    Scope is per artifact kind (research.md R5): every string value in a structured draft,
+    but for `video_props` every leaf under `content` and nothing under `style`. A price
+    hallucinated into a video is otherwise invisible until someone watches it, and reading
+    `style` too would flag the palette's own hex values on the first honest render
+    (FR-026, §6.4).
     """
+    texts = (
+        extract_video_props_content(payload)
+        if deliverable == "video_props"
+        else extract_structured_strings(payload)
+    )
     extracted: list[GroundingEntry] = [
-        amount
-        for text in extract_structured_strings(payload)
-        for amount in find_amounts(text, locale)
+        amount for text in texts for amount in find_amounts(text, locale)
     ]
     return [
         {
@@ -81,9 +89,18 @@ async def produce(
             violations=violations or None,
             task_id=task_id,
         )
-        payload = output.model_dump(exclude_none=True)
+        draft = output.model_dump(exclude_none=True)
+        # `video_props` is checked and stored assembled: the Marketer authors `content` and
+        # two presentation choices, and the archetype and palette are copied from the brand
+        # doc (§6.4). The revision, though, carries back only what the Marketer itself
+        # wrote — handing it the assembled props would offer it fields it does not own.
+        payload = (
+            marketer.assemble_video_props(brand_doc, output)
+            if deliverable == "video_props"
+            else draft
+        )
 
-        violations = numeral_violations(payload, grounding_set, locale)
+        violations = numeral_violations(payload, grounding_set, locale, deliverable)
         if not violations:
             # Only now is a model asked an opinion, and only about voice and claims.
             review = await reviewer.review(
@@ -99,7 +116,7 @@ async def produce(
         if not violations:
             return await _write(session, run_id, deliverable, payload, [], revision)
 
-        previous = payload
+        previous = draft
 
     return await _write(session, run_id, deliverable, payload, violations, MAX_REVISIONS)
 

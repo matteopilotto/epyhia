@@ -59,7 +59,7 @@ the grounding check looks.
 **Out**: a structured list, never a rewrite and never a bare approval (FR-023).
 
 ```json
-{"approved": false, "violations": [{"kind": "voice" | "unsupported_claim", "quote": "...", "why": "..."}]}
+{"approved": false, "violations": [{"kind": "voice" | "unsupported_claim" | "missing_fact", "quote": "...", "why": "..."}]}
 ```
 
 Its inputs are scoped to the draft, the brand doc and the brief — **not the run transcript**. A

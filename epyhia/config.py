@@ -8,6 +8,7 @@ _CREDENTIAL_ATTRS = {
     "vercel": "vercel_token",
     "stripe": "stripe_secret_key",
     "smtp": "smtp_host",
+    "mailpit": "mailpit_api_url",
     "sink": "sink_token",
     "auth0": "auth0_domain",
 }
@@ -22,6 +23,7 @@ class CredentialNotConfigured(Exception):
 class Settings:
     def __init__(self) -> None:
         self.database_url = os.environ.get("DATABASE_URL") or None
+        self.test_database_url = os.environ.get("TEST_DATABASE_URL") or None
         self.anthropic_api_key = os.environ.get("ANTHROPIC_API_KEY") or None
         self.vercel_token = os.environ.get("VERCEL_TOKEN") or None
         self.stripe_secret_key = os.environ.get("STRIPE_SECRET_KEY") or None

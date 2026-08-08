@@ -16,6 +16,7 @@ dist/
 # Remotion render output — artifacts of record live in Postgres, not the tree
 out/
 *.mp4
+preview/
 
 # Working notes, deliberately untracked (see .claude/DECISIONS.md header)
 .claude/DECISIONS.md

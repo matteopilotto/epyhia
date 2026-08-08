@@ -201,17 +201,17 @@ find now than after 4b exists.
 
 ### 4b · The rest of the pack
 
-- [ ] T078 [P] [US2] Implement the email adapter in `epyhia/gate/adapters/email.py` — `execute()` sends SMTP to Mailpit; `verify()` reads the message **back out of Mailpit's API** and stores `{message_id, recipient, subject}` (FR-037, §4.5)
-- [ ] T079 [P] [US2] Implement the recording sink in `epyhia/api/routers/sink.py` — token-authenticated `POST /sink/posts` → `{id, permalink}` and `GET /sink/posts/{id}`, backed by `sink_posts` (R4)
-- [ ] T080 [US2] Implement the publish adapter in `epyhia/gate/adapters/publish.py` — approval-gated (`requires_approval = true`: a stand-in channel still gets real approval, FR-043); a real HTTP round trip to the sink's configured base URL, never an in-process call; `verify()` fetches the permalink and asserts the stored `payload_sha256` matches (R4)
-- [ ] T081 [P] [US2] Create the Remotion project in `video/` — pinned `4.0.503`, 3–4 parameterised composition archetypes consuming [contracts/video-props.schema.json](./contracts/video-props.schema.json), each with a 1080×1920 vertical variant of the same archetype
-- [ ] T082 [US2] Implement the `video` task handler in `epyhia/queue/handlers/video.py` — render the primary and vertical cuts locally from **one** `video_props` artifact, store both as artifacts, and use the long per-`kind` lease from R8 (FR-025)
-- [ ] T083 [US2] Wire the `video_props` grounding check into `epyhia/queue/handlers/pack.py` — extract every leaf under `content`, set-difference it, and never render a `flagged` props artifact (FR-026, R5)
-- [ ] T084 [P] [US2] Implement `GET /runs/{id}/artifacts` and `GET /artifacts/{id}` in `epyhia/api/routers/artifacts.py` — including `grounding_status` and itemised `violations`; flagged artifacts are **listed and readable**, read-only (FR-024)
-- [ ] T085 [P] [US2] Build the artifacts view in `console/src/routes/artifacts.tsx`, rendering flagged artifacts with their violations rather than hiding them
-- [ ] T086 [P] [US2] Test in `tests/integration/test_us2_grounding_hold.py`: a fabricated numeral in a draft is held through two revisions then stored `flagged`; the Reviewer's output is itemised and is never a rewrite (FR-023, FR-024)
-- [ ] T087 [US2] Test in `tests/gate/test_deploy_precondition.py`: a run whose `site` artifact is `flagged` has its `deploy` **refused by the gate**, with no adapter invoked and no agent involved (FR-016, §3.4)
-- [ ] T088 [P] [US2] Test in `tests/integration/test_us2_send_verify.py`: `send_email` and `publish` **each** halt for approval (FR-043), and after approval `verify()` proves the email by reading it back from Mailpit and the post by fetching the sink permalink
+- [X] T078 [P] [US2] Implement the email adapter in `epyhia/gate/adapters/email.py` — `execute()` sends SMTP to Mailpit; `verify()` reads the message **back out of Mailpit's API** and stores `{message_id, recipient, subject}` (FR-037, §4.5)
+- [X] T079 [P] [US2] Implement the recording sink in `epyhia/api/routers/sink.py` — token-authenticated `POST /sink/posts` → `{id, permalink}` and `GET /sink/posts/{id}`, backed by `sink_posts` (R4)
+- [X] T080 [US2] Implement the publish adapter in `epyhia/gate/adapters/publish.py` — approval-gated (`requires_approval = true`: a stand-in channel still gets real approval, FR-043); a real HTTP round trip to the sink's configured base URL, never an in-process call; `verify()` fetches the permalink and asserts the stored `payload_sha256` matches (R4)
+- [X] T081 [P] [US2] Create the Remotion project in `video/` — pinned `4.0.503`, 3–4 parameterised composition archetypes consuming [contracts/video-props.schema.json](./contracts/video-props.schema.json), each with a 1080×1920 vertical variant of the same archetype
+- [X] T082 [US2] Implement the `video` task handler in `epyhia/queue/handlers/video.py` — render the primary and vertical cuts locally from **one** `video_props` artifact, store both as artifacts, and use the long per-`kind` lease from R8 (FR-025)
+- [X] T083 [US2] Wire the `video_props` grounding check into `epyhia/queue/handlers/pack.py` — extract every leaf under `content`, set-difference it, and never render a `flagged` props artifact (FR-026, R5)
+- [X] T084 [P] [US2] Implement `GET /runs/{id}/artifacts` and `GET /artifacts/{id}` in `epyhia/api/routers/artifacts.py` — including `grounding_status` and itemised `violations`; flagged artifacts are **listed and readable**, read-only (FR-024)
+- [X] T085 [P] [US2] Build the artifacts view in `console/src/routes/artifacts.tsx`, rendering flagged artifacts with their violations rather than hiding them
+- [X] T086 [P] [US2] Test in `tests/integration/test_us2_grounding_hold.py`: a fabricated numeral in a draft is held through two revisions then stored `flagged`; the Reviewer's output is itemised and is never a rewrite (FR-023, FR-024)
+- [X] T087 [US2] Test in `tests/gate/test_deploy_precondition.py`: a run whose `site` artifact is `flagged` has its `deploy` **refused by the gate**, with no adapter invoked and no agent involved (FR-016, §3.4)
+- [X] T088 [P] [US2] Test in `tests/integration/test_us2_send_verify.py`: `send_email` and `publish` **each** halt for approval (FR-043), and after approval `verify()` proves the email by reading it back from Mailpit and the post by fetching the sink permalink
 
 **Checkpoint**: US1 and US2 both work independently. Nothing leaves the system carrying a number
 the brief did not give it — including the site.
