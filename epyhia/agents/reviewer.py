@@ -5,7 +5,7 @@ from typing import Literal
 
 from pydantic import BaseModel, Field
 from pydantic_ai import Agent, PromptedOutput
-from pydantic_ai.settings import ModelSettings
+from pydantic_ai.models.anthropic import AnthropicModelSettings
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from epyhia.cost.ledger import record_call
@@ -15,7 +15,15 @@ AGENT = "reviewer"
 MODEL_ID = "claude-haiku-4-5"
 PROMPT_VERSION = prompt_service.active_version(AGENT)
 
-MAX_TOKENS = 4_096
+# Thinking is where the Reviewer works a check through; `why` is where it states the result.
+# Without a scratchpad it used `why` as one, and entries reading "this is correct" or
+# retracting themselves in their own sentence shipped as violations and spent revisions.
+#
+# Haiku 4.5 predates adaptive thinking: the budget is explicit, at least 1024, and strictly
+# below `max_tokens` — which caps thinking and response together, so the ceiling rises with
+# it rather than leaving the answer the remainder.
+THINKING_BUDGET = 4_096
+MAX_TOKENS = 8_192
 
 
 class Violation(BaseModel):
@@ -42,7 +50,10 @@ class Review(BaseModel):
 agent = Agent(
     f"anthropic:{MODEL_ID}",
     instructions=prompt_service.render(AGENT, PROMPT_VERSION),
-    model_settings=ModelSettings(max_tokens=MAX_TOKENS),
+    model_settings=AnthropicModelSettings(
+        max_tokens=MAX_TOKENS,
+        anthropic_thinking={"type": "enabled", "budget_tokens": THINKING_BUDGET},
+    ),
     # Constructing the agent must not require ANTHROPIC_API_KEY — only calling it does.
     defer_model_check=True,
 )
