@@ -19,11 +19,14 @@ PROMPT_VERSION = prompt_service.active_version(AGENT)
 # Without a scratchpad it used `why` as one, and entries reading "this is correct" or
 # retracting themselves in their own sentence shipped as violations and spent revisions.
 #
-# Haiku 4.5 predates adaptive thinking: the budget is explicit, at least 1024, and strictly
-# below `max_tokens` — which caps thinking and response together, so the ceiling rises with
-# it rather than leaving the answer the remainder.
+# Haiku 4.5 predates adaptive thinking: the budget is explicit and at least 1024. It is a
+# target, not a stop — the model may think past it, and `max_tokens` caps thinking and
+# response together, so the two are not a budget and a remainder. At 8192 an overrun reached
+# the ceiling mid-thought and the call came back with only thinking in it, which PydanticAI
+# raises as `UnexpectedModelBehavior` and which fails the whole stage. The headroom is what
+# makes the answer reachable; it costs nothing unless it is generated.
 THINKING_BUDGET = 4_096
-MAX_TOKENS = 8_192
+MAX_TOKENS = 16_384
 
 
 class Violation(BaseModel):
