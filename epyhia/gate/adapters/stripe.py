@@ -154,6 +154,44 @@ class StripePriceAdapter(_StripeAdapter):
         }
 
 
+class ArmChargePathAdapter(_StripeAdapter):
+    action_type = "arm_charge_path"
+    # *May this run take money, at these prices?* — the one money decision a human can make
+    # in advance, and therefore the one that is gated (FR-037, §4.4).
+    requires_approval = True
+
+    async def execute(self, request: dict, ctx: GateContext) -> dict:
+        """Nothing is created here: the products and prices already exist, and armed-ness is
+        the state of this row rather than a flag written somewhere else. Which is the point —
+        the run is armed because FR-029's re-read passed, so the armed state and its evidence
+        are one record (research.md R11)."""
+        return {"armed": [row["slug"] for row in request["catalogue"]]}
+
+    async def verify(self, request: dict, result: dict, ctx: GateContext) -> dict:
+        """Re-read **every** price from the processor and hold each against the brief's own
+        row. Not a sample and not the ones that changed: a catalogue is armed as a whole, and
+        one price that drifted is a customer charged the wrong amount (FR-029)."""
+        client = self._client(ctx)
+        prices = []
+        for row in request["catalogue"]:
+            try:
+                price = await client.v1.prices.retrieve_async(row["price_id"])
+            except stripe.StripeError as exc:
+                raise VerificationFailed(f"price {row['price_id']}: {exc}") from exc
+            if price is None:
+                raise VerificationFailed(f"price {row['price_id']} does not exist")
+            assert_matches(price, row)
+            prices.append(
+                {
+                    "slug": row["slug"],
+                    "price_id": price["id"],
+                    "unit_amount": price["unit_amount"],
+                    "currency": price["currency"],
+                }
+            )
+        return {"prices": prices}
+
+
 async def find_price(client: stripe.StripeClient, lookup_key: str) -> dict | None:
     """The price carrying this derived lookup key, or None. Listed rather than retrieved by
     id because Stripe assigns price ids and this must not depend on what `execute()` said."""
@@ -181,3 +219,4 @@ def assert_matches(price: dict, expected: dict) -> None:
 
 register(StripeProductAdapter())
 register(StripePriceAdapter())
+register(ArmChargePathAdapter())

@@ -5,6 +5,7 @@ from pathlib import Path
 import pytest
 
 from epyhia.gate.adapters.stripe import (
+    ArmChargePathAdapter,
     StripePriceAdapter,
     StripeProductAdapter,
     price_lookup_key,
@@ -157,6 +158,58 @@ async def test_a_price_that_drifted_from_the_brief_fails_verification() -> None:
 
     with pytest.raises(VerificationFailed):
         await prices.verify(request, {"price_id": price_id}, _ctx())
+
+
+async def _armed_request(api: FakeStripe) -> dict:
+    """The catalogue as Ops leaves it: the brief's own rows, each carrying the price id its
+    `stripe_price` action produced."""
+    prices = StripePriceAdapter(client_factory=lambda _: api)
+    priced = []
+    for row in catalogue():
+        request = price_request(row, "prod_stub")
+        created = await prices.execute(request, _ctx())
+        priced.append({**row, "price_id": created["price_id"]})
+    return {"catalogue": priced}
+
+
+async def test_arming_requires_approval_and_re_reads_every_price() -> None:
+    api = FakeStripe()
+    arm = ArmChargePathAdapter(client_factory=lambda _: api)
+    request = await _armed_request(api)
+
+    assert arm.requires_approval is True
+
+    evidence = await arm.verify(request, await arm.execute(request, _ctx()), _ctx())
+
+    assert [p["slug"] for p in evidence["prices"]] == [r["slug"] for r in request["catalogue"]]
+    for proved, row in zip(evidence["prices"], request["catalogue"], strict=True):
+        assert proved["unit_amount"] == row["price_minor"]
+        assert proved["currency"] == row["currency_charge"].lower()
+
+
+async def test_arming_fails_when_any_one_price_drifted() -> None:
+    """Not a sample: a catalogue is armed as a whole, and the price that moved is the one a
+    buyer is about to be charged (FR-029)."""
+    api = FakeStripe()
+    arm = ArmChargePathAdapter(client_factory=lambda _: api)
+    request = await _armed_request(api)
+
+    last = request["catalogue"][-1]
+    api.prices.rows[last["price_id"]]["unit_amount"] = last["price_minor"] + 1
+
+    with pytest.raises(VerificationFailed):
+        await arm.verify(request, {}, _ctx())
+
+
+async def test_arming_fails_when_a_price_was_deactivated() -> None:
+    api = FakeStripe()
+    arm = ArmChargePathAdapter(client_factory=lambda _: api)
+    request = await _armed_request(api)
+
+    api.prices.rows[request["catalogue"][0]["price_id"]]["active"] = False
+
+    with pytest.raises(VerificationFailed):
+        await arm.verify(request, {}, _ctx())
 
 
 async def test_a_missing_object_fails_verification_rather_than_succeeding() -> None:
