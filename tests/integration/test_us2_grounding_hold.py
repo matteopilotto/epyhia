@@ -11,6 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from epyhia.agents import marketer, reviewer
 from epyhia.agents.reviewer import Violation
 from epyhia.gate.keys import alias_for
+from epyhia.ingest.catalogue import resolve_catalogue
 from epyhia.ingest.grounding import build_grounding_set
 from epyhia.ingest.hashing import content_sha256
 from epyhia.models.briefs import Brief
@@ -80,6 +81,7 @@ async def _open_run(session: AsyncSession, brief_payload: dict) -> Run:
         brief_id=brief.id,
         prompt_version=prompt_service.active_version("strategist"),
         grounding_set=build_grounding_set(brief_payload, datetime.now(UTC).year),
+        resolved_catalogue=resolve_catalogue(brief_payload["products"]),
         budget_usd=25,
         status="running",
         alias=alias_for(brief_hash),
