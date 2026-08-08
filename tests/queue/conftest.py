@@ -6,7 +6,7 @@ import pytest_asyncio
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
-from epyhia.config import settings
+from tests.conftest import test_database_url
 
 
 @pytest_asyncio.fixture
@@ -17,9 +17,7 @@ async def queue_session() -> AsyncIterator[AsyncSession]:
     statement), which the transactional `db_session` fixture cannot exercise. Isolation
     between tests comes from truncating, not from a rolled-back transaction.
     """
-    engine = create_async_engine(
-        settings.database_url or "postgresql+asyncpg://epyhia:epyhia@localhost:5432/epyhia"
-    )
+    engine = create_async_engine(test_database_url())
     async with engine.begin() as conn:
         await conn.execute(text("TRUNCATE tasks, runs, briefs CASCADE"))
 

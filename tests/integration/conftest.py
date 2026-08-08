@@ -4,8 +4,8 @@ import pytest_asyncio
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
-from epyhia.config import settings
 from epyhia.gate import registry
+from tests.conftest import test_database_url
 
 _TABLES = "actions, artifacts, agent_calls, tasks, runs, brand_docs, briefs"
 
@@ -18,9 +18,7 @@ async def integration_session() -> AsyncIterator[AsyncSession]:
     commits between stages and the gate commits at every transition — so the transactional
     `db_session` fixture cannot express it. Isolation comes from truncating.
     """
-    engine = create_async_engine(
-        settings.database_url or "postgresql+asyncpg://epyhia:epyhia@localhost:5432/epyhia"
-    )
+    engine = create_async_engine(test_database_url())
     async with engine.begin() as conn:
         await conn.execute(text(f"TRUNCATE {_TABLES} CASCADE"))
 

@@ -5,7 +5,7 @@ from typing import Literal
 
 from pydantic import BaseModel, Field
 from pydantic_ai import Agent, PromptedOutput
-from pydantic_ai.settings import ModelSettings
+from pydantic_ai.models.anthropic import AnthropicModelSettings
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from epyhia.cost.ledger import record_call
@@ -15,7 +15,18 @@ AGENT = "reviewer"
 MODEL_ID = "claude-haiku-4-5"
 PROMPT_VERSION = prompt_service.active_version(AGENT)
 
-MAX_TOKENS = 4_096
+# Thinking is where the Reviewer works a check through; `why` is where it states the result.
+# Without a scratchpad it used `why` as one, and entries reading "this is correct" or
+# retracting themselves in their own sentence shipped as violations and spent revisions.
+#
+# Haiku 4.5 predates adaptive thinking: the budget is explicit and at least 1024. It is a
+# target, not a stop — the model may think past it, and `max_tokens` caps thinking and
+# response together, so the two are not a budget and a remainder. At 8192 an overrun reached
+# the ceiling mid-thought and the call came back with only thinking in it, which PydanticAI
+# raises as `UnexpectedModelBehavior` and which fails the whole stage. The headroom is what
+# makes the answer reachable; it costs nothing unless it is generated.
+THINKING_BUDGET = 4_096
+MAX_TOKENS = 16_384
 
 
 class Violation(BaseModel):
@@ -23,7 +34,7 @@ class Violation(BaseModel):
     replacement wording, which is what makes "never rewrites the draft" a property of the
     output shape rather than an instruction the Reviewer could talk itself out of."""
 
-    kind: Literal["unsupported_claim", "voice"]
+    kind: Literal["unsupported_claim", "voice", "missing_fact"]
     quote: str = Field(min_length=1)
     why: str = Field(min_length=1)
 
@@ -42,7 +53,10 @@ class Review(BaseModel):
 agent = Agent(
     f"anthropic:{MODEL_ID}",
     instructions=prompt_service.render(AGENT, PROMPT_VERSION),
-    model_settings=ModelSettings(max_tokens=MAX_TOKENS),
+    model_settings=AnthropicModelSettings(
+        max_tokens=MAX_TOKENS,
+        anthropic_thinking={"type": "enabled", "budget_tokens": THINKING_BUDGET},
+    ),
     # Constructing the agent must not require ANTHROPIC_API_KEY — only calling it does.
     defer_model_check=True,
 )

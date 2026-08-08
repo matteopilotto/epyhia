@@ -15,7 +15,8 @@
     "composition_archetype",
     "video_archetype",
     "voice",
-    "composition_plan"
+    "composition_plan",
+    "offerings"
   ],
   "properties": {
     "name": {
@@ -81,6 +82,37 @@
           "section": { "type": "string" },
           "layout": { "type": "string" },
           "intent": { "type": "string" }
+        }
+      }
+    },
+    "offerings": {
+      "type": "array",
+      "minItems": 1,
+      "description": "The fact channel. Every agent except the Reviewer reads this document and never the raw brief (FR-011), so without these fields there is no route by which what the business sells reaches the words that sell it — the anti-fabrication rules then correctly produce a page stating nothing. Mirrors brief.schema.json's `products[]` field-for-field minus `currency_charge`, which is Ops' charging detail and belongs on no page. Copied verbatim by the Strategist; never paraphrased, repriced or trimmed. Named typed fields, not prose: the containment argument (DESIGN.md 9.6) survives because there is still no free channel from the brief into an agent's prompt. Schedule and location facts need no field of their own — they live in `description`/`features`, whose numerals are already in runs.grounding_set.",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "name",
+          "description",
+          "price_minor",
+          "currency_display",
+          "billing",
+          "features",
+          "not_covered"
+        ],
+        "properties": {
+          "name": { "type": "string", "minLength": 1 },
+          "description": { "type": "string", "minLength": 1 },
+          "price_minor": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Minor units, as the brief has it. A reader states it in the display currency's normal major form; the normaliser reduces both sides to minor units, so the major form matches and the raw minor number beside a currency marker does not."
+          },
+          "currency_display": { "type": "string", "minLength": 1 },
+          "billing": { "type": "string", "enum": ["subscription", "one_time"] },
+          "features": { "type": "array", "items": { "type": "string" } },
+          "not_covered": { "type": "array", "items": { "type": "string" } }
         }
       }
     }

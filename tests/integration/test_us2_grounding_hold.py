@@ -44,6 +44,10 @@ def _brand_doc(brief: dict) -> dict:
         "composition_plan": [
             {"section": "opening", "layout": "hero_stacked", "intent": "state what this is"},
         ],
+        "offerings": [
+            {k: v for k, v in product.items() if k != "currency_charge"}
+            for product in brief["products"]
+        ],
     }
 
 
@@ -222,3 +226,75 @@ async def test_the_reviewer_itemises_and_never_rewrites(
     # output shape has no field through which replacement wording could have arrived (FR-023).
     assert json.loads(artifact.bytes) == drafts[-1]
     assert set(Violation.model_fields) == {"kind", "quote", "why"}
+
+
+async def test_an_omitted_offering_is_held_the_same_way_an_invented_one_is(
+    integration_session: AsyncSession,
+) -> None:
+    """A draft that states too little is held exactly as a draft that states too much.
+
+    Nothing in `produce` branches on the kind, and this is what says so: `missing_fact`
+    drives the same revisions and flags the same artifact as `ungrounded_numeral` does.
+    """
+    brief_payload = load_brief()
+    run = await _open_run(integration_session, brief_payload)
+    brand_doc = _brand_doc(brief_payload)
+    omitted = brand_doc["offerings"][0]
+
+    drafts: list[dict] = []
+    handed_back: list[list[dict] | None] = []
+
+    def marketer_respond(messages: list[ModelMessage], info: AgentInfo) -> ModelResponse:
+        payload = _prompt_json(messages)
+        handed_back.append(payload.get("violations"))
+        doc = payload["brand_doc"]
+        # Vague where the brand doc is specific: the section's job is to say what is sold,
+        # and it names nothing. It carries no numeral, so the deterministic check passes and
+        # the Reviewer is the only thing that can catch it.
+        draft = {
+            "sections": [
+                {
+                    "section": entry["section"],
+                    "headline": doc["descriptor"],
+                    "body": "Options to suit you.",
+                }
+                for entry in doc["composition_plan"]
+            ]
+        }
+        drafts.append(draft)
+        return ModelResponse(parts=[TextPart(json.dumps(draft))])
+
+    def reviewer_respond(messages: list[ModelMessage], info: AgentInfo) -> ModelResponse:
+        draft = _prompt_json(messages)["draft"]
+        review = {
+            "violations": [
+                {
+                    "kind": "missing_fact",
+                    "quote": draft["sections"][0]["body"],
+                    "why": f"the brand document states {omitted['name']} and the draft does not",
+                }
+            ]
+        }
+        return ModelResponse(parts=[TextPart(json.dumps(review))])
+
+    with (
+        marketer.agent.override(model=FunctionModel(marketer_respond)),
+        reviewer.agent.override(model=FunctionModel(reviewer_respond)),
+    ):
+        artifact = await produce(
+            integration_session,
+            run_id=run.id,
+            deliverable="copy",
+            brand_doc=brand_doc,
+            brief=brief_payload,
+            grounding_set=run.grounding_set,
+        )
+    await integration_session.commit()
+
+    assert len(drafts) == MAX_REVISIONS + 1
+    assert handed_back[0] is None
+    assert all(v and v[0]["kind"] == "missing_fact" for v in handed_back[1:])
+
+    assert artifact.grounding_status == "flagged"
+    assert artifact.violations
+    assert all(v["kind"] == "missing_fact" for v in artifact.violations)
