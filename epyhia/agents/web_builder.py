@@ -46,15 +46,23 @@ async def build_site(
     run_id: uuid.UUID,
     brand_doc: dict,
     copy: dict,
+    checkout: dict,
     task_id: uuid.UUID | None = None,
 ) -> str:
     """Compose one self-contained HTML document from the brand doc and the reviewed copy.
 
     Returns the markup. Storing it, checking it and deploying it are the handler's, so this
     function has no way to put anything into the world.
+
+    `checkout` carries the run id, the endpoint and one slug per offering — and no price id,
+    no key and nothing else from the payment processor. That is the whole reason the site and
+    money stages can run in parallel, and the reason the deployed bytes stay credential-free
+    by construction (FR-030, DESIGN.md §6.2).
     """
     prompt = json.dumps(
-        {"brand_doc": brand_doc, "copy": copy}, ensure_ascii=False, sort_keys=True
+        {"brand_doc": brand_doc, "copy": copy, "checkout": checkout},
+        ensure_ascii=False,
+        sort_keys=True,
     )
 
     started = time.perf_counter()

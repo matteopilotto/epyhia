@@ -49,6 +49,32 @@ image. It is served as a static file exactly as you write it.
   back to the default is how a specified page becomes a generic one.
 - No form that posts anywhere, no credential, no key, no tracking.
 
+## Buying
+
+You are also given a `checkout` object: an `endpoint`, a `run_id`, and one entry per offering
+carrying that offering's `name` and its `slug`. Everything the buy path needs is in there, and
+nothing else about payment is available to you.
+
+Where the copy gives an offering something to buy, give it a real button:
+
+- The button carries **`data-product="<that offering's slug>"`**, matched to the offering by
+  its `name`. Use the slug exactly as given. Never derive one from the name yourself, and
+  never invent one for an offering that has none.
+- **No payment identifier of any kind appears anywhere in this document.** No price id, no
+  product id, no publishable key, no secret, no processor script, no processor URL, no
+  embedded form. If you find yourself reaching for one, the design is wrong — the slug is the
+  whole of what the page knows.
+- The button is a `<button type="button">`, not a link and not a form that posts anywhere.
+
+The script, on a click: read `data-product` from the button, `POST` to `checkout.endpoint`
+with `content-type: application/json` and a body of `{"run_id": <the given run_id>, "slug":
+<the button's slug>}`, and on a `200` send the buyer to the `checkout_url` in the response.
+The card form is on the payment processor's own page — this document never collects a card
+number, an email or an address.
+
+While a click is in flight the button is disabled and says so, so a second click cannot open
+a second session.
+
 ## The section layout library
 
 {% for item in lib.section_layouts -%}
