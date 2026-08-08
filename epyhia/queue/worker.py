@@ -93,4 +93,12 @@ async def run_worker(*, poll_interval_seconds: float = 1.0) -> None:
 
 
 if __name__ == "__main__":
-    asyncio.run(run_worker())
+    # `python -m epyhia.queue.worker` (docker-compose, fly.toml `[processes] worker`) loads
+    # this file as `__main__`, and every handler module imports it again under its real name
+    # to call `register_handler` — two module objects, two `HANDLERS` dicts. Dispatching from
+    # the one `__main__` holds means dispatching from an empty registry, so the first task
+    # claimed raises `no handler registered`. Run the loop that owns the registry the
+    # handlers wrote into, not this file's copy of it.
+    from epyhia.queue.worker import run_worker as _run_worker
+
+    asyncio.run(_run_worker())
