@@ -27,17 +27,18 @@ async def run_once(session: AsyncSession, *, kind: str | None = None) -> bool:
 
     A handler that raises `ApprovalRequired` (R7 step 4) parks the task `awaiting_approval`
     with the action id on its payload and releases the lease — no process holds state
-    across a human's pause. Any other exception rolls back and re-raises, leaving the task
-    `running` for the sweeper to expire.
+    across a human's pause.
+
+    Any other exception rolls the handler's writes back and lands the task `failed` with
+    the reason on the row. It must not leave the loop: a worker that dies on one task stops
+    serving every other run, and the failure a crash leaves behind is a task stuck `running`
+    against a lease nothing sweeps — invisible in exactly the way a `failed` row naming its
+    reason is not.
     """
     task = await claim_task(session, kind=kind)
     await session.commit()
     if task is None:
         return False
-
-    handler = HANDLERS.get(task.kind)
-    if handler is None:
-        raise RuntimeError(f"no handler registered for task kind: {task.kind!r}")
 
     await session.execute(
         text("UPDATE tasks SET state = 'running' WHERE id = :id"), {"id": task.id}
@@ -45,6 +46,9 @@ async def run_once(session: AsyncSession, *, kind: str | None = None) -> bool:
     await session.commit()
 
     try:
+        handler = HANDLERS.get(task.kind)
+        if handler is None:
+            raise RuntimeError(f"no handler registered for task kind: {task.kind!r}")
         await handler(session, task)
         await session.execute(
             text(
@@ -65,9 +69,21 @@ async def run_once(session: AsyncSession, *, kind: str | None = None) -> bool:
         )
         await session.commit()
         return True
-    except Exception:
+    except Exception as exc:
+        # The rollback discards whatever the handler had written, so a task that failed
+        # half-way leaves no artifact behind; the state change is written after it, on a
+        # clean session, and is the only thing that survives.
         await session.rollback()
-        raise
+        logger.exception("task %s (%s) failed", task.id, task.kind)
+        await session.execute(
+            text(
+                "UPDATE tasks SET state = 'failed', lease_expires_at = NULL, error = :error "
+                "WHERE id = :id"
+            ),
+            {"id": task.id, "error": f"{type(exc).__name__}: {exc}"},
+        )
+        await session.commit()
+        return True
 
     await session.commit()
     return True
