@@ -43,6 +43,77 @@ function describeTarget(action: Action, run: Run | undefined): string {
   }
 }
 
+type CatalogueRow = {
+  slug: string;
+  name: string;
+  price_minor: number;
+  currency_display: string;
+  currency_charge: string;
+  billing: string;
+  billing_interval?: string;
+  billing_interval_count?: number;
+};
+
+/**
+ * Minor units to the amount a reader recognises, using the currency's own exponent rather
+ * than an assumed one — the operator is approving what will actually be charged, so a
+ * two-decimal guess is not good enough for a currency that has none.
+ */
+function formatAmount(minorUnits: number, currency: string): string {
+  const format = new Intl.NumberFormat(undefined, { style: "currency", currency });
+  const digits = format.resolvedOptions().maximumFractionDigits ?? 0;
+  return format.format(minorUnits / 10 ** digits);
+}
+
+function describeBilling(row: CatalogueRow): string {
+  if (row.billing !== "subscription") return row.billing;
+  const count = row.billing_interval_count;
+  return count && count > 1
+    ? `${row.billing} · every ${count} ${row.billing_interval}s`
+    : `${row.billing} · every ${row.billing_interval}`;
+}
+
+/**
+ * The resolved catalogue, as it will be charged (FR-028, DESIGN.md §4.4).
+ *
+ * The unit of the decision is these prices going live, once — so every row has to be on the
+ * screen, with the currency the charge is actually made in. Where the brief displays one
+ * currency and charges another, both are shown and neither is converted: the difference is
+ * the business's own and it is not this screen's to reconcile (research.md R6).
+ */
+function Catalogue({ rows }: { rows: CatalogueRow[] }) {
+  return (
+    <div className="mt-3 overflow-x-auto">
+      <table className="w-full text-sm">
+        <thead className="text-left text-xs text-ink-muted">
+          <tr>
+            <th className="py-1 pr-4 font-normal">Product</th>
+            <th className="py-1 pr-4 font-normal">Charged</th>
+            <th className="py-1 pr-4 font-normal">Displayed</th>
+            <th className="py-1 font-normal">Billing</th>
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((row) => (
+            <tr key={row.slug} className="border-t border-line">
+              <td className="py-1 pr-4">{row.name}</td>
+              <td className="py-1 pr-4 font-mono text-xs">
+                {formatAmount(row.price_minor, row.currency_charge)} {row.currency_charge}
+              </td>
+              <td className="py-1 pr-4 font-mono text-xs text-ink-muted">
+                {row.currency_display === row.currency_charge
+                  ? "—"
+                  : `${formatAmount(row.price_minor, row.currency_display)} ${row.currency_display}`}
+              </td>
+              <td className="py-1">{describeBilling(row)}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
 function ApprovalCard({ action, run }: { action: Action; run: Run | undefined }) {
   const queryClient = useQueryClient();
 
@@ -75,6 +146,10 @@ function ApprovalCard({ action, run }: { action: Action; run: Run | undefined })
         <dt className="text-ink-muted">Idempotency key</dt>
         <dd className="font-mono text-xs break-all">{action.idempotency_key}</dd>
       </dl>
+
+      {action.action_type === "arm_charge_path" && (
+        <Catalogue rows={(action.request.catalogue ?? []) as CatalogueRow[]} />
+      )}
 
       <div className="mt-4 flex gap-2">
         <Button disabled={decide.isPending} onClick={() => decide.mutate("approve")}>
