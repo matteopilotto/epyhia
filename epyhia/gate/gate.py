@@ -172,22 +172,35 @@ async def deny(session: AsyncSession, action_id: uuid.UUID, approved_by: str) ->
 
 
 async def resume(
-    session: AsyncSession, action_id: uuid.UUID, brand_doc: dict | None = None
+    session: AsyncSession,
+    action_id: uuid.UUID,
+    brand_doc: dict | None = None,
+    result: dict | None = None,
 ) -> dict:
-    """Continue a row left behind by a crash. The truth comes from the probe, never from
-    whatever state the process happened to leave on the row (§7.4)."""
+    """Continue a row left behind by a crash, or one whose effect the world has only just
+    caught up with. The truth comes from the probe, never from whatever state the process
+    happened to leave on the row (§7.4).
+
+    `result` is what the observer that re-drove this action saw — for a deferred
+    verification, the handle the provider's own callback carried. It is not `execute()`'s
+    word for it.
+    """
     action = await session.get(Action, action_id)
     if action.state in TERMINAL_STATES:
         return _result(action)
     adapter = get_adapter(action.action_type)
-    return await _run(session, action, adapter, brand_doc)
+    return await _run(session, action, adapter, brand_doc, result=result)
 
 
 async def _run(
-    session: AsyncSession, action: Action, adapter: Adapter, brand_doc: dict | None
+    session: AsyncSession,
+    action: Action,
+    adapter: Adapter,
+    brand_doc: dict | None,
+    result: dict | None = None,
 ) -> dict:
-    ctx = GateContext(run_id=action.run_id, brand_doc=brand_doc)
-    result: dict = {}
+    ctx = GateContext(run_id=action.run_id, brand_doc=brand_doc, session=session)
+    result = result or {}
 
     if action.state in ("pending", "awaiting_approval"):
         action.state = "executing"
@@ -201,6 +214,11 @@ async def _run(
             raise
         action.state = "verifying"
         await session.commit()
+        if getattr(adapter, "defer_verification", False):
+            # The effect exists; the proof of it does not yet. The row stays `verifying` —
+            # never `succeeded`, never `failed` — until whatever observes the effect calls
+            # `resume()` with what it saw.
+            return _result(action) | {"result": result}
     elif action.state == "executing":
         # Resumed after a crash: the side effect may already have happened, so execute()
         # is not called again — verify() proves the truth independently of it (§7.4).

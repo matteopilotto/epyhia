@@ -3,9 +3,11 @@ import uuid
 from pathlib import Path
 
 import pytest
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from epyhia.gate.adapters.stripe import (
     ArmChargePathAdapter,
+    CheckoutSessionAdapter,
     StripePriceAdapter,
     StripeProductAdapter,
     price_lookup_key,
@@ -33,9 +35,29 @@ class FakeStripe:
     def __init__(self) -> None:
         self.products = FakeResource(assigns_ids=False)
         self.prices = FakeResource(assigns_ids=True)
+        self.checkout = FakeCheckout()
         # `client.v1.products` reaches the same store as `client.products`, as on the real
         # client.
         self.v1 = self
+
+
+class FakeCheckout:
+    def __init__(self) -> None:
+        self.sessions = FakeSessions()
+
+
+class FakeSessions:
+    def __init__(self) -> None:
+        self.rows: dict[str, dict] = {}
+
+    async def create_async(self, params: dict) -> dict:
+        obj = {
+            **params,
+            "id": f"cs_test_{len(self.rows)}",
+            "url": f"https://checkout.stripe.test/{len(self.rows)}",
+        }
+        self.rows[obj["id"]] = obj
+        return obj
 
 
 class FakeResource:
@@ -210,6 +232,52 @@ async def test_arming_fails_when_a_price_was_deactivated() -> None:
 
     with pytest.raises(VerificationFailed):
         await arm.verify(request, {}, _ctx())
+
+
+def checkout_request(row: dict, price_id: str) -> dict:
+    return {
+        "brief_hash": BRIEF_HASH,
+        "slug": row["slug"],
+        "price_id": price_id,
+        "billing": row["billing"],
+        "idempotency_key": "checkout-key",
+        "success_url": "https://example.invalid/?checkout=success",
+        "cancel_url": "https://example.invalid/",
+    }
+
+
+async def test_checkout_is_not_gated_and_defers_the_proof_it_cannot_have_yet() -> None:
+    """An operator click must never sit between a buyer and the card form (§4.4, SC-009),
+    and the order that proves the sale does not exist until the buyer has paid."""
+    api = FakeStripe()
+    checkout = CheckoutSessionAdapter(client_factory=lambda _: api)
+    row = catalogue()[0]
+
+    assert checkout.requires_approval is False
+    assert checkout.defer_verification is True
+
+    result = await checkout.execute(checkout_request(row, "price_0"), _ctx())
+    created = api.checkout.sessions.rows[result["session_id"]]
+
+    assert result["checkout_url"] == created["url"]
+    assert created["mode"] == ("subscription" if row["billing"] == "subscription" else "payment")
+    assert created["line_items"] == [{"price": "price_0", "quantity": 1}]
+    assert created["metadata"]["slug"] == row["slug"]
+
+
+async def test_an_unpaid_checkout_proves_nothing(gate_session: AsyncSession) -> None:
+    api = FakeStripe()
+    checkout = CheckoutSessionAdapter(client_factory=lambda _: api)
+    request = checkout_request(catalogue()[0], "price_0")
+    ctx = GateContext(run_id=uuid.uuid4(), credentials=_Credentials(), session=gate_session)
+    result = await checkout.execute(request, ctx)
+
+    # No webhook has written an order for this session, so there is nothing to prove.
+    with pytest.raises(VerificationFailed):
+        await checkout.verify(request, result, ctx)
+    # And a re-drive that carries no session at all proves less, not more.
+    with pytest.raises(VerificationFailed):
+        await checkout.verify(request, {}, ctx)
 
 
 async def test_a_missing_object_fails_verification_rather_than_succeeding() -> None:

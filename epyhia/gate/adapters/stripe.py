@@ -1,9 +1,11 @@
 from collections.abc import Callable
 
 import stripe
+from sqlalchemy import select
 
 from epyhia.gate.errors import VerificationFailed
 from epyhia.gate.registry import GateContext, register
+from epyhia.models.orders import Order
 
 # One namespace per brief, so a re-run lands on the same objects and two clients never
 # collide. Nothing client-shaped is in the string itself — both halves are read from the
@@ -192,6 +194,66 @@ class ArmChargePathAdapter(_StripeAdapter):
         return {"prices": prices}
 
 
+class CheckoutSessionAdapter(_StripeAdapter):
+    action_type = "checkout_session"
+    # **Deliberately not gated.** A buyer clicking buy would sit on a spinner until a human
+    # in another timezone noticed — that is not an approval step, it is an outage with a
+    # review queue attached. The decision that can be made in advance is `arm_charge_path`,
+    # and it is gated (contracts/action-gate.md §4.4, FR-037).
+    requires_approval = False
+    # The order this is proved by does not exist until the buyer has paid, which is minutes
+    # after the click and on a different request. So the row waits at `verifying` and the
+    # webhook re-drives it (§4.4, FR-032).
+    defer_verification = True
+
+    async def execute(self, request: dict, ctx: GateContext) -> dict:
+        try:
+            session = await self._client(ctx).v1.checkout.sessions.create_async(
+                {
+                    # Hosted Checkout: the card form is Stripe's page, so no key and no card
+                    # data ever reaches EPYHIA or the generated site (DESIGN.md §6.2).
+                    "mode": "subscription" if request["billing"] == RECURRING else "payment",
+                    "line_items": [{"price": request["price_id"], "quantity": 1}],
+                    "success_url": request["success_url"],
+                    "cancel_url": request["cancel_url"],
+                    # Carries the action's own key back on the webhook, so the callback can
+                    # find the row it is completing without a lookup table of its own.
+                    "client_reference_id": request["idempotency_key"],
+                    "metadata": {"run_id": str(ctx.run_id), "slug": request["slug"]},
+                }
+            )
+        except stripe.StripeError as exc:
+            raise StripeCallFailed(str(exc)) from exc
+        return {"session_id": session["id"], "checkout_url": session["url"]}
+
+    async def verify(self, request: dict, result: dict, ctx: GateContext) -> dict:
+        """The order row, selected by the session the processor's own callback reported —
+        not by anything `execute()` returned, and not by the session's status at Stripe. A
+        checkout that was never paid has nothing to prove, and this row stays `verifying`
+        rather than claiming an order that does not exist (contracts/action-gate.md §4)."""
+        session_id = (result or {}).get("session_id")
+        if not session_id:
+            raise VerificationFailed("no completed checkout session to prove")
+
+        order = (
+            await ctx.session.execute(
+                select(Order).where(Order.stripe_session_id == session_id)
+            )
+        ).scalars().first()
+        if order is None:
+            raise VerificationFailed(f"no order for session {session_id}")
+        if not order.paid:
+            raise VerificationFailed(f"order for session {session_id} is not paid")
+
+        return {
+            "order_id": str(order.id),
+            "stripe_session_id": order.stripe_session_id,
+            "product_slug": order.product_slug,
+            "amount_minor": order.amount_minor,
+            "currency": order.currency,
+        }
+
+
 async def find_price(client: stripe.StripeClient, lookup_key: str) -> dict | None:
     """The price carrying this derived lookup key, or None. Listed rather than retrieved by
     id because Stripe assigns price ids and this must not depend on what `execute()` said."""
@@ -220,3 +282,4 @@ def assert_matches(price: dict, expected: dict) -> None:
 register(StripeProductAdapter())
 register(StripePriceAdapter())
 register(ArmChargePathAdapter())
+register(CheckoutSessionAdapter())
