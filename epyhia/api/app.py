@@ -6,7 +6,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
 from epyhia.api.errors import register_exception_handlers
-from epyhia.api.routers import actions, artifacts, briefs, checkout, runs, sink
+from epyhia.api.routers import actions, artifacts, briefs, checkout, runs, sink, webhooks
 from epyhia.gate.keys import ALIAS_ORIGIN_PATTERN
 
 CONSOLE_DIST = Path(__file__).resolve().parent.parent.parent / "console" / "dist"
@@ -29,16 +29,15 @@ def create_app() -> FastAPI:
         allow_headers=["content-type"],
     )
 
-    # More routers are mounted here as they are implemented (webhooks) — every span they
-    # open carries run_id, per DESIGN.md: "run_id ... is on every agent span".
     app.include_router(briefs.router)
     app.include_router(runs.router)
     app.include_router(actions.router)
     app.include_router(artifacts.router)
     app.include_router(sink.router)
-    # Buyer-facing and unauthenticated, mounted alongside the operator routes because it
-    # shares their origin: the deployed site posts here from another host entirely.
+    # Buyer-facing, and neither one an operator route: the buy click is authenticated by
+    # nothing (it is a stranger on the generated site) and the webhook by its signature.
     app.include_router(checkout.router)
+    app.include_router(webhooks.router)
 
     # Serves the built SPA from the same origin as the API — no CORS.
     app.mount(

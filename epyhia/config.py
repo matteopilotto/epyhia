@@ -7,6 +7,7 @@ load_dotenv()
 _CREDENTIAL_ATTRS = {
     "vercel": "vercel_token",
     "stripe": "stripe_secret_key",
+    "stripe_webhook": "stripe_webhook_secret",
     "smtp": "smtp_host",
     "mailpit": "mailpit_api_url",
     "sink": "sink_token",
