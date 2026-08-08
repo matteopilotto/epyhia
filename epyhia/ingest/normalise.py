@@ -40,6 +40,11 @@ _CURRENCY_WORDS = {
     "yen": "JPY",
 }
 _WORD_RE = re.compile(r"[A-Za-z]+")
+# What may sit between two number words and still leave them one written number: the space
+# of "one hundred twenty three" and the hyphen of "twenty-three", and nothing else. A full
+# stop or a line break ends the run, so "gone by nine." followed by "Three ways" stays two
+# numbers instead of summing into a twelve that nobody wrote.
+_RUN_GAP_RE = re.compile(r"[ \t-]*")
 
 
 @dataclass(frozen=True)
@@ -157,7 +162,11 @@ def find_amounts(text: str, locale: str) -> list[GroundingEntry]:
             continue
 
         j = i
-        while j + 1 < len(tokens) and tokens[j + 1].group(0).lower() in words_map:
+        while (
+            j + 1 < len(tokens)
+            and tokens[j + 1].group(0).lower() in words_map
+            and _RUN_GAP_RE.fullmatch(text[tokens[j].end() : tokens[j + 1].start()])
+        ):
             j += 1
 
         run_text = " ".join(t.group(0) for t in tokens[i : j + 1])

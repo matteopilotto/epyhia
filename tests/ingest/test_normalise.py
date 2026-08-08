@@ -35,3 +35,20 @@ def test_number_formats_survive_unchanged() -> None:
 
     entries = find_amounts("twelve dollars", "en-US")
     assert [(str(e.value), e.currency) for e in entries] == [("1200", "USD")]
+
+
+def test_a_number_word_run_stops_at_the_end_of_a_sentence() -> None:
+    """Regression test: the run extended to the next number word whatever lay between them,
+    so a sentence ending on one and the next beginning on one were summed into an amount
+    nobody wrote. Found on a real email whose copy was correct — the phantom was ungrounded
+    by construction, and on a site artifact that is a refused deploy for a clean page."""
+    entries = find_amounts("gone by nine.\n\nThree ways to reserve:", "en-GB")
+
+    assert [str(e.value) for e in entries] == ["9", "3"]
+
+
+def test_a_written_number_still_spans_its_own_spaces_and_hyphen() -> None:
+    """The other side of that fix: the separators that do belong inside one written number
+    must keep reading as one, or spelling a number out becomes a way around the check."""
+    assert [str(e.value) for e in find_amounts("twenty-three", "en-US")] == ["23"]
+    assert [str(e.value) for e in find_amounts("one hundred twenty three", "en-US")] == ["123"]
