@@ -318,7 +318,9 @@ async def main(brief_path: Path, real: bool, open_browser: bool, stages: list[st
               " to Remotion")
 
     action = (await session.execute(select(Action))).scalar_one_or_none()
-    if action is None:
+    if action is None and "site" not in stages:
+        print("\nno deploy action — this selection never built a page")
+    elif action is None:
         print("\nno deploy action — the site artifact was flagged, so the gate refused it")
     else:
         print(f"\ndeploy   {action.state}   key={action.idempotency_key[:16]}…")
