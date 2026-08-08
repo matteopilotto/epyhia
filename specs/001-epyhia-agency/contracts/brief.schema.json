@@ -71,9 +71,25 @@
             "enum": ["subscription", "one_time"],
             "description": "Per product, never a global setting (FR-003)."
           },
+          "billing_interval": {
+            "type": "string",
+            "enum": ["day", "week", "month", "year"],
+            "description": "How often a recurring charge repeats. Required when billing is subscription and meaningless otherwise: a recurring price cannot be created without a cadence, and a cadence chosen in EPYHIA's code would be a billing interval hardcoded for every client at once (FR-003, FR-027)."
+          },
+          "billing_interval_count": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Intervals between charges. Omitted means every interval — the field is left off the processor call entirely rather than defaulted here."
+          },
           "features": { "type": "array", "items": { "type": "string" } },
           "not_covered": { "type": "array", "items": { "type": "string" } }
-        }
+        },
+        "allOf": [
+          {
+            "if": { "properties": { "billing": { "const": "subscription" } }, "required": ["billing"] },
+            "then": { "required": ["billing_interval"] }
+          }
+        ]
       }
     },
     "voice": {

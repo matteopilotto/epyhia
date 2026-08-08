@@ -147,6 +147,7 @@ async def wire_catalogue(
             requested_by=AGENT,
             action_type="stripe_product",
             action_request={
+                "brief_hash": brief.content_sha256,
                 "slug": row["slug"],
                 "name": row["name"],
                 "description": lines[row["slug"]],
@@ -163,6 +164,7 @@ async def wire_catalogue(
             requested_by=AGENT,
             action_type="stripe_price",
             action_request={
+                "brief_hash": brief.content_sha256,
                 "slug": row["slug"],
                 "product_id": product["evidence"]["product_id"],
                 "price_minor": row["price_minor"],
