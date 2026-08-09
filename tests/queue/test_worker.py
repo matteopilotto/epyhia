@@ -123,10 +123,10 @@ async def test_a_failing_handler_leaves_neither_artifact_nor_done(
 async def test_a_kind_with_no_handler_fails_the_task_rather_than_the_worker(
     queue_session: AsyncSession,
 ) -> None:
-    """`money` is a stage the Strategist may select before its handler exists. Claiming it
-    must not take the process down with it — every other run shares that worker."""
+    """A kind no handler module claims — a stage renamed, or a row from an older image.
+    Claiming it must not take the process down with it: every other run shares that worker."""
     run_id = await make_run(queue_session)
-    task_id = await _insert_task(queue_session, run_id, kind="money")
+    task_id = await _insert_task(queue_session, run_id, kind="not_a_stage")
 
     assert await run_once(queue_session) is True
 
@@ -136,7 +136,7 @@ async def test_a_kind_with_no_handler_fails_the_task_rather_than_the_worker(
         )
     ).one()
     assert row.state == "failed"
-    assert "no handler registered for task kind: 'money'" in row.error
+    assert "no handler registered for task kind: 'not_a_stage'" in row.error
 
 
 async def test_agent_backed_kinds_get_a_longer_lease_than_the_default(

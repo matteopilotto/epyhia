@@ -25,6 +25,9 @@ class Run(Base):
     )
     prompt_version: Mapped[str] = mapped_column(String, nullable=False)
     grounding_set: Mapped[dict] = mapped_column(JSONB, nullable=False)
+    # `brief.products[]` with the slug derived at ingest (research.md R11). Written once,
+    # beside the grounding set, and read by the site, by Ops and by `/checkout`.
+    resolved_catalogue: Mapped[list] = mapped_column(JSONB, nullable=False)
     budget_usd: Mapped[float] = mapped_column(Numeric, nullable=False)
     spend_usd: Mapped[float] = mapped_column(Numeric, nullable=False, default=0)
     status: Mapped[str] = mapped_column(String, nullable=False)

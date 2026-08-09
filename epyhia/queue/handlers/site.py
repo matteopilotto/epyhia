@@ -6,6 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 import epyhia.gate.adapters  # noqa: F401  — registers the deploy pair
 from epyhia.agents.web_builder import build_site
 from epyhia.artifacts.store import PostgresArtifactStore
+from epyhia.config import settings
 from epyhia.gate import gate
 from epyhia.gate.keys import deploy_key
 from epyhia.ingest.extractors import extract_site_text
@@ -44,6 +45,23 @@ def check_grounding(html: str, grounding_set: dict, locale: str) -> list[dict]:
     ]
 
 
+def checkout_context(run: Run) -> dict:
+    """What the buy button needs, and nothing more.
+
+    The slug comes from the run's resolved catalogue — derived from the brief at ingest — so
+    the button is built against the same brief field Ops prices against, rather than against
+    Ops' output. Neither task waits on the other, and no Stripe identifier is in reach of
+    this markup at all (research.md R11, FR-030).
+    """
+    return {
+        "endpoint": f"{(settings.public_api_url or '').rstrip('/')}/checkout",
+        "run_id": str(run.id),
+        "products": [
+            {"name": row["name"], "slug": row["slug"]} for row in run.resolved_catalogue
+        ],
+    }
+
+
 async def handle_site(session: AsyncSession, task: Task) -> None:
     run = await session.get(Run, task.run_id)
     brand_doc = await session.get(BrandDoc, run.brand_doc_id)
@@ -75,6 +93,7 @@ async def handle_site(session: AsyncSession, task: Task) -> None:
         run_id=run.id,
         brand_doc=brand_doc.doc,
         copy=copy,
+        checkout=checkout_context(run),
         task_id=task.id,
     )
 

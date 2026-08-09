@@ -10,16 +10,34 @@ class GateContext:
     Deliberately does not carry an agent, a transcript, or a model (contracts/action-gate.md §3).
     """
 
-    def __init__(self, run_id: uuid.UUID, brand_doc: dict | None = None, credentials=None) -> None:
+    def __init__(
+        self,
+        run_id: uuid.UUID,
+        brand_doc: dict | None = None,
+        credentials=None,
+        session=None,
+    ) -> None:
         self.run_id = run_id
         self.brand_doc = brand_doc
         self.credentials = credentials if credentials is not None else settings
+        # For the one verification the contract itself defines as a database read: a
+        # checkout is proved by the order row, not by anything the processor says
+        # (contracts/action-gate.md §4). Every other adapter leaves it untouched.
+        self.session = session
 
 
 @runtime_checkable
 class Adapter(Protocol):
     action_type: str
     requires_approval: bool
+
+    # Optional, and false unless an adapter says otherwise: the effect this action proves
+    # cannot exist at the moment it is requested, so the gate leaves the row `verifying`
+    # instead of burning its five attempts against a world that has not caught up yet.
+    # Whatever later observes the effect re-drives `resume()`. It is not a way around
+    # verification — there is still no `executing → succeeded` edge, and `succeeded` still
+    # requires evidence.
+    defer_verification: bool
 
     async def execute(self, request: dict, ctx: GateContext) -> dict:
         """Reach the world. Returns the raw provider result.

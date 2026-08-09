@@ -12,6 +12,7 @@ from epyhia.api.auth import require_operator
 from epyhia.api.db import get_session
 from epyhia.config import settings
 from epyhia.gate.keys import alias_for
+from epyhia.ingest.catalogue import resolve_catalogue
 from epyhia.ingest.grounding import build_grounding_set
 from epyhia.ingest.guardrail import screen_brief
 from epyhia.ingest.hashing import content_sha256
@@ -76,6 +77,10 @@ async def submit_brief(
         brief_id=brief.id,
         prompt_version=prompt_service.active_version("strategist"),
         grounding_set=build_grounding_set(payload, datetime.now(UTC).year),
+        # Derived here, at the same seam and for the same reason as the grounding set: the
+        # slug the site's button carries and the one Ops prices against are one value,
+        # computed from the brief before anything expensive runs (research.md R11).
+        resolved_catalogue=resolve_catalogue(payload["products"]),
         budget_usd=float(settings.run_budget_usd),
         status="running",
         alias=alias,

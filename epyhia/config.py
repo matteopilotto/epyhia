@@ -7,6 +7,7 @@ load_dotenv()
 _CREDENTIAL_ATTRS = {
     "vercel": "vercel_token",
     "stripe": "stripe_secret_key",
+    "stripe_webhook": "stripe_webhook_secret",
     "smtp": "smtp_host",
     "mailpit": "mailpit_api_url",
     "sink": "sink_token",
@@ -31,6 +32,9 @@ class Settings:
         self.smtp_host = os.environ.get("SMTP_HOST") or None
         self.smtp_port = os.environ.get("SMTP_PORT") or None
         self.mailpit_api_url = os.environ.get("MAILPIT_API_URL") or None
+        # Where the deployed site posts a buy click. It is a different host from the site by
+        # construction, so the page has to be told the origin — it cannot be relative.
+        self.public_api_url = os.environ.get("PUBLIC_API_URL") or None
         self.sink_base_url = os.environ.get("SINK_BASE_URL") or None
         self.sink_token = os.environ.get("SINK_TOKEN") or None
         self.auth0_domain = os.environ.get("AUTH0_DOMAIN") or None

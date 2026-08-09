@@ -42,3 +42,10 @@ def alias_for(brief_hash: str) -> str:
     """`epyhia-<brief_hash[:12]>.vercel.app` — a pure function of the brief hash, so the
     deploy adapter's `verify()` derives the URL it probes rather than being told it (R2)."""
     return f"epyhia-{brief_hash[:12]}.vercel.app"
+
+
+# Every origin `alias_for` can ever produce, and nothing else. The buy button posts to the
+# API from the deployed site, which is a different host by construction, so `/checkout` is
+# the one cross-origin route in the system — and this is the shape it accepts, derived from
+# the same rule the alias is (R2, DESIGN.md §6.2).
+ALIAS_ORIGIN_PATTERN = r"https://epyhia-[0-9a-f]{12}\.vercel\.app"

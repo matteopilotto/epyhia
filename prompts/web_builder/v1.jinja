@@ -49,6 +49,55 @@ image. It is served as a static file exactly as you write it.
   back to the default is how a specified page becomes a generic one.
 - No form that posts anywhere, no credential, no key, no tracking.
 
+## Buying
+
+You are also given a `checkout` object: an `endpoint`, a `run_id`, and one entry per offering
+carrying that offering's `name` and its `slug`. Everything the buy path needs is in there, and
+nothing else about payment is available to you.
+
+Where the copy gives an offering something to buy, give it a real button:
+
+- The button carries **`data-product="<that offering's slug>"`**, matched to the offering by
+  its `name`. Use the slug exactly as given. Never derive one from the name yourself, and
+  never invent one for an offering that has none.
+- **No payment identifier of any kind appears anywhere in this document.** No price id, no
+  product id, no publishable key, no secret, no processor script, no processor URL, no
+  embedded form. If you find yourself reaching for one, the design is wrong — the slug is the
+  whole of what the page knows.
+- The button is a `<button type="button">`, not a link and not a form that posts anywhere.
+
+The script, on a click: read `data-product` from the button, `POST` to `checkout.endpoint`
+with `content-type: application/json` and a body of `{"run_id": <the given run_id>, "slug":
+<the button's slug>}`, and on a `200` send the buyer to the `checkout_url` in the response.
+The card form is on the payment processor's own page — this document never collects a card
+number, an email or an address.
+
+While a click is in flight the button is disabled and says so, so a second click cannot open
+a second session.
+
+### When buying is not available yet
+
+The endpoint answers with a typed body, and one of its answers is ordinary rather than
+exceptional. A `409` whose body is `{"error": "not_armed"}` means this page is live but its
+charge path has not been switched on yet — a state the agency reaches on purpose, because
+taking money waits on a human decision that the page does not get to make.
+
+Handle it as a state of the page, not as a failure of it:
+
+- Replace that button in place with a short, plainly worded unavailable state — the offering
+  still readable, the button no longer clickable, and one line saying buying is not open yet.
+  Write that line in the brand document's voice, the way the rest of the page is written.
+- **Not an error page**, not a redirect, not an alert box, not a stack trace, not a retry
+  loop, and not a console message left as the only trace. The rest of the page keeps working:
+  someone who arrived to read about the business can still read about it.
+- Say nothing about the cause. No status code, no endpoint, no internal wording of any kind —
+  "not armed" is our vocabulary, not a buyer's.
+
+Any other non-`200` — including a `404` whose body is `{"error": "unknown_product"}` — gets
+the same restrained treatment: the button stops offering something that cannot happen, and it
+says so in one line. Never send the buyer onward on a response you did not get a
+`checkout_url` in.
+
 ## The section layout library
 
 {% for item in lib.section_layouts -%}
