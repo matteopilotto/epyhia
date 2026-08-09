@@ -7,6 +7,7 @@ from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
 from epyhia.config import settings
+from epyhia.cost.budget import HALTED, enforce_run_budget
 from epyhia.models.tasks import Task
 from epyhia.queue.claim import claim_task
 
@@ -39,6 +40,20 @@ async def run_once(session: AsyncSession, *, kind: str | None = None) -> bool:
     await session.commit()
     if task is None:
         return False
+
+    # A halted run stops starting new work (FR-053). `resume` is exempt on purpose: it drives
+    # an action the gate already began, and halting must not leave a side effect in the world
+    # with no probe run against it.
+    if task.kind != "resume" and await enforce_run_budget(session, task.run_id):
+        await session.execute(
+            text(
+                "UPDATE tasks SET state = 'failed', lease_expires_at = NULL, error = :error "
+                "WHERE id = :id"
+            ),
+            {"id": task.id, "error": f"run halted: spend reached budget ({HALTED})"},
+        )
+        await session.commit()
+        return True
 
     await session.execute(
         text("UPDATE tasks SET state = 'running' WHERE id = :id"), {"id": task.id}
@@ -86,6 +101,9 @@ async def run_once(session: AsyncSession, *, kind: str | None = None) -> bool:
         return True
 
     await session.commit()
+    # Whatever this task spent is now on the run's row, so the next claim decides against a
+    # current number rather than the one that was true a stage ago.
+    await enforce_run_budget(session, task.run_id)
     return True
 
 
