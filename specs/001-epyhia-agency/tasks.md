@@ -281,7 +281,7 @@ stage cost, what the run cost in total, and what evidence proves the site is liv
 - [X] T114 [P] [US5] Implement `GET /runs/{id}/cost` in `epyhia/api/routers/cost.py` — per-`agent_calls` rows with agent, model id, tier, four token counts, derived cost and latency, plus **one** combined total against one budget (FR-052)
 - [X] T115 [P] [US5] Build the cost view in `console/src/routes/cost.tsx` — per-call table and the single combined total
 - [X] T116 [P] [US5] Test in `tests/integration/test_us5_cost.py`: every `agent_calls` row carries a non-null tier and cost, and **exactly one** row per run carries the planning tier (SC-007)
-- [ ] T117 [P] [US5] Test in `tests/integration/test_us5_budget.py`: a run crossing its budget halts rather than continuing to spend, and the daily ceiling prevents a new run from starting (FR-053)
+- [X] T117 [P] [US5] Test in `tests/integration/test_us5_budget.py`: a run crossing its budget halts rather than continuing to spend, and the daily ceiling prevents a new run from starting (FR-053)
 
 **Checkpoint**: Cost is observable per call, per stage and per run, in one total.
 
