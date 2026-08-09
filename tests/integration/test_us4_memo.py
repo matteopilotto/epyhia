@@ -31,16 +31,27 @@ def _vercel_configured(monkeypatch: pytest.MonkeyPatch) -> None:
 
 async def _outcomes(session: AsyncSession, run_id: uuid.UUID) -> list[tuple]:
     """Everything the cache is forbidden to influence: which actions exist, under which
-    keys, in which state, with which stored evidence."""
+    keys, in which state, with which stored evidence.
+
+    Selected as columns rather than entities on purpose. Loading `Action` objects would come
+    back through the identity map holding whatever this session already had, so a pass that
+    *did* move a row could compare equal to the first — the test would pass by reading its
+    own stale copy.
+    """
     rows = (
         await session.execute(
-            select(Action).where(Action.run_id == run_id).order_by(Action.created_at)
+            select(
+                Action.id,
+                Action.action_type,
+                Action.idempotency_key,
+                Action.state,
+                Action.evidence,
+            )
+            .where(Action.run_id == run_id)
+            .order_by(Action.created_at)
         )
-    ).scalars().all()
-    return [
-        (row.id, row.action_type, row.idempotency_key, row.state, row.evidence)
-        for row in rows
-    ]
+    ).all()
+    return [tuple(row) for row in rows]
 
 
 async def _spend(session: AsyncSession, run_id: uuid.UUID) -> tuple[int, int]:
