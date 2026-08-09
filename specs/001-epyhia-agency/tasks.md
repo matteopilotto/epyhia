@@ -253,7 +253,7 @@ second catalogue, no second charge and no second order.
 **Independent Test**: Run a brief to completion, resubmit it byte-identical, and confirm one live
 site, one catalogue, one order, and short-circuited actions carrying the first run's keys.
 
-- [ ] T102 [US4] Implement the dedup path in `epyhia/api/routers/briefs.py` — an identical `content_sha256` resolves to the existing brief and returns `200 {..., deduplicated: true}` rather than inserting (FR-002, contracts/rest-api.md)
+- [X] T102 [US4] Implement the dedup path in `epyhia/api/routers/briefs.py` — an identical `content_sha256` resolves to the existing brief and returns `200 {..., deduplicated: true}` rather than inserting (FR-002, contracts/rest-api.md)
 - [ ] T103 [US4] Implement the `resume` task handler in `epyhia/queue/handlers/resume.py` — rebuild `deferred_tool_results` **from the `actions` row**, never from anything a previous process held in memory (R7 step 6)
 - [ ] T104 [US4] Implement the memoisation cache in `epyhia/agents/memo.py` — read/write `agent_cache` keyed on `agent + model + prompt_version + brand_doc_version + scoped_inputs`; it is a cache permitted to miss and no correctness path may read it (FR-048, Principle V)
 - [ ] T105 [P] [US4] Implement `GET /runs/{id}/brand-doc`, `PUT /runs/{id}/brand-doc` and `GET /briefs/{id}/brand-docs/diff?from=&to=` in `epyhia/api/routers/brand_docs.py` — `PUT` **inserts version + 1** and never updates in place (FR-012)
