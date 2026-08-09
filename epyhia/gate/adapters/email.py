@@ -1,5 +1,6 @@
 import asyncio
 import smtplib
+from decimal import Decimal
 from email.message import EmailMessage
 
 import httpx
@@ -41,6 +42,8 @@ class EmailAdapter:
     action_type = "send_email"
     # Anything outbound to a person is one of the three things a human decides (FR-037, §4.4).
     requires_approval = True
+    # Local SMTP (Mailpit) bills nothing.
+    cost_usd = Decimal("0")
 
     def __init__(self, transport: httpx.AsyncBaseTransport | None = None) -> None:
         self._transport = transport

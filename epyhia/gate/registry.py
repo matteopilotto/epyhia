@@ -1,4 +1,5 @@
 import uuid
+from decimal import Decimal
 from typing import Protocol, runtime_checkable
 
 from epyhia.config import settings
@@ -38,6 +39,13 @@ class Adapter(Protocol):
     # verification — there is still no `executing → succeeded` edge, and `succeeded` still
     # requires evidence.
     defer_verification: bool
+
+    # What this provider bills EPYHIA for one such action. Declared by the adapter because
+    # the adapter is what knows the provider; the gate only stamps it on the row (FR-050).
+    # Every provider here bills zero, and that zero is stated rather than assumed: an adapter
+    # that declares nothing leaves the column NULL, which reads as "never priced" instead of
+    # quietly claiming the action was free.
+    cost_usd: Decimal
 
     async def execute(self, request: dict, ctx: GateContext) -> dict:
         """Reach the world. Returns the raw provider result.

@@ -1,4 +1,5 @@
 from collections.abc import Callable
+from decimal import Decimal
 
 import stripe
 from sqlalchemy import select
@@ -65,6 +66,11 @@ def recurring_for(request: dict) -> dict | None:
 class _StripeAdapter:
     """Shared plumbing only: the key is required at execute time and never leaves the gate,
     and the client is injectable so the pair is exercisable with no key and no network."""
+
+    # Test mode moves no money, so Stripe bills nothing for any of these four. The processing
+    # fee a live checkout would carry is taken out of the buyer's payment, not charged to the
+    # agency, so it would not belong in `runs.spend_usd` even then (FR-050, §4.2).
+    cost_usd = Decimal("0")
 
     def __init__(self, client_factory: ClientFactory | None = None) -> None:
         self._client_factory = client_factory or _default_client
