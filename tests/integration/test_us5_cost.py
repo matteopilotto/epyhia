@@ -1,8 +1,9 @@
 from datetime import UTC, datetime
+from decimal import Decimal
 
 import httpx
 import pytest
-from sqlalchemy import select
+from sqlalchemy import select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 import epyhia.queue.handlers  # noqa: F401  — registers every task handler
@@ -14,6 +15,8 @@ from epyhia.cost.pricing import rate_for
 from epyhia.models.agent_calls import AgentCall
 from epyhia.queue.worker import run_once
 from tests.integration.test_us1_brief_to_site import (
+    FakeDeployAdapter,
+    _drive_to_approval,
     _marketer_model,
     _open_run,
     _reviewer_model,
@@ -126,3 +129,56 @@ async def test_cost_endpoint_itemises_calls_under_one_total(
     # never below the model spend it itemises.
     assert float(body["total_usd"]) >= sum(float(row["cost_usd"]) for row in body["calls"])
     assert float(body["budget_usd"]) > 0
+
+
+async def test_cost_is_answerable_per_stage(integration_session: AsyncSession) -> None:
+    """The checkpoint asks for cost per call, per stage and per run. Per stage is not per
+    agent: the run has to be able to say what `copy` cost as distinct from what `site` did."""
+    run_id = await _drive_run(integration_session)
+
+    async with client_for(integration_session) as client:
+        body = (await client.get(f"/runs/{run_id}/cost")).json()
+
+    assert all(row["stage"] is not None for row in body["calls"])
+
+    subtotals: dict[str, float] = {}
+    for row in body["calls"]:
+        subtotals[row["stage"]] = subtotals.get(row["stage"], 0) + float(row["cost_usd"])
+
+    # Every stage this run actually ran is priced, named by the task's own `kind` rather than
+    # by a list of stage names written here.
+    ran = set(
+        (
+            await integration_session.execute(
+                text("SELECT kind FROM tasks WHERE run_id = :r AND state = 'done'"),
+                {"r": run_id},
+            )
+        ).scalars()
+    )
+    assert ran <= set(subtotals)
+    assert all(value > 0 for value in subtotals.values())
+    # More than one stage billed, or "per stage" would be indistinguishable from "per run".
+    assert len(subtotals) > 1
+
+
+async def test_one_total_holds_while_a_run_is_parked_at_an_approval(
+    integration_session: AsyncSession,
+) -> None:
+    """`GET /runs` and `GET /runs/{id}/cost` must not disagree about what a run has spent.
+
+    A stage that generates and then parks for an approval is the case that splits them: the
+    spend is real and committed, and a roll-up written only on the *next* claim would leave
+    the run list showing one number and the cost view another — FR-052's two separate views,
+    arriving by the back door.
+    """
+    run_id, action = await _drive_to_approval(
+        integration_session, load_brief(), FakeDeployAdapter()
+    )
+    assert action.state == "awaiting_approval"
+
+    async with client_for(integration_session) as client:
+        run = (await client.get(f"/runs/{run_id}")).json()
+        cost = (await client.get(f"/runs/{run_id}/cost")).json()
+
+    assert Decimal(run["spend_usd"]) == Decimal(cost["total_usd"])
+    assert Decimal(run["spend_usd"]) > 0

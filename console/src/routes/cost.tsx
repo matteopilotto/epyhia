@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge";
 
 type AgentCall = {
   id: string;
+  stage: string | null;
   agent: string;
   model_id: string;
   tier: string;
@@ -27,6 +28,16 @@ type RunCost = {
 };
 
 const usd = (value: number) => Number(value).toFixed(4);
+
+/** Per-stage subtotals, in the order the stages first billed. */
+function byStage(calls: AgentCall[]): [string, number][] {
+  const totals = new Map<string, number>();
+  for (const call of calls) {
+    const stage = call.stage ?? "—";
+    totals.set(stage, (totals.get(stage) ?? 0) + Number(call.cost_usd));
+  }
+  return [...totals.entries()];
+}
 
 /**
  * The per-call table and the one combined total, and nothing else.
@@ -63,10 +74,24 @@ export function CostRoute() {
 
       {cost.isLoading && <p className="text-sm text-ink-muted">Loading…</p>}
 
+      {cost.data && (
+        <ul className="mb-4 flex flex-wrap gap-2">
+          {byStage(cost.data.calls).map(([stage, total]) => (
+            <li
+              key={stage}
+              className="rounded-md border border-line px-3 py-1.5 text-xs text-ink-muted"
+            >
+              {stage} <span className="font-mono text-ink">{usd(total)}</span>
+            </li>
+          ))}
+        </ul>
+      )}
+
       <div className="overflow-x-auto rounded-lg border border-line">
         <table className="w-full text-left text-xs">
           <thead className="text-ink-muted">
             <tr className="border-b border-line">
+              <th className="px-3 py-2 font-medium">Stage</th>
               <th className="px-3 py-2 font-medium">Agent</th>
               <th className="px-3 py-2 font-medium">Model</th>
               <th className="px-3 py-2 font-medium">Tier</th>
@@ -81,6 +106,7 @@ export function CostRoute() {
           <tbody>
             {cost.data?.calls.map((call) => (
               <tr key={call.id} className="border-b border-line last:border-0">
+                <td className="px-3 py-2">{call.stage ?? "—"}</td>
                 <td className="px-3 py-2">{call.agent}</td>
                 <td className="px-3 py-2 font-mono">{call.model_id}</td>
                 <td className="px-3 py-2">
@@ -96,7 +122,7 @@ export function CostRoute() {
             ))}
             {cost.data?.calls.length === 0 && (
               <tr>
-                <td className="px-3 py-3 text-ink-muted" colSpan={9}>
+                <td className="px-3 py-3 text-ink-muted" colSpan={10}>
                   No model calls yet.
                 </td>
               </tr>

@@ -83,6 +83,9 @@ async def run_once(session: AsyncSession, *, kind: str | None = None) -> bool:
             {"id": task.id, "action_id": action_id},
         )
         await session.commit()
+        # The stage generated before it parked, and that spend is real. Without this the run
+        # would sit at an approval reporting a total one stage out of date.
+        await enforce_run_budget(session, task.run_id)
         return True
     except Exception as exc:
         # The rollback discards whatever the handler had written, so a task that failed

@@ -9,13 +9,18 @@ from epyhia.api.db import get_session
 from epyhia.cost.budget import spend_for
 from epyhia.models.agent_calls import AgentCall
 from epyhia.models.runs import Run
+from epyhia.models.tasks import Task
 
 router = APIRouter(dependencies=[Depends(require_operator)])
 
 
-def _serialize(call: AgentCall) -> dict:
+def _serialize(call: AgentCall, stage: str | None) -> dict:
     return {
         "id": call.id,
+        # The stage the call belongs to, read from the task that made it. Cost has to be
+        # answerable per stage as well as per call, and `agent` is not that answer — the
+        # Marketer bills against `copy` and against `demand` in the same run.
+        "stage": stage,
         "agent": call.agent,
         "model_id": call.model_id,
         "tier": call.tier,
@@ -51,14 +56,17 @@ async def run_cost(run_id: uuid.UUID, session: AsyncSession = Depends(get_sessio
 
     calls = (
         await session.execute(
-            select(AgentCall).where(AgentCall.run_id == run_id).order_by(AgentCall.created_at)
+            select(AgentCall, Task.kind)
+            .outerjoin(Task, Task.id == AgentCall.task_id)
+            .where(AgentCall.run_id == run_id)
+            .order_by(AgentCall.created_at)
         )
-    ).scalars().all()
+    ).all()
 
     return {
         "run_id": run.id,
         "status": run.status,
         "budget_usd": run.budget_usd,
         "total_usd": await spend_for(session, run_id),
-        "calls": [_serialize(call) for call in calls],
+        "calls": [_serialize(call, stage) for call, stage in calls],
     }
