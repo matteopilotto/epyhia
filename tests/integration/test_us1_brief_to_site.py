@@ -168,12 +168,16 @@ def _reviewer_model() -> FunctionModel:
     return FunctionModel(respond)
 
 
-def _web_builder_model() -> FunctionModel:
+def _web_builder_model(marker: str = "") -> FunctionModel:
     """Composes a page from the brand doc and copy it is handed, carrying no fact of its
     own — so the grounding check has nothing to flag and the deploy precondition holds.
 
     Every offering reaches the page, by exact name and price, because that is what the
     brand doc's `offerings` list is: the checklist the finished page is read against.
+
+    `marker` is how a caller gets a second generation whose bytes genuinely differ, which is
+    what a re-run has to survive (T107). It carries no numeral, so it changes the page
+    without changing what the grounding check reads.
     """
 
     async def stream(messages: list[ModelMessage], info: AgentInfo):
@@ -192,6 +196,7 @@ def _web_builder_model() -> FunctionModel:
             f"{name}</title><style>:root{{--bg:#101014}}.h{{padding:1.5rem}}</style>"
             f"</head><body><h1>{name}</h1>{sections}<ul>{offerings}</ul>"
             "<script>document.title = document.title;</script></body></html>"
+            f"{f'<!-- {marker} -->' if marker else ''}"
         )
         for index in range(0, len(html), 64):
             yield html[index : index + 64]
