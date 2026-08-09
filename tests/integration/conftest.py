@@ -7,7 +7,10 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_asyn
 from epyhia.gate import registry
 from tests.conftest import test_database_url
 
-_TABLES = "actions, artifacts, agent_calls, tasks, runs, brand_docs, briefs"
+# `agent_cache` has no FK to anything, so `CASCADE` from `runs` does not reach it — and a
+# memo left behind by an earlier test would serve the next one's generation, changing its
+# `agent_calls` rows. Droppable at any time is exactly what makes truncating it safe.
+_TABLES = "actions, artifacts, agent_calls, tasks, runs, brand_docs, briefs, agent_cache"
 
 
 @pytest_asyncio.fixture

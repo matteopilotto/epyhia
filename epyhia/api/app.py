@@ -6,7 +6,16 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
 from epyhia.api.errors import register_exception_handlers
-from epyhia.api.routers import actions, artifacts, briefs, checkout, runs, sink, webhooks
+from epyhia.api.routers import (
+    actions,
+    artifacts,
+    brand_docs,
+    briefs,
+    checkout,
+    runs,
+    sink,
+    webhooks,
+)
 from epyhia.gate.keys import ALIAS_ORIGIN_PATTERN
 
 CONSOLE_DIST = Path(__file__).resolve().parent.parent.parent / "console" / "dist"
@@ -33,6 +42,7 @@ def create_app() -> FastAPI:
     app.include_router(runs.router)
     app.include_router(actions.router)
     app.include_router(artifacts.router)
+    app.include_router(brand_docs.router)
     app.include_router(sink.router)
     # Buyer-facing, and neither one an operator route: the buy click is authenticated by
     # nothing (it is a stranger on the generated site) and the webhook by its signature.

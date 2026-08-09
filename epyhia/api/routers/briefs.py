@@ -6,6 +6,7 @@ from pathlib import Path
 import jsonschema
 from fastapi import APIRouter, Depends
 from fastapi.responses import JSONResponse
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from epyhia.api.auth import require_operator
@@ -52,6 +53,33 @@ async def submit_brief(
         )
 
     brief_hash = content_sha256(payload)
+
+    # "Same run" means same brief hash and nothing else (FR-002). An identical resubmission
+    # resolves to what already exists — it does not insert, does not open a second run, and
+    # does not spend another guardrail call on a decision already on the row.
+    existing = await session.scalar(
+        select(Brief).where(Brief.content_sha256 == brief_hash)
+    )
+    if existing is not None:
+        if existing.guardrail_decision == "reject":
+            return JSONResponse(
+                status_code=422,
+                content={"error": "guardrail_rejected", "detail": existing.guardrail_reason},
+            )
+        run = await session.scalar(
+            select(Run).where(Run.brief_id == existing.id).order_by(Run.created_at)
+        )
+        return JSONResponse(
+            status_code=200,
+            content={
+                "run_id": str(run.id),
+                "brief_id": str(existing.id),
+                "content_sha256": brief_hash,
+                "alias": run.alias,
+                "deduplicated": True,
+            },
+        )
+
     verdict = await screen_brief(payload)
 
     brief = Brief(
@@ -63,9 +91,10 @@ async def submit_brief(
         guardrail_model=verdict.model,
     )
     session.add(brief)
-    await session.commit()
 
     if verdict.decision == "reject":
+        # Logged either way, but nothing downstream of it exists to resolve to.
+        await session.commit()
         return JSONResponse(
             status_code=422,
             content={"error": "guardrail_rejected", "detail": verdict.reason},

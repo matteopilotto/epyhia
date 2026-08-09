@@ -3,6 +3,7 @@ import { RootLayout } from "@/routes/root";
 import { RunsRoute, RunDetailRoute } from "@/routes/runs";
 import { ApprovalsRoute } from "@/routes/approvals";
 import { ArtifactsRoute } from "@/routes/artifacts";
+import { BrandDocRoute } from "@/routes/brand-doc";
 
 const rootRoute = createRootRoute({ component: RootLayout });
 
@@ -30,6 +31,12 @@ const runArtifactsRoute = createRoute({
   component: ArtifactsRoute,
 });
 
+const runBrandDocRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/runs/$runId/brand-doc",
+  component: BrandDocRoute,
+});
+
 const approvalsRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/approvals",
@@ -41,6 +48,7 @@ const routeTree = rootRoute.addChildren([
   runsRoute,
   runDetailRoute,
   runArtifactsRoute,
+  runBrandDocRoute,
   approvalsRoute,
 ]);
 

@@ -92,6 +92,7 @@ async def handle_site(session: AsyncSession, task: Task) -> None:
         session,
         run_id=run.id,
         brand_doc=brand_doc.doc,
+        brand_doc_version=brand_doc.version,
         copy=copy,
         checkout=checkout_context(run),
         task_id=task.id,
