@@ -190,6 +190,13 @@ export function RunDetailRoute() {
             >
               Artifacts
             </Link>
+            <Link
+              to="/runs/$runId/brand-doc"
+              params={{ runId }}
+              className="text-sm text-ink-muted hover:text-ink"
+            >
+              Brand doc
+            </Link>
             <span className="ml-auto text-xs text-ink-muted">
               brand doc v{run.data.brand_doc_version ?? "—"} · prompts {run.data.prompt_version}
             </span>
