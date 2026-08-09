@@ -9,6 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 import epyhia.gate.adapters  # noqa: F401  — registers the Stripe pairs
 from epyhia.cost.ledger import record_call
+from epyhia.cost.limits import limits_for_run
 from epyhia.gate import gate
 from epyhia.gate.keys import arm_charge_path_key, stripe_price_key, stripe_product_key
 from epyhia.ingest.catalogue import catalogue_hash
@@ -82,6 +83,7 @@ async def describe_catalogue(
     result = await agent.run(
         json.dumps(request, ensure_ascii=False, sort_keys=True),
         output_type=PromptedOutput(CatalogueLines),
+        usage_limits=await limits_for_run(session, run_id),
     )
     latency_ms = int((time.perf_counter() - started) * 1000)
 

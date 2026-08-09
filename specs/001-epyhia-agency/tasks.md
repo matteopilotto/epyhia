@@ -275,7 +275,7 @@ budget — all from the console.
 **Independent Test**: From the console alone, answer which model tier planned the run, what each
 stage cost, what the run cost in total, and what evidence proves the site is live.
 
-- [ ] T111 [US5] Implement per-run token enforcement in `epyhia/cost/limits.py` — PydanticAI `UsageLimits` is token-denominated; dollars are derived from `RunUsage` through `pricing.yaml` and never passed as a ceiling (§8.1)
+- [X] T111 [US5] Implement per-run token enforcement in `epyhia/cost/limits.py` — PydanticAI `UsageLimits` is token-denominated; dollars are derived from `RunUsage` through `pricing.yaml` and never passed as a ceiling (§8.1)
 - [ ] T112 [US5] Implement the per-run budget in `epyhia/cost/budget.py` — `runs.spend_usd` is **one number** covering model spend and action spend; crossing `budget_usd` moves the run to `halted_budget` and stops it (FR-052, FR-053)
 - [ ] T113 [P] [US5] Implement the system-wide daily ceiling in `epyhia/cost/budget.py` — when reached, `POST /briefs` refuses to open new runs (FR-053)
 - [ ] T114 [P] [US5] Implement `GET /runs/{id}/cost` in `epyhia/api/routers/cost.py` — per-`agent_calls` rows with agent, model id, tier, four token counts, derived cost and latency, plus **one** combined total against one budget (FR-052)

@@ -9,6 +9,7 @@ from pydantic_ai.settings import ModelSettings
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from epyhia.cost.ledger import record_call
+from epyhia.cost.limits import limits_for_run
 from epyhia.prompts_service import prompt_service
 
 AGENT = "marketer"
@@ -151,6 +152,7 @@ async def draft(
     result = await agent.run(
         json.dumps(request, ensure_ascii=False, sort_keys=True),
         output_type=PromptedOutput(output_type),
+        usage_limits=await limits_for_run(session, run_id),
     )
     latency_ms = int((time.perf_counter() - started) * 1000)
 

@@ -11,6 +11,7 @@ from epyhia.agents.memo import memo_key
 from epyhia.agents.memo import read as memo_read
 from epyhia.agents.memo import write as memo_write
 from epyhia.cost.ledger import record_call
+from epyhia.cost.limits import limits_for_run
 from epyhia.prompts_service import prompt_service
 
 AGENT = "web_builder"
@@ -97,7 +98,8 @@ async def build_site(
         return memoised["html"]
 
     started = time.perf_counter()
-    async with agent.run_stream(prompt) as result:
+    limits = await limits_for_run(session, run_id)
+    async with agent.run_stream(prompt, usage_limits=limits) as result:
         html = await result.get_output()
         usage = result.usage
     latency_ms = int((time.perf_counter() - started) * 1000)
