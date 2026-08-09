@@ -4,6 +4,7 @@ import { RunsRoute, RunDetailRoute } from "@/routes/runs";
 import { ApprovalsRoute } from "@/routes/approvals";
 import { ArtifactsRoute } from "@/routes/artifacts";
 import { BrandDocRoute } from "@/routes/brand-doc";
+import { CostRoute } from "@/routes/cost";
 
 const rootRoute = createRootRoute({ component: RootLayout });
 
@@ -37,6 +38,12 @@ const runBrandDocRoute = createRoute({
   component: BrandDocRoute,
 });
 
+const runCostRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/runs/$runId/cost",
+  component: CostRoute,
+});
+
 const approvalsRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/approvals",
@@ -49,6 +56,7 @@ const routeTree = rootRoute.addChildren([
   runDetailRoute,
   runArtifactsRoute,
   runBrandDocRoute,
+  runCostRoute,
   approvalsRoute,
 ]);
 
