@@ -80,6 +80,11 @@ async def submit_brief(
             },
         )
 
+    # Below the dedup branch on purpose. The ceiling refuses to *open* runs, and an identical
+    # resubmission opens none — it resolves to the run that already exists, so refusing it
+    # would withhold a record of work already paid for while stopping nothing.
+    await budget.assert_within_daily_ceiling(session)
+
     # Read before the guardrail's model call, not at run construction after it: an absent
     # `RUN_BUDGET_USD` is a refusal to open a run, and refusing after spending on a screening
     # call is spending against a budget that does not exist.

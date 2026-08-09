@@ -1,4 +1,5 @@
 import uuid
+from datetime import UTC, datetime
 from decimal import Decimal, InvalidOperation
 
 from sqlalchemy import func, select
@@ -23,6 +24,16 @@ class BudgetNotConfigured(Exception):
     def __init__(self, variable: str) -> None:
         self.variable = variable
         super().__init__(f"budget not configured: {variable}")
+
+
+class DailyCeilingReached(Exception):
+    """The system-wide kill switch. It refuses to *open* runs and does nothing else — it
+    halts no run already in flight and never reaches into the gate."""
+
+    def __init__(self, spend: Decimal, ceiling: Decimal) -> None:
+        self.spend = spend
+        self.ceiling = ceiling
+        super().__init__(f"daily spend ceiling reached: {spend} of {ceiling} USD")
 
 
 def _amount(raw: str | None, variable: str) -> Decimal | None:
@@ -63,6 +74,35 @@ async def spend_for(session: AsyncSession, run_id: uuid.UUID) -> Decimal:
         select(func.coalesce(func.sum(Action.cost_usd), 0)).where(Action.run_id == run_id)
     )
     return Decimal(model_spend) + Decimal(action_spend)
+
+
+async def daily_spend(session: AsyncSession) -> Decimal:
+    """Everything the system has spent since midnight UTC, across every run — the same one
+    number as `spend_for`, widened from one run to all of them."""
+    since = datetime.now(UTC).replace(hour=0, minute=0, second=0, microsecond=0)
+    model_spend = await session.scalar(
+        select(func.coalesce(func.sum(AgentCall.cost_usd), 0)).where(AgentCall.created_at >= since)
+    )
+    action_spend = await session.scalar(
+        select(func.coalesce(func.sum(Action.cost_usd), 0)).where(Action.created_at >= since)
+    )
+    return Decimal(model_spend) + Decimal(action_spend)
+
+
+async def assert_within_daily_ceiling(session: AsyncSession) -> None:
+    """Refuse to open a new run once the day's spend has reached the ceiling (FR-053).
+
+    An absent `DAILY_CEILING_USD` means no ceiling, where an absent `RUN_BUDGET_USD` means no
+    run. The asymmetry is forced by the schema and is the right way round: `runs.budget_usd`
+    is NOT NULL so a run cannot exist without one, while a kill switch nobody configured must
+    not become a refusal to do any work at all.
+    """
+    ceiling = _amount(settings.daily_ceiling_usd, "DAILY_CEILING_USD")
+    if ceiling is None:
+        return
+    spend = await daily_spend(session)
+    if spend >= ceiling:
+        raise DailyCeilingReached(spend, ceiling)
 
 
 async def enforce_run_budget(session: AsyncSession, run_id: uuid.UUID) -> bool:
