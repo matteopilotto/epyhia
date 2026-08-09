@@ -283,6 +283,9 @@ stage cost, what the run cost in total, and what evidence proves the site is liv
 - [X] T116 [P] [US5] Test in `tests/integration/test_us5_cost.py`: every `agent_calls` row carries a non-null tier and cost, and **exactly one** row per run carries the planning tier (SC-007)
 - [X] T117 [P] [US5] Test in `tests/integration/test_us5_budget.py`: a run crossing its budget halts rather than continuing to spend, and the daily ceiling prevents a new run from starting (FR-053)
 
+- [ ] T134 [US5] Stamp each action's cost on its row in `epyhia/gate/gate.py` — the adapter declares what its provider costs, the gate writes `projected_cost_usd` at request time and `cost_usd` on success. Both columns are currently never written, so `actions.cost_usd` is NULL on every row and the approval screen renders "no projected cost" against FR-039. Every provider here bills zero (Vercel free tier, Stripe test mode, local SMTP, the app's own sink) — an **explicitly declared** zero, never a NULL and never one defaulted by an adapter that forgot (FR-039, FR-050)
+- [ ] T135 [P] [US5] Test in `tests/gate/test_action_cost.py`: an action awaiting approval already carries its projected cost, every action reaching `succeeded` carries a non-null actual cost, and an action with a non-zero cost moves the run's **one** combined total (FR-050, FR-052)
+
 **Checkpoint**: Cost is observable per call, per stage and per run, in one total.
 
 ---
