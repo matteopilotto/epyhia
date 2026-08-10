@@ -5,6 +5,7 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from epyhia.api.auth import Unauthorized
 from epyhia.config import CredentialNotConfigured
+from epyhia.cost.budget import BudgetNotConfigured, DailyCeilingReached
 from epyhia.gate.errors import PreconditionFailed
 
 # One shape everywhere (contracts/rest-api.md "Errors"): {error: "<machine_slug>",
@@ -39,6 +40,20 @@ def register_exception_handlers(app: FastAPI) -> None:
         return JSONResponse(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             content=_error_body("credential_not_configured", str(exc)),
+        )
+
+    @app.exception_handler(BudgetNotConfigured)
+    async def _budget_not_configured(_: Request, exc: BudgetNotConfigured) -> JSONResponse:
+        return JSONResponse(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            content=_error_body("budget_not_configured", str(exc)),
+        )
+
+    @app.exception_handler(DailyCeilingReached)
+    async def _daily_ceiling_reached(_: Request, exc: DailyCeilingReached) -> JSONResponse:
+        return JSONResponse(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            content=_error_body("daily_ceiling_reached", str(exc)),
         )
 
     @app.exception_handler(Unauthorized)

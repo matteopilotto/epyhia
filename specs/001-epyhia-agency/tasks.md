@@ -275,13 +275,16 @@ budget — all from the console.
 **Independent Test**: From the console alone, answer which model tier planned the run, what each
 stage cost, what the run cost in total, and what evidence proves the site is live.
 
-- [ ] T111 [US5] Implement per-run token enforcement in `epyhia/cost/limits.py` — PydanticAI `UsageLimits` is token-denominated; dollars are derived from `RunUsage` through `pricing.yaml` and never passed as a ceiling (§8.1)
-- [ ] T112 [US5] Implement the per-run budget in `epyhia/cost/budget.py` — `runs.spend_usd` is **one number** covering model spend and action spend; crossing `budget_usd` moves the run to `halted_budget` and stops it (FR-052, FR-053)
-- [ ] T113 [P] [US5] Implement the system-wide daily ceiling in `epyhia/cost/budget.py` — when reached, `POST /briefs` refuses to open new runs (FR-053)
-- [ ] T114 [P] [US5] Implement `GET /runs/{id}/cost` in `epyhia/api/routers/cost.py` — per-`agent_calls` rows with agent, model id, tier, four token counts, derived cost and latency, plus **one** combined total against one budget (FR-052)
-- [ ] T115 [P] [US5] Build the cost view in `console/src/routes/cost.tsx` — per-call table and the single combined total
-- [ ] T116 [P] [US5] Test in `tests/integration/test_us5_cost.py`: every `agent_calls` row carries a non-null tier and cost, and **exactly one** row per run carries the planning tier (SC-007)
-- [ ] T117 [P] [US5] Test in `tests/integration/test_us5_budget.py`: a run crossing its budget halts rather than continuing to spend, and the daily ceiling prevents a new run from starting (FR-053)
+- [X] T111 [US5] Implement per-run token enforcement in `epyhia/cost/limits.py` — PydanticAI `UsageLimits` is token-denominated; dollars are derived from `RunUsage` through `pricing.yaml` and never passed as a ceiling (§8.1)
+- [X] T112 [US5] Implement the per-run budget in `epyhia/cost/budget.py` — `runs.spend_usd` is **one number** covering model spend and action spend; crossing `budget_usd` moves the run to `halted_budget` and stops it (FR-052, FR-053)
+- [X] T113 [P] [US5] Implement the system-wide daily ceiling in `epyhia/cost/budget.py` — when reached, `POST /briefs` refuses to open new runs (FR-053)
+- [X] T114 [P] [US5] Implement `GET /runs/{id}/cost` in `epyhia/api/routers/cost.py` — per-`agent_calls` rows with agent, model id, tier, four token counts, derived cost and latency, plus **one** combined total against one budget (FR-052)
+- [X] T115 [P] [US5] Build the cost view in `console/src/routes/cost.tsx` — per-call table and the single combined total
+- [X] T116 [P] [US5] Test in `tests/integration/test_us5_cost.py`: every `agent_calls` row carries a non-null tier and cost, and **exactly one** row per run carries the planning tier (SC-007)
+- [X] T117 [P] [US5] Test in `tests/integration/test_us5_budget.py`: a run crossing its budget halts rather than continuing to spend, and the daily ceiling prevents a new run from starting (FR-053)
+
+- [X] T134 [US5] Stamp each action's cost on its row in `epyhia/gate/gate.py` — the adapter declares what its provider costs, the gate writes `projected_cost_usd` at request time and `cost_usd` on success. Both columns are currently never written, so `actions.cost_usd` is NULL on every row and the approval screen renders "no projected cost" against FR-039. Every provider here bills zero (Vercel free tier, Stripe test mode, local SMTP, the app's own sink) — an **explicitly declared** zero, never a NULL and never one defaulted by an adapter that forgot (FR-039, FR-050)
+- [X] T135 [P] [US5] Test in `tests/gate/test_action_cost.py`: an action awaiting approval already carries its projected cost, every action reaching `succeeded` carries a non-null actual cost, and an action with a non-zero cost moves the run's **one** combined total (FR-050, FR-052)
 
 **Checkpoint**: Cost is observable per call, per stage and per run, in one total.
 

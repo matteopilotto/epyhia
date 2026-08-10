@@ -1,3 +1,5 @@
+from decimal import Decimal
+
 import httpx
 
 from epyhia.gate.errors import VerificationFailed
@@ -15,6 +17,8 @@ class PublishAdapter:
     # A stand-in channel still gets a real approval (FR-043, §4.1): the control is on the
     # decision to put something in front of an audience, not on which API happens to answer.
     requires_approval = True
+    # The sink is this application's own endpoint (research.md R4) — it bills nothing.
+    cost_usd = Decimal("0")
 
     def __init__(self, transport: httpx.AsyncBaseTransport | None = None) -> None:
         self._transport = transport

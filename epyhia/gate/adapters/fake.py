@@ -1,3 +1,5 @@
+from decimal import Decimal
+
 from epyhia.gate.errors import VerificationFailed
 from epyhia.gate.registry import GateContext
 
@@ -13,9 +15,13 @@ class FakeAdapter:
         requires_approval: bool = False,
         fail_execute: bool = False,
         always_fail_verify: bool = False,
+        cost_usd: Decimal = Decimal("0"),
     ) -> None:
         self.action_type = action_type
         self.requires_approval = requires_approval
+        # Settable so the roll-up into `runs.spend_usd` is exercisable with a cost that is
+        # actually non-zero — every real provider here bills nothing, so nothing else can.
+        self.cost_usd = cost_usd
         self.fail_execute = fail_execute
         self.always_fail_verify = always_fail_verify
         self.execute_calls: list[dict] = []

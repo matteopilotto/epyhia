@@ -197,6 +197,13 @@ export function RunDetailRoute() {
             >
               Brand doc
             </Link>
+            <Link
+              to="/runs/$runId/cost"
+              params={{ runId }}
+              className="text-sm text-ink-muted hover:text-ink"
+            >
+              Cost
+            </Link>
             <span className="ml-auto text-xs text-ink-muted">
               brand doc v{run.data.brand_doc_version ?? "—"} · prompts {run.data.prompt_version}
             </span>

@@ -1,6 +1,7 @@
 import asyncio
 import base64
 import re
+from decimal import Decimal
 
 import httpx
 
@@ -58,6 +59,8 @@ class VercelAdapter:
     action_type = "deploy"
     # Going live is one of the three things a human decides (FR-037, §4.4).
     requires_approval = True
+    # A deployment on the free tier bills nothing. Stated, not assumed (FR-050).
+    cost_usd = Decimal("0")
 
     poll_interval_seconds = 1.0
     max_poll_attempts = 60

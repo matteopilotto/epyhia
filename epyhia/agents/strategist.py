@@ -10,6 +10,7 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from epyhia.cost.ledger import record_call
+from epyhia.cost.limits import limits_for_run
 from epyhia.models.brand_docs import BrandDoc
 from epyhia.models.runs import Run
 from epyhia.prompts_service import prompt_service
@@ -159,6 +160,7 @@ async def run_strategist(
     result = await agent.run(
         json.dumps(brief_payload, ensure_ascii=False, sort_keys=True),
         deps=deps,
+        usage_limits=await limits_for_run(session, run_id),
     )
     latency_ms = int((time.perf_counter() - started) * 1000)
 

@@ -25,6 +25,7 @@ extract the grounding set, open the run, enqueue the `plan` task (§3.5, FR-004,
 | `200 {run_id, brief_id, content_sha256, alias, deduplicated: true}` | **Identical hash** — resolves to the existing brief; no second run's worth of effects will occur (FR-002, US4) |
 | `422 {error: "guardrail_rejected", reason}` | Brief carries instructions aimed at the system. The decision is logged either way (FR-007) |
 | `400` | Schema violation |
+| `503 {error: "daily_ceiling_reached"}` | The system-wide daily spend ceiling is reached, so no new run opens. A deduplicated resubmission opens no run and is unaffected (FR-053) |
 
 ### `GET /runs` · `GET /runs/{id}`
 

@@ -1,6 +1,7 @@
 import asyncio
 import uuid
 from datetime import UTC, datetime
+from decimal import Decimal
 
 from pydantic_ai.exceptions import ApprovalRequired
 from sqlalchemy import select, text
@@ -30,6 +31,16 @@ _CREDENTIAL_BY_ACTION_TYPE = {
 
 def _verify_backoff_seconds(attempt: int) -> float:
     return min(2**attempt * 0.01, 1.0)
+
+
+def _declared_cost(adapter: Adapter) -> Decimal | None:
+    """What the adapter says its provider bills, or `None` if it says nothing.
+
+    `None` leaves the column NULL, which reads as "this adapter never priced itself" — the
+    one thing it must not do is invent a zero on the adapter's behalf, because that is
+    indistinguishable from a provider that genuinely bills nothing (FR-050).
+    """
+    return getattr(adapter, "cost_usd", None)
 
 
 async def _check_preconditions(session: AsyncSession, action_type: str, run_id: uuid.UUID) -> None:
@@ -71,10 +82,13 @@ async def request(
     action_request: dict,
     idempotency_key: str,
     task_id: uuid.UUID | None = None,
-    projected_cost_usd: float | None = None,
     brand_doc: dict | None = None,
 ) -> dict:
     await _check_preconditions(session, action_type, run_id)
+
+    # Before the insert, so the row carries its projected cost from the moment it exists —
+    # an approval screen must never be the first place that number is missing (FR-039).
+    adapter = get_adapter(action_type)
 
     insert_stmt = (
         pg_insert(Action)
@@ -87,7 +101,7 @@ async def request(
             idempotency_key=idempotency_key,
             request=action_request,
             state="pending",
-            projected_cost_usd=projected_cost_usd,
+            projected_cost_usd=_declared_cost(adapter),
         )
         .on_conflict_do_nothing(index_elements=["idempotency_key"])
         .returning(Action.id)
@@ -107,7 +121,6 @@ async def request(
         return {"action_id": existing.id, "state": existing.state, "in_progress": True}
 
     action = await session.get(Action, action_id)
-    adapter = get_adapter(action_type)
 
     if adapter.requires_approval:
         action.state = "awaiting_approval"
@@ -238,6 +251,10 @@ async def _run(
                 continue
             action.evidence = evidence
             action.error = None
+            # The actual, recorded only once the action is proved. These providers have no
+            # variance between projection and actual, so the two agree — an adapter whose
+            # cost depended on the request would be the reason they are separate columns.
+            action.cost_usd = _declared_cost(adapter)
             action.state = "succeeded"
             await session.commit()
             return _result(action)

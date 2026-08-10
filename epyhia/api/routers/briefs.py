@@ -11,7 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from epyhia.api.auth import require_operator
 from epyhia.api.db import get_session
-from epyhia.config import settings
+from epyhia.cost import budget
 from epyhia.gate.keys import alias_for
 from epyhia.ingest.catalogue import resolve_catalogue
 from epyhia.ingest.grounding import build_grounding_set
@@ -80,6 +80,16 @@ async def submit_brief(
             },
         )
 
+    # Below the dedup branch on purpose. The ceiling refuses to *open* runs, and an identical
+    # resubmission opens none — it resolves to the run that already exists, so refusing it
+    # would withhold a record of work already paid for while stopping nothing.
+    await budget.assert_within_daily_ceiling(session)
+
+    # Read before the guardrail's model call, not at run construction after it: an absent
+    # `RUN_BUDGET_USD` is a refusal to open a run, and refusing after spending on a screening
+    # call is spending against a budget that does not exist.
+    run_budget = budget.configured_run_budget()
+
     verdict = await screen_brief(payload)
 
     brief = Brief(
@@ -110,7 +120,7 @@ async def submit_brief(
         # slug the site's button carries and the one Ops prices against are one value,
         # computed from the brief before anything expensive runs (research.md R11).
         resolved_catalogue=resolve_catalogue(payload["products"]),
-        budget_usd=float(settings.run_budget_usd),
+        budget_usd=run_budget,
         status="running",
         alias=alias,
     )
