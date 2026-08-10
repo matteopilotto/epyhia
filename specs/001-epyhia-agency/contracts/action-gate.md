@@ -46,6 +46,10 @@ gate.request(run_id, requested_by, action_type, request, key)
         raise ApprovalRequired
   5. state = executing   →  adapter.execute(request, credentials)
   6. state = verifying   →  adapter.verify(...) with backoff, cap 5
+       adapter.defer_verification?
+         →  return. The row HOLDS at `verifying` — no attempt consumed,
+            no failure recorded — until an external observer calls
+            gate.resume() with what it saw (§4.4).
   7. evidence stored     →  state = succeeded
 ```
 
@@ -67,6 +71,11 @@ Every action type registers exactly one pair.
 class Adapter(Protocol):
     action_type: str
     requires_approval: bool
+    defer_verification: bool
+    """True when the proof of this effect arrives on a later, external event
+    rather than in the same request. The gate holds the row at `verifying`
+    instead of retrying to the cap. `verifying` is not a failure state and
+    not a success state — it is the honest one while the proof is pending."""
 
     async def execute(self, request: dict, ctx: GateContext) -> dict:
         """Reach the world. Returns the raw provider result.
@@ -82,6 +91,12 @@ alias it derives from `brief_hash`, not the deployment URL the API handed back (
 adapter whose `verify()` only reads what `execute()` returned is the "status field is not
 evidence" failure with extra steps.
 
+**Deferral does not relax that rule, it depends on it.** A deferred `verify()` is called later,
+by whatever observed the effect, and still proves the effect independently — the Stripe webhook
+re-drives `checkout_session`, and the adapter still selects the order row rather than trusting
+the session object it created. Deferral changes *when* the proof is available, never *what
+counts as* proof.
+
 `GateContext` carries `run_id`, the run's brand doc row, and the credential store. It does not
 carry an agent, a transcript, or a model.
 
@@ -94,7 +109,7 @@ carry an agent, a transcript, or a model.
 | `deploy` | **yes** | `POST /v13/deployments` (inline files, `target: production`), poll `readyState`, `POST /v2/deployments/{id}/aliases` | `GET` **the alias**: assert `200`, that `brand_doc.name` for this run is in the body, **and** that the build marker is (§4.5) |
 | `arm_charge_path` | **yes** | Mark the run's catalogue live | Re-read **every** price from Stripe: assert `active`, `unit_amount` and `currency` match the brief (FR-029) |
 | `stripe_product` / `stripe_price` | no | Create from `brief.products[]` | Read back the object by id; assert it exists |
-| `checkout_session` | **no** — deliberately (§4.4) | Create a hosted Checkout Session | `SELECT` the order by `stripe_session_id`; assert it exists and is paid |
+| `checkout_session` | **no** — deliberately (§4.4) | Create a hosted Checkout Session | **Deferred.** `SELECT` the order by `stripe_session_id`; assert it exists and is paid. The order does not exist until the buyer pays, minutes later on a different request, so the row holds at `verifying` and the Stripe webhook re-drives it (§4.4, FR-032) |
 | `send_email` | **yes** | SMTP to Mailpit | Assert the catcher's API shows the message |
 | `publish` | **yes** | `POST` to the recording sink (research.md R4) | `GET` the returned permalink; assert the payload is stored and readable |
 
@@ -144,7 +159,9 @@ Deny is terminal: `state = denied`, `approval_decision = denied`, `approved_by` 
 
 ## 7 · Failure and retry
 
-- `verify()` retries with backoff, caps at **5** attempts, then `failed` (FR-041, §4.5).
+- `verify()` retries with backoff, caps at **5** attempts, then `failed` (FR-041, §4.5). A
+  deferred adapter (§3) never enters that loop until its proof arrives, so it consumes no
+  attempts and the cap is untouched.
 - **A verify that never passes must never leave a row at `succeeded`.** Enforced by a CHECK
   constraint that `succeeded ⇒ evidence IS NOT NULL`, so it is a schema guarantee rather than a
   code path anyone can forget.
