@@ -24,6 +24,33 @@ boundary before it reaches the outside world.
 **The product is the agency, not any one client.** Submitting a different business must be a
 different brief, never a different codebase.
 
+## Clarifications
+
+### Session 2026-08-10
+
+- Q: When the evaluation runs, who approves the actions that halt for approval — the eval
+  script itself, a person while the script waits, or nobody because the run already happened?
+  → A: Nobody at eval time. An operator drives both runs through the console, approvals and the
+  one test purchase included; the evaluation asserts over the stored records afterwards. The
+  only thing it may itself initiate is a byte-identical resubmission, which is side-effect-free
+  by construction.
+- Q: How does the evaluation know which two runs to assert over? → A: It is given the two brief
+  files as arguments and resolves each run by hashing the brief exactly as ingest does. Run
+  identity is brief identity, so no run identifier is ever written into the repository, and the
+  re-run assertion falls out of resubmitting the same file.
+- Q: Where should the six scored areas and their point values live as a tracked source of truth?
+  → A: As an external contract alongside the others, `contracts/grading-rubric.md`, reproduced
+  verbatim and not edited for convenience. The rubric schema constrains `area` to its six ids,
+  and a test asserts every area is covered and the point totals reconcile.
+- Q: What must the evaluation do with a human-judgement row — print a link, or resolve one and
+  confirm it points at something real? → A: Resolve, never re-probe. Each row names what is to
+  be shown; system output resolves from stored records, human-produced material from a tracked
+  repository path or a URL in a tracked file, and an unresolvable row renders as missing.
+- Q: What happens when a rubric check marked `required` fails? → A: The report is always
+  written, with required failures summarised at the top, and the evaluation exits non-zero only
+  for a failed required *automated* check. A missing human-judgement item is reported as missing
+  and never affects exit status.
+
 ## User Scenarios & Testing *(mandatory)*
 
 ### User Story 1 - Brief to a verified live website (Priority: P1)
@@ -472,7 +499,9 @@ confirm the two runs share no artifact content, no visual identity, and no publi
 - **FR-057**: The console MUST authenticate operators against a real identity provider, and the
   same authenticated path MUST be the only way in — no separate bypass credential may exist.
 - **FR-058**: Automated evaluation MUST authenticate through the same identity provider using
-  machine-to-machine credentials rather than through any alternative authentication path.
+  machine-to-machine credentials rather than through any alternative authentication path. That
+  credential MUST NOT carry approval authority — the evaluation reads records and may resubmit a
+  byte-identical brief, but no approval decision may ever be attributed to it.
 
 ### Genericity and evaluation
 
@@ -482,18 +511,38 @@ confirm the two runs share no artifact content, no visual identity, and no publi
 - **FR-060**: Instruction templates MUST live in versioned files rather than embedded in source
   code, so that an automated check can scan the rendered templates for client-specific data and
   fail the build.
-- **FR-061**: Automated evaluation MUST run a full brief end to end against the deployed system
-  and assert, from stored records: that publication succeeded with its stored evidence; that an
-  order exists matching a product in that brief; that re-running the same brief produces one
-  publication and one order; that every action and every model call carries a cost and a tier
-  with exactly one top-tier call; that nothing flagged reached publication; that no purchase
-  exists for an unarmed run; and that zero actions are attributed to the orchestrator.
-- **FR-062**: Automated evaluation MUST additionally run a second, unrelated brief end to end
-  and assert the two runs differ in visual identity and published address and share no artifact
-  content.
+- **FR-061**: Automated evaluation MUST assert, against the deployed system and from the stored
+  records of a brief already driven end to end by an operator: that publication succeeded with
+  its stored evidence; that an order exists matching a product in that brief; that re-running
+  the same brief produces one publication and one order; that every action and every model call
+  carries a cost and a tier with exactly one top-tier call; that nothing flagged reached
+  publication; that no purchase exists for an unarmed run; and that zero actions are attributed
+  to the orchestrator. It MUST NOT re-probe the outside world for anything a verification step
+  already proved and stored. Resubmitting the brief byte-identically is the one action the
+  evaluation may itself initiate, because deduplication makes it free of external effect.
+  The evaluation MUST locate each run by hashing a brief it is given as input, using the same
+  canonicalisation as ingest — never by a run identifier recorded anywhere in the repository,
+  and never by an implicit "most recent run" rule.
+- **FR-062**: Automated evaluation MUST additionally assert, from the stored records of a
+  second, unrelated brief driven end to end, that the two runs differ in visual identity and
+  published address and share no artifact content.
 - **FR-063**: The evaluation report MUST separate mechanically checked results, which carry
   pass/fail and the evidence read, from human-judgement items, which carry links and no
-  self-awarded score, and MUST state that distinction plainly.
+  self-awarded score, and MUST state that distinction plainly. Each human-judgement item MUST
+  name what is to be shown rather than carry a literal link: references to system output MUST
+  resolve from stored records, references to human-produced material MUST resolve to a tracked
+  repository path or a URL held in a tracked file, and an item that resolves to nothing MUST
+  render as missing — never as a pass, and never as a score.
+- **FR-067**: The scored areas and their point values MUST exist as a tracked contract in the
+  repository, reproduced from the external grading table rather than restated inside the
+  evaluation script. Every rubric entry MUST name one of those areas, every area MUST carry at
+  least one entry, and the per-area point totals MUST reconcile to the contract — checked
+  mechanically, not by reading.
+- **FR-068**: The evaluation MUST produce its report on every run, including a failing one, and
+  MUST summarise any failed required check at the top of it. It MUST signal failure to whatever
+  invoked it, in a form an automated check can act on, when and only when a required
+  mechanically-checked result fails — a human-judgement item that resolved to nothing MUST NOT
+  change that signal.
 
 ### Operability
 
