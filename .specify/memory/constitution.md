@@ -1,8 +1,11 @@
 <!--
 Sync Impact Report
 ==================
-Version change: [TEMPLATE] → 1.0.0 (initial ratification)
-Modified principles: n/a (template placeholders filled for the first time)
+Version change: 1.0.0 → 1.1.0 (MINOR — Principle III gains the intake guardrail)
+Modified principles: III. Fixed Pipeline, Tiered Agents with Hard Boundaries — the agent table
+  gains the intake guardrail row, and the raw-brief exception is restated as "sole agent in the
+  pipeline" plus a named, bounded pre-pipeline reader. No prior guarantee is reversed: every
+  boundary the five pipeline agents had, they still have.
 Added sections:
 
   - I. Client Data Never in Code
@@ -70,13 +73,21 @@ hard, enforced boundary on what it may never do:
 | Marketer | `claude-sonnet-5` | Invent a fact not in the brief; deploy |
 | Reviewer (Marketer's self-review) | `claude-haiku-4-5` | Approve silently; rewrite the draft itself |
 | Ops | `claude-haiku-4-5` | Deploy; publish; touch markup |
+| Intake guardrail | `claude-haiku-4-5` | Run after a run is open; write an artifact; hold a gate handle; influence anything downstream. Its only output is a verdict that stops work or does not |
 
-The Reviewer is the sole agent permitted to read the raw brief in addition to the brand doc,
-because it must check facts as well as voice.
+Two model callers read the raw brief. The Reviewer is the sole agent *in the pipeline*
+permitted to, in addition to the brand doc, because it must check facts as well as voice. The
+intake guardrail reads it necessarily and exclusively — it runs before a brand doc exists, and
+screening a brief for instructions aimed at the system cannot be done through a paraphrase of
+it, because the paraphrase is exactly where an injected sentence would be laundered. The
+guardrail is not a pipeline stage: it writes no artifact, holds no gate handle, and its verdict
+is logged on the brief whichever way it falls (FR-007).
 
 **Rationale**: A fixed pipeline with per-agent capability boundaries makes the system's
 behavior provable independent of any one model's judgment call, and keeps the blast radius of
 a compromised or confused agent bounded to what its tier is supposed to do.
+The intake guardrail is outside that pipeline by construction rather than by convention, which
+is why its raw-brief access does not widen anyone else's.
 
 ### IV. Action Gate Governs All Consequential Egress
 
@@ -264,4 +275,4 @@ are real (Principle VII). Once code exists, compliance additionally requires
 `uv run ruff check` and `uv run pytest` to pass, and gate/ingest/idempotency changes to be
 exercised against their real path rather than asserted.
 
-**Version**: 1.0.0 | **Ratified**: 2026-08-02 | **Last Amended**: 2026-08-02
+**Version**: 1.1.0 | **Ratified**: 2026-08-02 | **Last Amended**: 2026-08-10
