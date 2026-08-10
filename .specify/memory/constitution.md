@@ -1,11 +1,15 @@
 <!--
 Sync Impact Report
 ==================
-Version change: 1.0.0 → 1.1.0 (MINOR — Principle III gains the intake guardrail)
+Version change: 1.0.0 → 1.1.1 (MINOR then PATCH — Principle III gains the intake guardrail;
+  Principle I's cross-reference to it restated to match)
 Modified principles: III. Fixed Pipeline, Tiered Agents with Hard Boundaries — the agent table
   gains the intake guardrail row, and the raw-brief exception is restated as "sole agent in the
   pipeline" plus a named, bounded pre-pipeline reader. No prior guarantee is reversed: every
   boundary the five pipeline agents had, they still have.
+  I. Client Data Never in Code — "with one exception (Principle III)" became "with only the
+  exceptions named in Principle III", which is a count correction, not a widening. Principle
+  III remains the sole place where a raw-brief reader may be named.
 Added sections:
 
   - I. Client Data Never in Code
@@ -38,8 +42,8 @@ deploy probe strings, prices or any other numeral, products seeded into Stripe, 
 pairs, aesthetic direction baked into a builder prompt, a single fixed video composition, and
 client copy embedded in eval assertions. The brand doc is the sole parameterisation layer —
 the Strategist reads the brief and writes the brand doc; every other agent reads the brand
-doc, never the raw brief, with one exception (Principle III). A different client MUST be
-representable as a different brief alone, never as a code change.
+doc, never the raw brief, with only the exceptions named in Principle III. A different client
+MUST be representable as a different brief alone, never as a code change.
 
 **Rationale**: This violation is invisible while only one client (GRAFT) runs through the
 system, and a well-meaning change is the most likely way to introduce it. EPYHIA is the
@@ -275,4 +279,4 @@ are real (Principle VII). Once code exists, compliance additionally requires
 `uv run ruff check` and `uv run pytest` to pass, and gate/ingest/idempotency changes to be
 exercised against their real path rather than asserted.
 
-**Version**: 1.1.0 | **Ratified**: 2026-08-02 | **Last Amended**: 2026-08-10
+**Version**: 1.1.1 | **Ratified**: 2026-08-02 | **Last Amended**: 2026-08-10
