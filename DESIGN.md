@@ -1016,7 +1016,27 @@ token request and a Bearer header. (The same reasoning is why the console consum
 access and proxy logs — or a parallel cookie session. Slightly more client code buys one auth
 path.)
 
-It drives a full brief → site → pack → checkout run and then asserts against the database:
+That client is deliberately **not granted approval authority**, and the eval does not drive the
+runs it grades. An operator drives both of them through the console — approvals and the one
+test purchase included — and the eval asserts afterwards against what those runs left behind.
+Two reasons, and the second is the one that decides it. The first is that §4.5 already spent the
+probe: `verify()` fetched the alias, read the message back out of Mailpit, and re-read every
+price from Stripe, storing what it found. An eval that re-drives the world is asserting against
+a second, weaker observation while a stronger one sits in the row. The second is that an eval
+which approves its own deploy and its own charge path is a machine authorising irreversible
+actions on its own say-so — precisely what the gate exists to stop. Making that structurally
+impossible costs one convenience, a single-command reproduction of the whole run, and buys the
+claim in §4.4 back intact.
+
+The one thing it may initiate is **resubmitting a brief byte-identically**, because §7.2 makes
+that free of external effect by construction — the hash resolves to the existing run and every
+gate key short-circuits. That is how the re-run assertion below is *produced* rather than
+arranged.
+
+It finds each run the way the rest of the system does: by **hashing the brief it was handed**,
+with ingest's canonicalisation. Run identity is brief identity (§7.1), so no run id is ever
+written into the repository and no "most recent run" rule can quietly grade the wrong thing.
+Handed two briefs, it asserts against the database:
 
 - the deploy action succeeded **and** its stored evidence shows 200, that run's own
   `brand_doc.name` — read from the row, not hardcoded — and that run's build marker, proving
@@ -1032,9 +1052,9 @@ It drives a full brief → site → pack → checkout run and then asserts again
 
 ### 10.1 The genericity test
 
-The eval also runs a **second, unrelated brief** end to end (a bakery fixture) and asserts the
-two runs produce different brand-doc palettes, different deployed URLs, and no shared artifact
-hashes.
+The eval also asserts over a **second, unrelated brief** driven end to end (a bakery fixture):
+the two runs produce different brand-doc palettes, different deployed URLs, and no shared
+artifact hashes.
 
 This is the cheapest and by far the strongest evidence that EPYHIA is an agency rather than a
 one-client script, and it is much harder to fake than the brand-doc-edit demo. If §1.2 has
@@ -1054,11 +1074,16 @@ one. Each entry is a check bound to one of the six scored areas:
   required: bool }
 ```
 
-`area` and `points` come straight from the assignment's table, which means the totals add to
-100 and a reader can see which check earns which points. `eval.py` runs every `automated`
-check against the deployed agency and writes `PRODUCT_EVAL.md`: one row per check with
-pass/fail, the evidence it read (the action row, the probe result, the order id, the cost
-figures), and the area subtotals.
+`area` and `points` come from the grading table, which lives in the repository as
+`specs/001-epyhia-agency/contracts/grading-rubric.md` — reproduced verbatim and treated like
+every other file in that directory: an agreement the system must satisfy, not one it may edit
+for convenience. Tracking it is what makes `rubric.json` checkable at all. The schema
+constrains `area` to its six ids, and a test asserts that every area carries at least one entry
+and that the per-area totals reconcile. Without that file the rubric could silently omit a
+whole area; with it, "the totals add to 100" is a check rather than a claim. `eval.py`
+evaluates every `automated` check against the deployed agency's stored records and writes
+`PRODUCT_EVAL.md`: one row per check with pass/fail, the evidence it read (the action row, the
+stored probe result, the order id, the cost figures), and the area subtotals.
 
 **Checks of kind `evidence` are not self-scored, and that distinction is the point.** "Not
 slop" and "the design is argued" are human judgements; a script that awards itself 15 points
@@ -1068,6 +1093,21 @@ generated sites from the genericity run, the recording, the section of this docu
 claimed. Automated rows carry numbers; judged rows carry evidence. The document says which is
 which at the top, because a mixed report that hides the difference is exactly the "status
 field the system trusted more than reality" failure in report form.
+
+Those rows still have to point at something real, so each names *what* to show rather than
+carrying a pasted link. Anything the system produced resolves out of the records — the deploy
+action's evidence URL, an artifact id; anything a person produced resolves to a tracked path or
+a URL held in a tracked file. Nothing is re-fetched to confirm it, which would reintroduce the
+probe §10 just argued away. A row resolving to nothing renders as **missing**, which is both
+the honest rendering and the useful one: it is how the report reads before the recording
+exists, rather than as a broken link or a quietly dropped line.
+
+`required` decides exactly one thing — whether the eval reports failure to whatever invoked it.
+The report is written on every run, failing or not, because a grading tool that withholds its
+output when the news is bad is the same self-deception this section exists to prevent, and any
+failed required check is summarised at the top of it. Judged rows never move that signal: a
+recording that has not been made yet is a gap in the evidence, not a mechanical failure, and
+letting it redden the run would undo the split the rest of this section is built on.
 
 ---
 
@@ -1133,8 +1173,9 @@ is worth less for having leaked its own credentials.
     crash.
 12. Deploy the agency to Fly with real Auth0 auth; console polish limited to the approval
     view.
-13. `eval/`: `rubric.json` mapped to the six scored areas, `eval.py` → `PRODUCT_EVAL.md`, the
-    second-brief genericity run; record the 60–90s demo.
+13. `eval/`: `rubric.json` mapped to the six scored areas, `eval.py` → `PRODUCT_EVAL.md`,
+    asserted over both operator-driven runs including the second-brief genericity run; record
+    the 60–90s demo.
 
 ---
 
