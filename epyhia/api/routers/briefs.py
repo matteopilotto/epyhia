@@ -12,10 +12,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from epyhia.api.auth import require_operator
 from epyhia.api.db import get_session
 from epyhia.cost import budget
+from epyhia.cost.ledger import record_call
 from epyhia.gate.keys import alias_for
+from epyhia.ingest import guardrail
 from epyhia.ingest.catalogue import resolve_catalogue
 from epyhia.ingest.grounding import build_grounding_set
-from epyhia.ingest.guardrail import screen_brief
 from epyhia.ingest.hashing import content_sha256
 from epyhia.models.briefs import Brief
 from epyhia.models.runs import Run
@@ -90,7 +91,7 @@ async def submit_brief(
     # call is spending against a budget that does not exist.
     run_budget = budget.configured_run_budget()
 
-    verdict = await screen_brief(payload)
+    verdict = await guardrail.screen_brief(payload)
 
     brief = Brief(
         id=uuid.uuid4(),
@@ -102,14 +103,12 @@ async def submit_brief(
     )
     session.add(brief)
 
-    if verdict.decision == "reject":
-        # Logged either way, but nothing downstream of it exists to resolve to.
-        await session.commit()
-        return JSONResponse(
-            status_code=422,
-            content={"error": "guardrail_rejected", "detail": verdict.reason},
-        )
+    rejected = verdict.decision == "reject"
 
+    # A rejected brief still opens a run — not to do work, but so the screening call has a run
+    # to be recorded against and a budget to have spent from. Rejecting a brief is the one way
+    # to make the system spend money; it must not also be the one way to spend it invisibly
+    # (FR-034, FR-054, SC-007).
     alias = alias_for(brief_hash)
     run = Run(
         id=uuid.uuid4(),
@@ -121,11 +120,35 @@ async def submit_brief(
         # computed from the brief before anything expensive runs (research.md R11).
         resolved_catalogue=resolve_catalogue(payload["products"]),
         budget_usd=run_budget,
-        status="running",
+        status="failed" if rejected else "running",
         alias=alias,
     )
     session.add(run)
     await session.flush()
+
+    await record_call(
+        session,
+        run_id=run.id,
+        task_id=None,
+        agent=guardrail.AGENT,
+        model_id=verdict.model,
+        prompt_version=guardrail.PROMPT_VERSION,
+        input_tokens=verdict.input_tokens,
+        output_tokens=verdict.output_tokens,
+        cache_write_tokens=verdict.cache_write_tokens,
+        cache_read_tokens=verdict.cache_read_tokens,
+        latency_ms=verdict.latency_ms,
+        # No memo stands in front of the screen — every submitted brief is screened by the
+        # model, so this row is never served from `agent_cache`.
+        cache_hit=False,
+    )
+
+    if rejected:
+        await session.commit()
+        return JSONResponse(
+            status_code=422,
+            content={"error": "guardrail_rejected", "detail": verdict.reason},
+        )
 
     session.add(Task(id=uuid.uuid4(), run_id=run.id, kind="plan", state="pending"))
     await session.commit()

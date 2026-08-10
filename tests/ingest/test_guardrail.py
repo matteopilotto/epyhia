@@ -26,7 +26,7 @@ async def test_brief_carrying_a_system_instruction_is_rejected() -> None:
 
     assert result.decision == "reject"
     assert result.reason == "field tagline addresses the system, not a customer"
-    assert result.model == guardrail.GUARDRAIL_MODEL
+    assert result.model == guardrail.MODEL_ID
 
 
 async def test_accepted_brief_also_carries_a_logged_decision_and_reason() -> None:
