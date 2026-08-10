@@ -337,7 +337,7 @@ not runtime state, and a YAML diff is the review artifact. Fetching prices from 
 no such API, and it would put a network dependency in the cost path.
 
 **Consequence**: `tier` lives here rather than being inferred from the model id, so FR-049's
-tier column and SC-007's "exactly one top-tier call" have one definition.
+tier column and SC-007's "every top-tier call is the Strategist's" have one definition.
 
 ---
 

@@ -1045,7 +1045,8 @@ Handed two briefs, it asserts against the database:
 - **re-running the same brief produces no second site and no second order** — asserted as one
   `succeeded` deploy action and one alias, not merely as one order;
 - every action row carries a cost, and **every `agent_calls` row carries a model id, a tier and
-  a cost**, with exactly one top-tier call in the run (§3.1);
+  a cost**, and that every top-tier call in the run is the Strategist's (§3.1) — a retried plan
+  stage may repeat that call, but no drafting, reviewing or wiring agent may ever make one;
 - no artifact reached the deploy with `grounding_status = 'flagged'`, and no Checkout Session
   exists for a run whose charge path was never armed (§4.4);
 - **zero gate actions attributed to the Strategist** — the mechanical proof of §3.3.

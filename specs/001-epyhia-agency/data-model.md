@@ -216,7 +216,9 @@ One row per model call — the per-call half of "what did it do and what did it 
 
 - `tier` and `cost_usd` are NOT NULL because SC-007 asserts 100% coverage. A model id with no
   applicable rate row is a hard error, never a silent `0.00` (R9).
-- Exactly one row per run carries the planning tier (SC-007, §3.1).
+- Every row carrying the planning tier has `agent = 'strategist'` (SC-007, §3.1). More than one
+  such row means the plan task was retried, which FR-047 permits and FR-048 makes affordable; a
+  planning-tier row for any *other* agent is the defect this rule exists to catch.
 - This table, not Logfire, is what `eval.py` reads — it must assert with no Logfire account
   and no network (§8).
 

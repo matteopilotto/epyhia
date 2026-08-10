@@ -519,7 +519,8 @@ confirm the two runs share no artifact content, no visual identity, and no publi
   records of a brief already driven end to end by an operator: that publication succeeded with
   its stored evidence; that an order exists matching a product in that brief; that re-running
   the same brief produces one publication and one order; that every action and every model call
-  carries a cost and a tier with exactly one top-tier call; that nothing flagged reached
+  carries a cost and a tier, with every top-tier call attributable to the orchestrator; that
+  nothing flagged reached
   publication; that no purchase exists for an unarmed run; and that zero actions are attributed
   to the orchestrator. It MUST NOT re-probe the outside world for anything a verification step
   already proved and stored. Resubmitting the brief byte-identically is the one action the
@@ -599,8 +600,10 @@ confirm the two runs share no artifact content, no visual identity, and no publi
   deduplication key are all present on it.
 - **SC-006**: Two unrelated briefs run without any intervening source change produce zero shared
   artifact content, distinct visual identities, and distinct published addresses.
-- **SC-007**: 100% of model calls carry a recorded model tier and cost, and exactly one top-tier
-  call occurs per run.
+- **SC-007**: 100% of model calls carry a recorded model tier and cost, and within a run the only
+  agent that makes top-tier calls is the one that plans it. A resumed or retried planning stage
+  may repeat that call — delivery is at-least-once by design (FR-047) — but no drafting,
+  reviewing or wiring agent may ever make one.
 - **SC-008**: A forced crash at any point in a run results in zero duplicated external effects
   after resume, and any pending approval is still actionable after restart.
 - **SC-009**: A buyer completes a test purchase on the published site with zero operator

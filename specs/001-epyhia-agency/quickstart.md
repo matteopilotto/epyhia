@@ -181,7 +181,7 @@ Answer entirely from `GET /runs/{id}/cost`, without leaving the console:
 | Assert | Requirement |
 |---|---|
 | Every model call lists agent, model id, **tier**, four token counts, derived cost, latency | FR-049 |
-| **Exactly one** top-tier call in the run | SC-007, §3.1 |
+| **Every** top-tier call in the run is the Strategist's | SC-007, §3.1 |
 | Model spend and action spend appear as **one** total against **one** budget | FR-052, SC-011 |
 | Exceeding the run budget stops the run; the daily ceiling stops new runs starting | FR-053 |
 | Costs use **effective-dated** rates; a rate change on a known date does not silently misreport | FR-051, R9 |
