@@ -1,3 +1,5 @@
+import uuid
+from collections.abc import Sequence
 from datetime import UTC, datetime
 from decimal import Decimal
 
@@ -11,6 +13,7 @@ from epyhia.agents import marketer, reviewer, strategist, web_builder
 from epyhia.api.app import create_app
 from epyhia.api.auth import require_operator
 from epyhia.api.db import get_session
+from epyhia.cost.ledger import record_call
 from epyhia.cost.pricing import rate_for
 from epyhia.models.agent_calls import AgentCall
 from epyhia.queue.worker import run_once
@@ -31,6 +34,47 @@ OPERATOR = "auth0|operator"
 # function the ledger uses. SC-007's "top tier" is whatever the rate table says it is, so
 # nothing here restates it as a literal.
 PLANNING_TIER = rate_for(strategist.MODEL_ID, datetime.now(UTC)).tier
+
+
+def _assert_sc007(calls: Sequence[AgentCall]) -> None:
+    """SC-007: the only agent making top-tier calls is the one that plans.
+
+    A *second* Strategist row is a retry, which FR-047 permits — the defect this catches is a
+    planning-tier row for any other agent: an expensive model reached for where a cheaper one
+    belongs. Stated once here because three tests and the eval must mean the same thing by it.
+    """
+    planning = [call for call in calls if call.tier == PLANNING_TIER]
+    # Dropping the count entirely would let a run with *zero* planning calls pass, which is a
+    # different and worse regression than the one being fixed.
+    assert planning, "no planning-tier call recorded"
+    assert {call.agent for call in planning} == {strategist.AGENT}
+    assert {call.model_id for call in planning} == {strategist.MODEL_ID}
+
+
+async def _calls_for(session: AsyncSession, run_id: uuid.UUID) -> Sequence[AgentCall]:
+    return (
+        await session.execute(select(AgentCall).where(AgentCall.run_id == run_id))
+    ).scalars().all()
+
+
+async def _record_planning_call(session: AsyncSession, run_id: uuid.UUID, agent: str) -> None:
+    """One ledger row at the planning tier, attributed to `agent`. The tier is derived from
+    the model id through `pricing.yaml`, so passing the Strategist's model is what puts a row
+    at the top tier — exactly how a drafting agent would land there in production."""
+    await record_call(
+        session,
+        run_id=run_id,
+        task_id=None,
+        agent=agent,
+        model_id=strategist.MODEL_ID,
+        prompt_version=strategist.PROMPT_VERSION,
+        input_tokens=1_000,
+        output_tokens=500,
+        cache_write_tokens=0,
+        cache_read_tokens=0,
+        latency_ms=10,
+        cache_hit=False,
+    )
 
 
 def client_for(session: AsyncSession) -> httpx.AsyncClient:
@@ -90,12 +134,41 @@ async def test_every_call_carries_a_tier_and_a_cost(
         assert call.input_tokens + call.output_tokens > 0
         assert call.cost_usd > 0
 
-    # SC-007: exactly one top-tier call per run, and it is the Strategist's. A second one is
-    # a real defect — a planning-tier model reached for where a cheaper one belongs.
-    planning = [call for call in calls if call.tier == PLANNING_TIER]
-    assert len(planning) == 1
-    assert planning[0].agent == strategist.AGENT
-    assert planning[0].model_id == strategist.MODEL_ID
+    _assert_sc007(calls)
+
+
+async def test_a_retried_plan_does_not_break_sc007(
+    integration_session: AsyncSession,
+) -> None:
+    """A worker that dies mid-plan has its lease expire, and `sweeper.py` returns the task to
+    `pending` with `attempts + 1` — so the Strategist runs again and the ledger carries two
+    planning-tier rows. FR-047 makes that delivery guarantee deliberate, so the criterion has
+    to survive it. Under the old `len(planning) == 1` this run failed."""
+    run_id, _ = await _open_run(integration_session, load_brief())
+
+    await _record_planning_call(integration_session, run_id, strategist.AGENT)
+    await _record_planning_call(integration_session, run_id, strategist.AGENT)
+
+    calls = await _calls_for(integration_session, run_id)
+    assert len([call for call in calls if call.tier == PLANNING_TIER]) == 2
+    _assert_sc007(calls)
+
+
+async def test_a_drafting_agent_at_planning_tier_fails(
+    integration_session: AsyncSession,
+) -> None:
+    """The failure SC-007 exists to catch: a top-tier model reached for where a mid-tier one
+    belongs (§3.1), which is a ~5x cost increase inside a run that otherwise looks fine. The
+    old assertion caught it only by accident, and not at all once a legitimate Strategist row
+    sat beside it — as it does here."""
+    run_id, _ = await _open_run(integration_session, load_brief())
+
+    await _record_planning_call(integration_session, run_id, strategist.AGENT)
+    await _record_planning_call(integration_session, run_id, marketer.AGENT)
+
+    calls = await _calls_for(integration_session, run_id)
+    with pytest.raises(AssertionError):
+        _assert_sc007(calls)
 
 
 async def test_cost_endpoint_itemises_calls_under_one_total(
