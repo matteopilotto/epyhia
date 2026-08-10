@@ -427,8 +427,9 @@ confirm the two runs share no artifact content, no visual identity, and no publi
 - **FR-034**: Model inference MUST NOT route through that boundary; it MUST instead be metered
   against per-run token limits, a per-run spend budget, and a system-wide daily ceiling.
 - **FR-035**: Every consequential action MUST progress through the states pending →
-  (awaiting approval) → executing → verifying → succeeded or failed. There MUST be no path from
-  executing directly to succeeded.
+  (awaiting approval) → executing → verifying → succeeded or failed, with denied as a terminal
+  state reachable only from awaiting approval. There MUST be no path from executing directly to
+  succeeded.
 - **FR-036**: Every action type MUST register both an execution behaviour and an independent
   verification behaviour. Approval policy, deduplication, retry, and audit MUST live in the
   boundary itself, not be duplicated per action type.
@@ -446,7 +447,10 @@ confirm the two runs share no artifact content, no visual identity, and no publi
   identifiers — MUST be stored on the action record and MUST be the basis on which success is
   claimed anywhere in the system.
 - **FR-041**: Verification MUST retry with backoff up to a small fixed cap and then record
-  failure. An action whose verification never passes MUST NOT be recorded as succeeded.
+  failure. An action whose verification never passes MUST NOT be recorded as succeeded. Where the
+  proof of an effect can only arrive on a later external event, the action MUST hold in the
+  verifying state — consuming no attempt and recording no failure — until that event supplies it.
+  Holding at verifying is never reported as success.
 - **FR-042**: The orchestrating agent MUST be constructed with no capability functions at all,
   and the system MUST be able to demonstrate zero consequential actions attributed to it across
   a full run.
