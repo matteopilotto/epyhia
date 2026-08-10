@@ -18,7 +18,15 @@
           "id": { "type": "string", "minLength": 1 },
           "area": {
             "type": "string",
-            "description": "One of the scored areas. Areas and points come straight from the assignment's table so the totals add up and a reader can see which check earns which points."
+            "enum": [
+              "deliverables-real",
+              "not-slop",
+              "crew-orchestration",
+              "action-gate",
+              "design-failure-catalogue",
+              "ships-clean-clone"
+            ],
+            "description": "The scored area this check earns points in, by id. The six ids, their titles and their point budgets are fixed by contracts/grading-rubric.md, which reproduces the external grading table verbatim. Membership is enforced here; coverage of all six areas and per-area point reconciliation are asserted by test, because JSON Schema cannot sum (FR-067)."
           },
           "points": { "type": "number", "minimum": 0 },
           "title": { "type": "string", "minLength": 1 },
@@ -33,9 +41,12 @@
           },
           "evidence": {
             "type": "string",
-            "description": "The query or artifact that shows it — an action row, a probe result, an order id, a cost figure, a live URL."
+            "description": "What shows it, named rather than pasted — an action row, a stored probe result, an order id, a cost figure, a tracked path. System output resolves from stored records, human-produced material from a tracked path or a URL held in a tracked file; nothing is re-fetched to confirm it. A reference resolving to nothing renders as `missing` in PRODUCT_EVAL.md — never a pass, never a score, never a broken link (FR-063)."
           },
-          "required": { "type": "boolean" }
+          "required": {
+            "type": "boolean",
+            "description": "Whether failing this check makes the evaluation report failure to whatever invoked it. Only `automated` rows can move that signal; an `evidence` row that resolves to nothing is reported missing and leaves it untouched. The report is written on every run either way, with failed required checks summarised at the top (FR-068)."
+          }
         },
         "allOf": [
           {

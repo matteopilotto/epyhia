@@ -221,13 +221,33 @@ automatically.
 
 ## The eval
 
+**Precondition**: both briefs have already been driven end to end by an operator — approvals
+clicked, one test purchase completed. The eval grades what those runs left behind; it does not
+drive them, and its M2M client carries **no approval authority** (FR-058, §10).
+
 ```bash
-uv run python eval/eval.py     # against the DEPLOYED agency, Auth0 M2M — no bypass key
+# against the DEPLOYED agency, Auth0 M2M — no bypass key
+uv run python eval/eval.py tests/fixtures/briefs/one.json tests/fixtures/briefs/two.json
 ```
 
+Each run is located by **hashing the brief it was handed**, with ingest's canonicalisation —
+run identity is brief identity (§7.1), so no run id is written into the repository and no
+"most recent run" rule can grade the wrong thing (FR-061). Resubmitting those briefs
+byte-identically is the only thing the eval initiates, and it is what produces the re-run
+assertion rather than arranging it.
+
 Writes `PRODUCT_EVAL.md` from `rubric.json`
-([schema](./contracts/eval-rubric.schema.json)), reading **stored records** rather than
+([schema](./contracts/eval-rubric.schema.json)), scored against
+[grading-rubric.md](./contracts/grading-rubric.md), reading **stored records** rather than
 re-probing the world (§4.5, §10).
+
+| Assert | Requirement |
+|---|---|
+| Every scored area carries ≥1 rubric entry and the per-area points reconcile to the contract | FR-067 |
+| The report is written **even when a required check fails**, with the failures summarised at the top | FR-068 |
+| Failure is signalled to the caller only for a failed required **automated** check | FR-068 |
+| A judged row that resolves to nothing renders as **missing** — never a pass, never a score, never a broken link | FR-063 |
+| No approval decision anywhere in the record is attributed to the eval's identity | FR-058 |
 
 The one thing to check about the report itself: a reader can tell, for **every** line, whether
 it was mechanically checked or left to human judgement. Automated rows carry pass/fail and the
