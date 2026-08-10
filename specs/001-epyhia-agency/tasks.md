@@ -8,7 +8,9 @@
 **Tests**: Test tasks ARE included. They are not speculative TDD — each one is named by the spec
 or the constitution: [quickstart.md](./quickstart.md) S0 enumerates seven gate assertions,
 FR-060/[research.md R10](./research.md) mandates the prompt-tree lint, FR-061–FR-063 mandate the
-eval, and Constitution Principle VII says the gate "has no excuse for being untested".
+eval, FR-067 mandates that the rubric's area coverage and point totals be checked mechanically
+rather than read, and Constitution Principle VII says the gate "has no excuse for being
+untested".
 
 **Organization**: Tasks are grouped by user story. Two constraints override pure story
 independence, both from Constitution Principle II (`DESIGN.md` §12 build order is binding):
@@ -298,17 +300,29 @@ source changes — proved both statically (the prompt lint) and dynamically (the
 **Independent Test**: `git status` before and after running a second unrelated brief must be
 identical, and the two runs must share no artifact hash, no palette and no alias.
 
+**⚠️ Precondition for T122–T140 — the eval does not drive the runs it grades** (spec
+Clarifications 2026-08-10, §10). An operator drives **both** briefs end to end through the
+console first, approvals and the one test purchase included; the eval asserts afterwards over
+what those runs left behind. Its M2M client carries **no approval authority**, and the single
+action it may itself initiate is a byte-identical resubmission — free of external effect by
+construction (§7.2), which is how the re-run assertion is *produced* rather than arranged.
+
 - [ ] T118 [P] [US6] Add a second, **unrelated** brief fixture at `tests/fixtures/briefs/two.json` sharing no facts with `one.json` — a different kind of business entirely. It must be real enough to harvest tokens from; a placeholder name silently weakens the lint (R10)
 - [ ] T119 [US6] Implement the prompt-tree lint in `tests/genericity/test_prompt_lint.py` per [research.md R10](./research.md) — harvest business names, taglines, one-liners, product names, `price_minor` as strings, currency codes and voice adjectives from **every** fixture; assert each fixture yields a non-empty token set; assert no token appears in any file under `prompts/` (raw scan); assert no token and no currency symbol appears in any template rendered against a sentinel context (empty render). Match on **word boundaries** — a voice adjective like `direct` otherwise hits `directory`/`directly` in ordinary source and the lint is red forever
 - [ ] T120 [P] [US6] Add the companion source scan in `tests/genericity/test_source_scan.py` — the same harvested tokens must not appear anywhere under `epyhia/`, `console/src/` or `video/src/`
-- [ ] T121 [US6] Write `eval/rubric.json` conforming to [contracts/eval-rubric.schema.json](./contracts/eval-rubric.schema.json) — every check carries `id`, `area`, `points`, `title`, `kind`, `assertion`, `evidence` and `required`; `evidence`-kind rows carry no score field
-- [ ] T122 [US6] Implement `eval/eval.py` — authenticates via Auth0 **machine-to-machine** through the same validator as the console, with no bypass path (FR-058); reads **stored records** rather than re-probing the world; writes `PRODUCT_EVAL.md`
-- [ ] T123 [US6] Implement the FR-061 assertions in `eval/eval.py` — publication succeeded with its stored evidence; an order exists matching a product in that brief; a re-run produced one publication and one order; every action and every model call carries a cost and a tier with exactly one top-tier call; nothing flagged reached publication; no purchase exists for an unarmed run; **zero actions carry `requested_by = 'strategist'`**
+- [ ] T121 [US6] Write `eval/rubric.json` conforming to [contracts/eval-rubric.schema.json](./contracts/eval-rubric.schema.json) — every check carries `id`, `area`, `points`, `title`, `kind`, `assertion`, `evidence` and `required`; `evidence`-kind rows carry no score field. `area` and `points` come from [contracts/grading-rubric.md](./contracts/grading-rubric.md) §2 — all six area ids covered, per-area totals reconciling to it. Three of the six are entirely human-judged and are the easiest to omit (FR-067)
+- [ ] T136 [P] [US6] Test in `tests/eval/test_rubric_contract.py`: `eval/rubric.json` validates against the schema; every `area` is one of the six ids; **all six** appear at least once; and each area's `points` sum to that area's budget — with the expected ids and budgets **parsed out of [contracts/grading-rubric.md](./contracts/grading-rubric.md) §2**, never restated in the test, or the check is a copy grading a copy (FR-067)
+- [ ] T122 [US6] Implement `eval/eval.py` — takes the brief files as arguments (`eval.py one.json two.json`) and resolves each run by hashing its brief through `epyhia.ingest.hashing`, the same canonicalisation ingest uses, so no run id is written into the repository and no "most recent run" rule can grade the wrong thing (FR-061, §7.1). Authenticates via Auth0 **machine-to-machine** through the same validator as the console, with no bypass path and **no approve/deny call path in the client at all** (FR-058). Reads **stored records** rather than re-probing the world; writes `PRODUCT_EVAL.md`
+- [ ] T123 [US6] Implement the FR-061 assertions in `eval/eval.py` — publication succeeded with its stored evidence; an order exists matching a product in that brief; every action and every model call carries a cost and a tier with exactly one top-tier call; nothing flagged reached publication; no purchase exists for an unarmed run; **zero actions carry `requested_by = 'strategist'`**; and **no approval decision anywhere in the record is attributed to the eval's own M2M identity** (FR-058)
+- [ ] T137 [US6] Implement the re-run assertion in `eval/eval.py` — resubmit each brief byte-identically, expect `200 {deduplicated: true}`, and assert the run still has exactly one publication and one order afterwards. This resubmission is the **only** action the eval initiates, and it is safe only because every gate key short-circuits on the same brief hash (FR-061, §7.2). Depends on T102
 - [ ] T124 [US6] Implement the FR-062 second-brief assertions in `eval/eval.py` — the two runs differ in brand doc palette and alias and share no artifact `sha256`, with each run's deploy probe having read its expected name from **its own** brand doc row
-- [ ] T125 [US6] Implement the report split in `eval/eval.py` — `automated` rows render pass/fail plus the evidence read; `evidence` rows render links and **no self-awarded score**; `PRODUCT_EVAL.md` states the distinction plainly at the top (FR-063, SC-013)
+- [ ] T138 [US6] Implement the evidence-row resolver in `eval/resolve.py` — an `evidence` row **names** what to show rather than carrying a pasted link: references to system output resolve out of the stored records (a deploy action's evidence URL, an artifact id, an order id), references to human-produced material resolve to a tracked repository path or a URL held in a tracked file. Nothing is re-fetched to confirm it — that would reintroduce the probe §10 argued away — and an unresolvable reference resolves to **missing**, never a pass, never a score, never a broken link (FR-063)
+- [ ] T125 [US6] Implement the report split in `eval/eval.py` — `automated` rows render pass/fail plus the evidence read; `evidence` rows render their resolved reference or `missing`, with **no self-awarded score**; area subtotals per [contracts/grading-rubric.md](./contracts/grading-rubric.md); `PRODUCT_EVAL.md` states the distinction plainly at the top (FR-063, SC-013)
+- [ ] T139 [US6] Implement the required-failure protocol in `eval/eval.py` — `PRODUCT_EVAL.md` is written on **every** run including a failing one, with any failed `required` check summarised at the top; the process exits non-zero when and only when a `required` **`automated`** check fails. An `evidence` row that resolved to `missing` is a gap in the evidence, not a mechanical failure, and never moves the exit status (FR-068)
+- [ ] T140 [P] [US6] Test in `tests/eval/test_report.py` against a stubbed record source: a failed required automated check still writes the report, names itself in the top summary, and exits non-zero; an `evidence` row resolving to nothing renders `missing` and leaves the exit status at zero; and no `evidence` row renders a score in either case (FR-063, FR-068)
 
 **Checkpoint**: The genericity claim is proved statically and dynamically, over two unrelated
-businesses.
+businesses — and the report is honest about which half of it a machine checked.
 
 ---
 
@@ -317,9 +331,9 @@ businesses.
 - [ ] T126 Deploy to Fly using `fly.toml` — one image, `web` + `worker` processes, `release_command = "alembic upgrade head"`, with a real Auth0 tenant configured (§12 step 12)
 - [ ] T127 [P] Polish the console limited to the approval view in `console/src/routes/approvals.tsx` — design effort belongs in the generated client site, not here (spec Assumptions)
 - [ ] T128 [P] Write `README.md` — the clone-to-running path from [quickstart.md](./quickstart.md) Prerequisites, and the explicit statement that the app starts with no credentials
-- [ ] T129 Run every section of [quickstart.md](./quickstart.md) S0–S6 against the running system and record the evidence each table asks for
+- [ ] T129 Run every section of [quickstart.md](./quickstart.md) S0–S6 against the running system and record the evidence each table asks for — S6 requires both briefs already driven end to end by an operator, since the eval grades stored records rather than driving them
 - [ ] T130 [P] Update `CLAUDE.md` — the "Repository state: design-first, no code yet" section is false once Phase 1 lands; replace it with the real layout and the working commands (`uv run ruff check`, `uv run pytest`, `uv run alembic upgrade head`, `docker compose up`)
-- [ ] T131 Record the 60–90s demo and link it from the header of `PRODUCT_EVAL.md` as an `evidence`-kind row (§12 step 13)
+- [ ] T131 Record the 60–90s demo and put its URL in a **tracked file** so the `evidence`-kind row for it resolves through T138 — until the recording exists the row renders `missing`, which is the honest rendering and does not fail the eval (§12 step 13, FR-063, FR-068)
 
 ---
 
@@ -343,7 +357,10 @@ businesses.
 - **US5 (Phase 7)**: Depends on Phase 2's `agent_calls` ledger. Independently testable against any
   completed run
 - **US6 (Phase 8)**: T119–T120 (the static lint) depend only on Phase 2 and the prompt tree, and
-  can run as soon as the first prompt exists. T121–T125 (the eval) depend on US1–US5
+  can run as soon as the first prompt exists. T121 and T136 (the rubric and its contract test)
+  depend on nothing but the grading contract. T122–T125 and T137–T140 (the eval proper) depend on
+  US1–US5 **and on an operator having driven both briefs end to end**, approvals and the test
+  purchase included — the eval reads what those runs left behind and cannot substitute for them
 - **Polish (Phase 9)**: Depends on the desired stories being complete
 
 ### Within Each User Story
@@ -368,7 +385,8 @@ businesses.
 - **Phase 5**: T099, T100, T101 in parallel
 - **Phase 6**: T105, T106 in parallel; T107–T110 are four independent test files
 - **Phase 7**: T113, T114, T115, T116, T117 in parallel
-- **Phase 8**: T118 and T120 in parallel
+- **Phase 8**: T118 and T120 in parallel; T136 in parallel with T122 once T121 lands; T140 in
+  parallel with the assertion tasks — it runs against a stubbed record source and needs no run
 - **Across stories**: once Phase 2 is done, US1, US2's pack agents, US3's Ops agent and US5's cost
   surface can be staffed in parallel
 
