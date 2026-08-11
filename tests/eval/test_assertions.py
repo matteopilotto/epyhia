@@ -143,6 +143,111 @@ def test_an_action_with_no_projected_cost_fails(check_id: str) -> None:
     assert "projected cost" in detail
 
 
+ALIAS = "https://an-alias.invalid"
+
+
+def published(created_at: str, **overrides) -> dict:
+    """A proved deploy: the evidence a `verify()` stores, at the run's one alias."""
+    return action(
+        "deploy",
+        "succeeded",
+        id=f"deploy-{created_at}",
+        created_at=created_at,
+        evidence={
+            "status": 200,
+            "url": ALIAS,
+            "matched_name": "A Placeholder Name",
+            "matched_build_marker": True,
+        }
+        | overrides,
+    )
+
+
+def deduplicated_response() -> httpx.Response:
+    return httpx.Response(200, json={"deduplicated": True, "run_id": "a-run"})
+
+
+def test_a_second_publication_is_a_brand_doc_edit_not_a_duplicate() -> None:
+    """`deploy_key` includes the brand doc version, so an operator edit and a re-run publish
+    again by design (§5.3, §7.2, US4 scenario 3). Both checks must survive that flow."""
+    two = record(
+        actions=[published("2020-01-01T00:00:00+00:00"), published("2020-01-02T00:00:00+00:00")]
+    )
+    source = StubSource(records=[two], response=deduplicated_response(), after=two)
+
+    published_passed, published_detail = ev.CHECKS["deliverables-site-published"](source)
+    assert published_passed, published_detail
+    # Visible rather than silently tolerated.
+    assert "2 succeeded deploy(s)" in published_detail
+
+    rerun_passed, rerun_detail = ev.CHECKS["gate-rerun-is-idempotent"](source)
+    assert rerun_passed, rerun_detail
+    assert "publications 2 → 2" in rerun_detail
+
+
+def test_the_newest_publication_is_the_one_read() -> None:
+    """The live site is the latest by `created_at`, not by row order — so a superseded
+    publication can neither carry this check nor sink it."""
+    superseded = published("2020-01-01T00:00:00+00:00", matched_name="A Superseded Name")
+    live = published("2020-01-02T00:00:00+00:00")
+    assert ev.CHECKS["deliverables-site-published"](
+        StubSource(records=[record(actions=[superseded, live])])
+    )[0]
+
+    # The same two rows, with the mismatch as the newest: now it is what a visitor sees.
+    republished = published("2020-01-03T00:00:00+00:00", matched_name="A Superseded Name")
+    assert not ev.CHECKS["deliverables-site-published"](
+        StubSource(records=[record(actions=[republished, live])])
+    )[0]
+
+
+def test_no_publication_at_all_still_fails() -> None:
+    source = StubSource(records=[record(actions=[])])
+
+    passed, detail = ev.CHECKS["deliverables-site-published"](source)
+    assert not passed
+    assert detail.endswith("no succeeded deploy action")
+
+
+def test_a_resubmission_that_published_again_fails_the_rerun_check() -> None:
+    """The delta is the claim: a re-run that added a publication is not idempotent, however
+    many the run legitimately had before it."""
+    before = record(actions=[published("2020-01-01T00:00:00+00:00")])
+    after = record(
+        actions=[published("2020-01-01T00:00:00+00:00"), published("2020-01-02T00:00:00+00:00")]
+    )
+    source = StubSource(records=[before], response=deduplicated_response(), after=after)
+
+    passed, detail = ev.CHECKS["gate-rerun-is-idempotent"](source)
+    assert not passed
+    assert "publications 1 → 2" in detail
+
+
+def test_a_second_alias_fails_the_rerun_check() -> None:
+    """`alias_for` is a pure function of the brief hash, so two aliases are two runs."""
+    elsewhere = published("2020-01-02T00:00:00+00:00", url="https://another-alias.invalid")
+    two = record(actions=[published("2020-01-01T00:00:00+00:00"), elsewhere])
+    source = StubSource(records=[two], response=deduplicated_response(), after=two)
+
+    passed, detail = ev.CHECKS["gate-rerun-is-idempotent"](source)
+    assert not passed
+    assert "2 alias(es)" in detail
+
+
+def test_a_resubmission_that_created_an_order_fails_the_rerun_check() -> None:
+    order = {"paid": True, "product_slug": "a-product", "amount_minor": 1}
+    before = record(actions=[published("2020-01-01T00:00:00+00:00")], orders=[order])
+    source = StubSource(
+        records=[before],
+        response=deduplicated_response(),
+        after=record(actions=before.actions, orders=[order, order]),
+    )
+
+    passed, detail = ev.CHECKS["gate-rerun-is-idempotent"](source)
+    assert not passed
+    assert "orders 1 → 2" in detail
+
+
 def test_a_connect_error_refuses_rather_than_failing(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:

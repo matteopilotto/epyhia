@@ -294,14 +294,21 @@ def for_each_run(source: RecordSource, assertion: Assertion) -> tuple[bool, str]
 @check("deliverables-site-published")
 def _site_published(source: RecordSource) -> tuple[bool, str]:
     def assertion(record: RunRecord) -> tuple[bool, str]:
-        deploys = [
-            action
-            for action in record.actions
-            if action["action_type"] == "deploy" and action["state"] == "succeeded"
-        ]
-        if len(deploys) != 1:
-            return False, f"{len(deploys)} succeeded deploy actions"
-        evidence = deploys[0]["evidence"] or {}
+        # More than one succeeded deploy is not a duplicate: `deploy_key` includes the brand
+        # doc version (§7.2), so an operator brand-doc edit followed by a re-run is by design
+        # a second publication (§5.3, US4 scenario 3). The newest is the live one, and the
+        # count is reported rather than silently tolerated.
+        deploys = sorted(
+            (
+                action
+                for action in record.actions
+                if action["action_type"] == "deploy" and action["state"] == "succeeded"
+            ),
+            key=lambda action: action["created_at"],
+        )
+        if not deploys:
+            return False, "no succeeded deploy action"
+        evidence = deploys[-1]["evidence"] or {}
         # Read from this run's own brand doc row, exactly as the probe did — the string a
         # deploy is proved by varies per client and exists in no source file (FR-018).
         expected_name = (record.brand_doc or {}).get("doc", {}).get("name")
@@ -311,7 +318,10 @@ def _site_published(source: RecordSource) -> tuple[bool, str]:
             and evidence.get("matched_name") == expected_name
             and bool(evidence.get("matched_build_marker"))
         )
-        return passed, f"deploy evidence {json.dumps(evidence, sort_keys=True)}"
+        return passed, (
+            f"{len(deploys)} succeeded deploy(s), latest evidence "
+            f"{json.dumps(evidence, sort_keys=True)}"
+        )
 
     return for_each_run(source, assertion)
 
@@ -494,11 +504,25 @@ def _rerun_is_idempotent(source: RecordSource) -> tuple[bool, str]:
 
     A byte-identical payload hashes to the existing brief, so the submission resolves to the
     run that already exists and every gate key short-circuits — the re-run assertion is
-    *produced* by that rather than arranged (§7.2). One publication is asserted as one
-    succeeded deploy at one alias, not merely as one order.
+    *produced* by that rather than arranged (§7.2).
+
+    What is asserted is a **delta**: the resubmission added nothing. That is FR-061's claim,
+    and unlike "exactly one publication" it survives a legitimate prior second publication
+    from a brand-doc edit, which `deploy_key` makes a genuine deploy rather than a duplicate.
     """
 
+    def counts(rec: RunRecord) -> tuple[int, set, int]:
+        deploys = [
+            action
+            for action in rec.actions
+            if action["action_type"] == "deploy" and action["state"] == "succeeded"
+        ]
+        aliases = {(action["evidence"] or {}).get("url") for action in deploys}
+        return len(deploys), aliases, len(rec.orders)
+
     def assertion(record: RunRecord) -> tuple[bool, str]:
+        before_deploys, _, before_orders = counts(record)
+
         response = source.resubmit(record)
         body = response.json() if response.content else {}
         deduplicated = (
@@ -507,18 +531,20 @@ def _rerun_is_idempotent(source: RecordSource) -> tuple[bool, str]:
             and str(body.get("run_id")) == str(record.run["id"])
         )
 
-        after = source.reread(record)
-        deploys = [
-            action
-            for action in after.actions
-            if action["action_type"] == "deploy" and action["state"] == "succeeded"
-        ]
-        aliases = {(action["evidence"] or {}).get("url") for action in deploys}
-        passed = deduplicated and len(deploys) == 1 and len(aliases) == 1 and len(after.orders) == 1
+        after_deploys, aliases, after_orders = counts(source.reread(record))
+        # One alias whatever the deploy count: `alias_for` is a pure function of the brief
+        # hash (§7.2), so even two legitimate publications share one, and a second alias
+        # would be a duplicate run under a different identity.
+        passed = (
+            deduplicated
+            and after_deploys == before_deploys
+            and after_orders == before_orders
+            and len(aliases) == 1
+        )
         return passed, (
             f"resubmission {response.status_code} deduplicated={body.get('deduplicated')!r}; "
-            f"afterwards {len(deploys)} publication(s) at {len(aliases)} alias(es) and "
-            f"{len(after.orders)} order(s)"
+            f"publications {before_deploys} → {after_deploys} at {len(aliases)} alias(es), "
+            f"orders {before_orders} → {after_orders}"
         )
 
     return for_each_run(source, assertion)
