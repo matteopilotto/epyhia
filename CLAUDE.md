@@ -4,16 +4,23 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Repository state
 
-**Design-first, no code yet.** The only tracked file is `DESIGN.md` — the full architecture,
-committed alone before any scaffolding (its §12 build order, step 1). Everything below is a
-compression of that document; when the two disagree, `DESIGN.md` wins and this file is the
-thing to fix.
+**Implemented through Phase 7.** `DESIGN.md` is the architecture of record; when it and this
+file disagree, `DESIGN.md` wins and this file is the thing to fix. The feature's spec, plan and
+task list live in `specs/001-epyhia-agency/`, and `tasks.md` is the current build state — read
+it before starting anything, since it carries per-task checkboxes this file cannot.
 
-Next step in the build order is §12 step 2: the Action Gate with one trivial action, before
-any agent exists. "The door before the rooms" — building it after the agents means
-retrofitting every call site.
+Complete: the Action Gate and its adapters, the schema and migrations, the task queue, brief
+ingest and grounding, the five agents, the site / pack / checkout pipelines, re-run and crash
+handling, and the cost ledger with budgets.
 
-`.claude/DECISIONS.md` is untracked working scratch. **Never `git add` it.**
+Remaining: Phase 8 (US6 — the second brief fixture, the genericity lint, and `eval/`) and
+Phase 9 (Fly deploy, README, the demo recording).
+
+Commands: `uv run ruff check`, `uv run pytest`, `uv run alembic upgrade head`,
+`docker compose up` (Postgres + Mailpit + web + worker from `.env.example` defaults).
+
+`.claude/DECISIONS.md` and `.claude/plans/` are untracked working scratch. **Never `git add`
+them.**
 
 ## What EPYHIA is
 
@@ -128,8 +135,8 @@ model says.
 
 ## Stack
 
-Nothing is scaffolded yet, so these are commitments from `DESIGN.md` §2.1 rather than
-commands you can run today. Use them rather than reaching for the reflexive alternative.
+These are the stack commitments from `DESIGN.md` §2.1, now scaffolded. Use them rather than
+reaching for the reflexive alternative.
 
 | Piece | Choice |
 |---|---|
@@ -150,9 +157,9 @@ templates for client data (a currency symbol, a price, a business name from any 
 fail the build. The same check against f-strings scattered through agent modules is possible
 in principle and unmaintainable in practice.
 
-Expected once scaffolding lands: `uv run ruff check`, `uv run pytest`, `uv run alembic
-upgrade head`, `docker compose up` (Postgres + Mailpit + web + worker from `.env.example`
-defaults). PydanticAI's `TestModel`/`FunctionModel` are what let tests run offline and free —
+`uv run ruff check`, `uv run pytest`, `uv run alembic upgrade head` and `docker compose up`
+(Postgres + Mailpit + web + worker from `.env.example` defaults) all work today.
+PydanticAI's `TestModel`/`FunctionModel` are what let tests run offline and free —
 CI must not need an API key.
 
 **The app must start without Stripe/Vercel credentials** and fail only at the gate action,
@@ -204,12 +211,12 @@ into verifiable goals ("fix the bug" → "reproduce it, then show the reproducti
 fires"). For multi-step work, state a brief plan as `step → verify: check`. The verification
 bar depends on what exists:
 
-- **Design-only changes** (today): the claim is consistent with the rest of `DESIGN.md`, and
+- **Code changes** (the normal case): `uv run ruff check` and `uv run pytest` pass. For gate,
+  ingest, or idempotency changes, exercise the actual path — the gate is testable against a
+  fake adapter with zero agents, zero credentials and zero network, which is why it is the
+  cheapest component to test and has no excuse for being untested.
+- **Documentation and spec changes**: the claim is consistent with `DESIGN.md`, and
   cross-references to other sections are real.
-- **Once code exists**: `uv run ruff check` and `uv run pytest` pass. For gate, ingest, or
-  idempotency changes, exercise the actual path — the gate is testable against a fake adapter
-  with zero agents, zero credentials and zero network, which is why it is the cheapest
-  component to test and has no excuse for being untested.
 
 ## Git workflow
 
