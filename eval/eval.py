@@ -42,6 +42,7 @@ from epyhia.cost.pricing import rate_for  # noqa: E402
 from epyhia.gate.registry import get_adapter  # noqa: E402
 from epyhia.ingest.catalogue import resolve_catalogue  # noqa: E402
 from epyhia.ingest.hashing import content_sha256  # noqa: E402
+from eval.resolve import latest, resolve  # noqa: E402
 
 # Derived, not named: the top tier is whatever tier `pricing.yaml` gives the model the
 # orchestrator runs on. Writing "planning" here would be a third place that fact lives.
@@ -282,13 +283,6 @@ def for_each_run(source: RecordSource, assertion: Assertion) -> tuple[bool, str]
     outcomes = [(record.label, *assertion(record)) for record in source.records]
     detail = "; ".join(f"{label}: {detail}" for label, _, detail in outcomes)
     return all(passed for _, passed, _ in outcomes), detail
-
-
-def latest(record: RunRecord, kind: str) -> dict | None:
-    """The current revision of an artifact kind. A flagged draft superseded by a clean
-    revision is the remedy loop working, so it is the latest one that speaks for the run."""
-    of_kind = [artifact for artifact in record.artifacts if artifact["kind"] == kind]
-    return max(of_kind, key=lambda artifact: artifact["revision"]) if of_kind else None
 
 
 @check("deliverables-site-published")
@@ -588,7 +582,15 @@ def evaluate(source: RecordSource, checks: list[dict] | None = None) -> list[Res
 
 def _evaluate(check: dict, source: RecordSource) -> Result:
     if check["kind"] != "automated":
-        return Result(check=check, passed=None, observed="")
+        # Resolved, never asserted: `passed` stays `None` for a judged row however its
+        # reference resolves, and a reference resolving to nothing is a gap in the evidence
+        # rather than a failure (FR-063).
+        return Result(
+            check=check,
+            passed=None,
+            observed="",
+            resolved=resolve(check["evidence"], source.records, source.base_url),
+        )
 
     implementation = CHECKS.get(check["id"])
     if implementation is None:
