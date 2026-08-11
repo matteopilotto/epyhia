@@ -43,7 +43,9 @@ sink_posts    (the publish adapter's destination — see research.md R4)
   whitespace) so that key ordering is not a source of false distinctness. FR-002.
 - Resubmitting an identical brief resolves to this row rather than inserting. FR-002, FR-044.
 - A `reject` decision still inserts the row — FR-007 requires the decision be logged either
-  way — but no `runs` row is opened.
+  way — and opens a `runs` row that lands `failed` with no task enqueued. The run exists so the
+  screening call has a `run_id` to be recorded against (FR-054) and so its cost counts against
+  the daily ceiling (FR-053).
 
 ---
 
@@ -96,6 +98,9 @@ One execution against one brief. Its `id` threads through every agent call and e
   (FR-053, SC-011).
 - `alias` is a pure function of `brief_hash`, so `verify()` and `eval.py` derive the URL they
   probe rather than reading it from the action they are checking (R2).
+- A run whose brief was rejected at intake is opened and immediately `failed`, with no task
+  enqueued and exactly one `agent_calls` row — the guardrail's.
+  `briefs.guardrail_decision` distinguishes it from a run that failed at work (SC-012).
 
 ---
 

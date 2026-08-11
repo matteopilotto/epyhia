@@ -102,10 +102,17 @@ network. If it needs any of those, the gate has been built wrong.
 - [X] T040 [P] Implement numeral normalisation in `epyhia/ingest/normalise.py` — strip separators and currency symbols, reduce amounts to minor units in a named currency, map locale-scoped number words to digits; a grounding entry is `(value: Decimal, currency: str | None)` (FR-006, R6)
 - [X] T041 Implement the **closed** derivation set in `epyhia/ingest/grounding.py` — exactly the five families of [research.md R6](./research.md) (×12/×52 annualisation, pairwise sums and absolute differences, list cardinalities, `current_year − established`, the same minor-unit amount restated under the product's other currency label with **no FX conversion**), plus the standalone `set_difference(extracted, grounding_set)` function with currency-compatibility matching. Nothing extends this set at runtime (FR-005, Principle VI)
 - [X] T042 Implement per-artifact-kind extractors in `epyhia/ingest/extractors.py` per the [research.md R5](./research.md) table — structured string values for `copy`/`posts`/`email`; for `site`, text nodes outside `<script>`/`<style>` plus `alt`, `title`, `aria-label` and `<meta name="description">` and nothing else; for `video_props`, every leaf under `content` and nothing under `style`
-- [X] T043 Implement the input guardrail in `epyhia/ingest/guardrail.py` — a bounded Haiku judge over the raw brief that logs its decision and reason on **both** outcomes and stops a rejected brief before expensive work (FR-007)
+- [X] T043 Implement the input guardrail in `epyhia/ingest/guardrail.py` — a bounded Haiku judge over the raw brief, instructed from `prompts/guardrail/v1.jinja` like every other model in the system (FR-060), that logs its decision and reason on **both** outcomes and stops a rejected brief before expensive work (FR-007)
 - [X] T044 [P] Test in `tests/ingest/test_grounding.py`: the five derivation families are produced exactly, the same number written four ways all match after normalisation, the currency-label restatement matches without conversion, and a fabricated numeral is reported as a violation (FR-006, SC-004, R6)
 - [X] T045 [P] Test in `tests/ingest/test_extractors.py`: the site extractor ignores `#0a0a0a`, `1.5rem`, `0.3s`, `viewBox` and `data-product`, and the `video_props` extractor reads `content` leaves while skipping every `style` value (R5)
 - [X] T132 [P] Test in `tests/ingest/test_guardrail.py` using PydanticAI `FunctionModel`: a brief carrying instructions aimed at the system is rejected before any expensive work begins, an accepted brief logs its decision and reason too, and the screening decision is retrievable from the record on **both** outcomes (FR-007, SC-012)
+
+- [X] T141 Record the guardrail's model call in `epyhia/ingest/guardrail.py` and
+  `epyhia/api/routers/briefs.py` — move its instructions to `prompts/guardrail/v1.jinja` (FR-060,
+  the one instruction template T119's lint could not see), return usage and latency from
+  `screen_brief`, always open a run so the call has a `run_id`, and `record_call` with
+  `agent='guardrail'`. It was the only model call in the system that spent money with no
+  tier, no cost, no run and no effect on the daily ceiling (FR-034, FR-049, FR-053, FR-054, SC-007)
 
 ### 2d · Shared API surface
 
@@ -113,7 +120,7 @@ network. If it needs any of those, the gate has been built wrong.
 - [X] T047 [P] Implement the single error shape `{error, detail}` and its exception handlers in `epyhia/api/errors.py` (contracts/rest-api.md §Errors)
 - [X] T048 [P] Implement `PromptService` in `epyhia/prompts_service.py` — renders `prompts/<agent>/<version>.jinja` and exposes the active `prompt_version`; no prompt text exists as a string literal in source (FR-060)
 - [X] T049 [P] Implement the SSE helper in `epyhia/api/sse.py` emitting `task`, `action`, `artifact`, `agent_call` and `cost` events, designed for `fetch` + `ReadableStream` consumption (§10)
-- [X] T050 Implement `POST /briefs` in `epyhia/api/routers/briefs.py` — validate the payload against [contracts/brief.schema.json](./contracts/brief.schema.json), returning `400` with itemised violations; then synchronously canonicalise and hash, run the guardrail, extract the grounding set, open the run with its derived `alias`, enqueue the `plan` task; returns `201` or `422 {error: "guardrail_rejected"}` (FR-001, FR-004, FR-007)
+- [X] T050 Implement `POST /briefs` in `epyhia/api/routers/briefs.py` — validate the payload against [contracts/brief.schema.json](./contracts/brief.schema.json), returning `400` with itemised violations; then synchronously canonicalise and hash, run the guardrail, extract the grounding set, open the run with its derived `alias` — on **both** verdicts, since the screening call needs a run to be recorded against, and a rejected brief's run lands `failed` — record the screening call, and enqueue the `plan` task only on a pass; returns `201` or `422 {error: "guardrail_rejected"}` (FR-001, FR-004, FR-007, FR-054)
 - [X] T051 [P] Implement `GET /runs` and `GET /runs/{id}` in `epyhia/api/routers/runs.py` returning status, brand doc version, prompt version, spend against budget and alias
 - [X] T052 [P] Add the first brief fixture at `tests/fixtures/briefs/one.json` conforming to [contracts/brief.schema.json](./contracts/brief.schema.json), with both a `subscription` and a `one_time` product and a `currency_display` differing from `currency_charge`. It is **input data**, so it carries real client-shaped values — no test may assert against a value copied out of it
 
