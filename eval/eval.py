@@ -770,9 +770,15 @@ def main(argv: list[str]) -> int:
         print(f"evaluation refused: {exc}", file=sys.stderr)
         return REFUSED
 
-    results = evaluate(source)
-    # Written before the verdict is computed, and unconditionally: a failing run is exactly
-    # the run whose report a reader needs (FR-068).
+    return write_report(evaluate(source), source)
+
+
+def write_report(results: list[Result], source: RecordSource) -> int:
+    """Write the report, then decide the verdict — in that order, and unconditionally.
+
+    A failing run is exactly the run whose report a reader needs, so the write cannot be
+    conditional on the verdict (FR-068).
+    """
     REPORT_PATH.write_text(render_report(results, source))
 
     failures = failed_required(results)
