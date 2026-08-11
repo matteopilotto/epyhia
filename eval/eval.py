@@ -610,12 +610,16 @@ def _refuses_flagged_and_unarmed(source: RecordSource) -> tuple[bool, str]:
             action["action_type"] == "arm_charge_path" and action["state"] == "succeeded"
             for action in record.actions
         )
-        purchases = len(record.orders) + sum(
+        # One sale is one order row *and* one `checkout_session` action. Both still move the
+        # verdict — a session against an unarmed run is its own violation, since the gate
+        # should have refused it — but they are one purchase counted twice if summed.
+        orders = len(record.orders)
+        sessions = sum(
             1 for action in record.actions if action["action_type"] == "checkout_session"
         )
-        return not flagged_published and not (purchases and not armed), (
+        return not flagged_published and not ((orders or sessions) and not armed), (
             f"site artifact {site and site['grounding_status']}, charge path "
-            f"{'armed' if armed else 'unarmed'}, {purchases} purchases"
+            f"{'armed' if armed else 'unarmed'}, {orders} order(s) from {sessions} session(s)"
         )
 
     return for_each_run(source, assertion)

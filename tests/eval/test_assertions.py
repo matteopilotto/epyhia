@@ -248,6 +248,54 @@ def test_a_resubmission_that_created_an_order_fails_the_rerun_check() -> None:
     assert "orders 1 → 2" in detail
 
 
+def site(grounding_status: str = "clean") -> dict:
+    return {
+        "id": "a-site-artifact",
+        "kind": "site",
+        "revision": 1,
+        "grounding_status": grounding_status,
+        "sha256": "1" * 64,
+    }
+
+
+def sold(*, armed: bool, grounding_status: str = "clean") -> ev.RunRecord:
+    """One test purchase against a published run: one order row and the one session that
+    created it."""
+    actions = [published("2020-01-01T00:00:00+00:00"), action("checkout_session", "succeeded")]
+    if armed:
+        actions.append(action("arm_charge_path", "succeeded"))
+    return record(
+        actions=actions,
+        artifacts=[site(grounding_status)],
+        orders=[{"paid": True, "product_slug": "a-product", "amount_minor": 1}],
+    )
+
+
+def test_one_sale_counts_as_one_order_from_one_session() -> None:
+    """Summing the two reported "2 purchases" for one sale. The verdict was unaffected; the
+    number a grader reads was wrong."""
+    passed, detail = ev.CHECKS["gate-refuses-flagged-and-unarmed"](
+        StubSource(records=[sold(armed=True)])
+    )
+
+    assert passed, detail
+    assert "1 order(s) from 1 session(s)" in detail
+
+
+def test_a_sale_against_an_unarmed_run_still_fails() -> None:
+    passed, _ = ev.CHECKS["gate-refuses-flagged-and-unarmed"](
+        StubSource(records=[sold(armed=False)])
+    )
+    assert not passed
+
+
+def test_a_published_flagged_site_still_fails() -> None:
+    passed, _ = ev.CHECKS["gate-refuses-flagged-and-unarmed"](
+        StubSource(records=[sold(armed=True, grounding_status="flagged")])
+    )
+    assert not passed
+
+
 def test_a_connect_error_refuses_rather_than_failing(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
