@@ -314,6 +314,13 @@ what those runs left behind. Its M2M client carries **no approval authority**, a
 action it may itself initiate is a byte-identical resubmission — free of external effect by
 construction (§7.2), which is how the re-run assertion is *produced* rather than arranged.
 
+**T126 is a precondition, not polish.** FR-061 requires the eval to assert *against the deployed
+system*, and T122 authenticates through a real Auth0 tenant with no bypass path (FR-058). Both
+are T126's output. These tasks may be *written* before the deploy exists; none of them can be
+*run*, and therefore none can be checked off, until it does. Pointing the eval at `localhost`
+with a stubbed validator would satisfy the checkbox while abandoning both requirements — it is
+the exact substitution FR-058 exists to forbid.
+
 - [X] T130 Update `CLAUDE.md` — "Repository state: design-first, no code yet" and "next step is
   §12 step 2, the Action Gate" have both been false since Phase 2. Replace with the real build
   state, the remaining phases and the working commands. **Not polish**: `CLAUDE.md` is loaded at
@@ -340,7 +347,7 @@ businesses — and the report is honest about which half of it a machine checked
 
 ## Phase 9: Polish & Cross-Cutting Concerns
 
-- [ ] T126 Deploy to Fly using `fly.toml` — one image, `web` + `worker` processes, `release_command = "alembic upgrade head"`, with a real Auth0 tenant configured (§12 step 12)
+- [ ] T126 Deploy to Fly using `fly.toml` — one image, `web` + `worker` processes, `release_command = "alembic upgrade head"`, with a real Auth0 tenant configured (§12 step 12). **Blocks the whole of Phase 8's eval** — T122–T125 and T137–T140 assert against the deployed system (FR-061) and authenticate through this tenant (FR-058), so it runs before them despite its position in the list
 - [ ] T127 [P] Polish the console limited to the approval view in `console/src/routes/approvals.tsx` — design effort belongs in the generated client site, not here (spec Assumptions)
 - [ ] T128 [P] Write `README.md` — the clone-to-running path from [quickstart.md](./quickstart.md) Prerequisites, and the explicit statement that the app starts with no credentials
 - [ ] T129 Run every section of [quickstart.md](./quickstart.md) S0–S6 against the running system and record the evidence each table asks for — S6 requires both briefs already driven end to end by an operator, since the eval grades stored records rather than driving them
@@ -370,8 +377,9 @@ businesses — and the report is honest about which half of it a machine checked
 - **US6 (Phase 8)**: T119–T120 (the static lint) depend only on Phase 2 and the prompt tree, and
   can run as soon as the first prompt exists. T121 and T136 (the rubric and its contract test)
   depend on nothing but the grading contract. T122–T125 and T137–T140 (the eval proper) depend on
-  US1–US5 **and on an operator having driven both briefs end to end**, approvals and the test
-  purchase included — the eval reads what those runs left behind and cannot substitute for them
+  US1–US5, **on T126 (the Fly deploy with a real Auth0 tenant)**, and **on an operator having
+  driven both briefs end to end through the deployed console**, approvals and the test purchase
+  included — the eval reads what those runs left behind and cannot substitute for them
 - **Polish (Phase 9)**: Depends on the desired stories being complete
 
 ### Within Each User Story
@@ -458,6 +466,10 @@ Task: "Remotion archetypes in video/"
 5. US4 → re-runs and crashes proved harmless
 6. US5 → cost visible per call and in one total
 7. US6 → the agency claim proved over two unrelated businesses
+
+The deploy (T126) sits between 6 and 7 in practice, whatever its position in the list: US6's
+eval grades a deployed system through a real tenant, so it cannot be the last thing that
+happens.
 
 ### The two checkpoints that are not negotiable
 
