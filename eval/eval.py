@@ -42,7 +42,7 @@ from epyhia.cost.pricing import rate_for  # noqa: E402
 from epyhia.gate.registry import get_adapter  # noqa: E402
 from epyhia.ingest.catalogue import resolve_catalogue  # noqa: E402
 from epyhia.ingest.hashing import content_sha256  # noqa: E402
-from eval.resolve import latest, resolve  # noqa: E402
+from eval.resolve import MISSING, latest, resolve  # noqa: E402
 
 # Derived, not named: the top tier is whatever tier `pricing.yaml` gives the model the
 # orchestrator runs on. Writing "planning" here would be a third place that fact lives.
@@ -279,7 +279,13 @@ def for_each_run(source: RecordSource, assertion: Assertion) -> tuple[bool, str]
 
     Each run's detail is labelled by the brief file it was resolved from: the report has to
     say which run it read without naming either business (Principle I).
+
+    No runs is a failure, not a pass. `all()` over nothing is true, and a check that passes
+    because it asserted nothing is the report telling a reader what they want to hear.
     """
+    if not source.records:
+        return False, "no runs to assert against"
+
     outcomes = [(record.label, *assertion(record)) for record in source.records]
     detail = "; ".join(f"{label}: {detail}" for label, _, detail in outcomes)
     return all(passed for _, passed, _ in outcomes), detail
@@ -604,17 +610,112 @@ def _evaluate(check: dict, source: RecordSource) -> Result:
     return Result(check, passed, observed)
 
 
+PREAMBLE = """Two kinds of row, and the difference between them is the point.
+
+- **Mechanically checked** rows were asserted by `eval/eval.py` against the records those
+  runs left behind. They carry pass/fail and the evidence they read.
+- **Left to judgement** rows are human judgements. They carry what to look at and **no
+  score**: a script that awards itself points for aesthetics is worth nothing to a reader.
+  Their points are this area's budget for a judgement, not points this evaluation earned.
+  A reference that resolves to nothing reads `missing` — a gap in the evidence rather than
+  a failure, and it does not move this run's exit status.
+
+Per-area budgets come from `eval/rubric.json`, whose areas and totals reconcile to the
+tracked grading table in `specs/001-epyhia-agency/contracts/grading-rubric.md` — asserted by
+`tests/eval/test_rubric_contract.py` rather than by reading."""
+
+
+def _cell(text: str) -> str:
+    return (text or "").replace("|", "\\|").replace("\n", " ")
+
+
+def _resolved(result: Result) -> str:
+    """What a judged row points at. Run-scoped references carry the label of the brief the
+    run was resolved from, so two runs read as two lines rather than one ambiguous one."""
+    return "<br>".join(
+        f"`{label}`: {value}" if label else f"{value}" for label, value in result.resolved
+    ) or MISSING
+
+
+def _areas(results: list[Result]) -> dict[str, list[Result]]:
+    grouped: dict[str, list[Result]] = {}
+    for result in results:
+        grouped.setdefault(result.check["area"], []).append(result)
+    return grouped
+
+
+def _area_table(grouped: dict[str, list[Result]]) -> list[str]:
+    lines = [
+        "| Area | Budget | Mechanically checked | Of those, passing | Left to judgement |",
+        "|---|---|---|---|---|",
+    ]
+    for area, results in grouped.items():
+        automated = [r for r in results if r.check["kind"] == "automated"]
+        judged = [r for r in results if r.check["kind"] != "automated"]
+        checked = sum(r.check["points"] for r in automated)
+        passing = sum(r.check["points"] for r in automated if r.passed)
+        lines.append(
+            f"| `{area}` | {sum(r.check['points'] for r in results)} | {checked} | "
+            f"{passing} | {sum(r.check['points'] for r in judged)} |"
+        )
+    return lines
+
+
 def render_report(results: list[Result], source: RecordSource) -> str:
+    generated = datetime.now(UTC).isoformat(timespec="seconds")
+    grouped = _areas(results)
     lines = [
         "# PRODUCT_EVAL.md",
         "",
-        f"Read from the stored records of the deployed agency at `{source.base_url}`.",
+        f"Read at {generated} from the stored records of the deployed agency at "
+        f"`{source.base_url}`. The runs were driven by an operator; this evaluation graded "
+        "what they left behind.",
+        "",
+        "## How to read this",
+        "",
+        PREAMBLE,
+        "",
+        "## Areas",
+        "",
+        *_area_table(grouped),
         "",
     ]
-    for result in results:
-        check = result.check
-        state = {True: "pass", False: "FAIL", None: "judged"}[result.passed]
-        lines.append(f"- [{check['area']}] {check['title']} — {state} — {result.observed}")
+
+    for area, area_results in grouped.items():
+        lines += [f"## `{area}`", ""]
+
+        automated = [r for r in area_results if r.check["kind"] == "automated"]
+        if automated:
+            lines += [
+                "### Mechanically checked",
+                "",
+                "| Check | Points | Result | Evidence read |",
+                "|---|---|---|---|",
+            ]
+            for result in automated:
+                verdict = "pass" if result.passed else "**FAIL**"
+                required = "" if result.check["required"] else " (not required)"
+                lines.append(
+                    f"| {_cell(result.check['title'])}{required} | {result.check['points']} "
+                    f"| {verdict} | {_cell(result.observed)} |"
+                )
+            lines.append("")
+
+        judged = [r for r in area_results if r.check["kind"] != "automated"]
+        if judged:
+            lines += [
+                "### Left to judgement — no score awarded",
+                "",
+                "| Check | Budget | What to look at | Resolves to |",
+                "|---|---|---|---|",
+            ]
+            for result in judged:
+                lines.append(
+                    f"| {_cell(result.check['title'])} | {result.check['points']} | "
+                    f"{_cell(result.check['assertion'])} | {_cell(_resolved(result))} |"
+                )
+            lines.append("")
+
     return "\n".join(lines) + "\n"
 
 
