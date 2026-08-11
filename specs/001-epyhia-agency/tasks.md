@@ -107,11 +107,11 @@ network. If it needs any of those, the gate has been built wrong.
 - [X] T045 [P] Test in `tests/ingest/test_extractors.py`: the site extractor ignores `#0a0a0a`, `1.5rem`, `0.3s`, `viewBox` and `data-product`, and the `video_props` extractor reads `content` leaves while skipping every `style` value (R5)
 - [X] T132 [P] Test in `tests/ingest/test_guardrail.py` using PydanticAI `FunctionModel`: a brief carrying instructions aimed at the system is rejected before any expensive work begins, an accepted brief logs its decision and reason too, and the screening decision is retrievable from the record on **both** outcomes (FR-007, SC-012)
 
-- [ ] T141 Record the guardrail's model call in `epyhia/ingest/guardrail.py` and
+- [X] T141 Record the guardrail's model call in `epyhia/ingest/guardrail.py` and
   `epyhia/api/routers/briefs.py` — move its instructions to `prompts/guardrail/v1.jinja` (FR-060,
-  the one instruction template T119's lint cannot currently see), return usage and latency from
+  the one instruction template T119's lint could not see), return usage and latency from
   `screen_brief`, always open a run so the call has a `run_id`, and `record_call` with
-  `agent='guardrail'`. Today it is the only model call in the system that spends money with no
+  `agent='guardrail'`. It was the only model call in the system that spent money with no
   tier, no cost, no run and no effect on the daily ceiling (FR-034, FR-049, FR-053, FR-054, SC-007)
 
 ### 2d · Shared API surface
