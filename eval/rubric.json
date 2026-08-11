@@ -103,14 +103,14 @@
       "required": true
     },
     {
-      "id": "crew-brand-doc-changes-behaviour",
+      "id": "crew-second-brief-shares-nothing",
       "area": "crew-orchestration",
       "points": 3,
-      "title": "The brand doc is what changes the crew's behaviour",
-      "kind": "evidence",
-      "assertion": "Read each run's brand doc beside the site it produced, and judge whether the document is what drove the difference rather than the prompt.",
-      "evidence": "brand-doc:composition_archetype",
-      "required": false
+      "title": "An unrelated brief produced an unrelated run",
+      "kind": "automated",
+      "assertion": "The two runs differ in brand doc palette and in published alias, share no artifact content hash, and each run's deploy probe asserted the name it read from its own brand doc row — the mechanical form of the brand doc, not the prompt, being what changes behaviour.",
+      "evidence": "brand-doc:palette",
+      "required": true
     },
 
     {

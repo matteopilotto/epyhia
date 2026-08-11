@@ -407,6 +407,50 @@ def _cost_logged(source: RecordSource) -> tuple[bool, str]:
     return for_each_run(source, assertion)
 
 
+@check("crew-second-brief-shares-nothing")
+def _second_brief_shares_nothing(source: RecordSource) -> tuple[bool, str]:
+    """FR-062, and the cheapest strong evidence that this is an agency rather than a
+    one-client script: a hardcoded probe string, a seeded product or an aesthetic baked into
+    a prompt all fail here and nowhere else.
+
+    Cross-run by nature, so it is the one check that does not hold per run.
+    """
+    records = source.records
+    if len(records) < 2:
+        return False, "fewer than two runs were handed in, and genericity is a comparison"
+
+    def brand_field(record: RunRecord, name: str) -> object:
+        return (record.brand_doc or {}).get("doc", {}).get(name)
+
+    def probed_name(record: RunRecord) -> object:
+        for action in record.actions:
+            if action["action_type"] == "deploy" and action["state"] == "succeeded":
+                return (action["evidence"] or {}).get("matched_name")
+        return None
+
+    palettes = [json.dumps(brand_field(r, "palette"), sort_keys=True) for r in records]
+    aliases = [r.run.get("alias") for r in records]
+    shared_artifacts = set.intersection(
+        *({artifact["sha256"] for artifact in r.artifacts} for r in records)
+    )
+    own_name = all(
+        brand_field(r, "name") is not None and probed_name(r) == brand_field(r, "name")
+        for r in records
+    )
+
+    passed = (
+        len(set(palettes)) == len(records)
+        and len(set(aliases)) == len(records)
+        and not shared_artifacts
+        and own_name
+    )
+    return passed, (
+        f"{len(set(palettes))} distinct palettes and {len(set(aliases))} distinct aliases "
+        f"across {len(records)} runs, {len(shared_artifacts)} shared artifact hashes, "
+        f"each deploy probe read its own brand doc name: {own_name}"
+    )
+
+
 @check("gate-approval-before-irreversible")
 def _approval_before_irreversible(source: RecordSource) -> tuple[bool, str]:
     def assertion(record: RunRecord) -> tuple[bool, str]:
