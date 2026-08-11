@@ -314,7 +314,7 @@ what those runs left behind. Its M2M client carries **no approval authority**, a
 action it may itself initiate is a byte-identical resubmission — free of external effect by
 construction (§7.2), which is how the re-run assertion is *produced* rather than arranged.
 
-- [ ] T130 Update `CLAUDE.md` — "Repository state: design-first, no code yet" and "next step is
+- [X] T130 Update `CLAUDE.md` — "Repository state: design-first, no code yet" and "next step is
   §12 step 2, the Action Gate" have both been false since Phase 2. Replace with the real build
   state, the remaining phases and the working commands. **Not polish**: `CLAUDE.md` is loaded at
   the start of every session, so a stale one misbriefs all remaining work, and Constitution
