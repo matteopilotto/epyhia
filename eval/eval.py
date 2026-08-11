@@ -394,14 +394,25 @@ def _cost_logged(source: RecordSource) -> tuple[bool, str]:
     def assertion(record: RunRecord) -> tuple[bool, str]:
         calls = record.cost["calls"]
         uncosted_calls = [call["id"] for call in calls if call["cost_usd"] is None]
-        uncosted_actions = [
-            action["id"] for action in record.actions if action["cost_usd"] is None
+        # The two cost columns are asserted per state, because the gate writes them at two
+        # different moments: `projected_cost_usd` at request time, so an approval screen is
+        # never the first place a number is missing, and `cost_usd` only once the action is
+        # proved (FR-039, §T134). A denied action carries a projection and no actual, and
+        # requiring one of it would report a correctly-behaving gate red.
+        unprojected = [
+            action["id"] for action in record.actions if action["projected_cost_usd"] is None
+        ]
+        unsettled = [
+            action["id"]
+            for action in record.actions
+            if action["state"] == "succeeded" and action["cost_usd"] is None
         ]
         total = record.cost.get("total_usd")
-        passed = not uncosted_calls and not uncosted_actions and total is not None
+        passed = not uncosted_calls and not unprojected and not unsettled and total is not None
         return passed, (
             f"one total of {total} covering {len(calls)} calls and {len(record.actions)} "
-            f"actions; {len(uncosted_calls)} calls and {len(uncosted_actions)} actions uncosted"
+            f"actions; {len(uncosted_calls)} calls uncosted, {len(unprojected)} actions with "
+            f"no projected cost, {len(unsettled)} succeeded actions with no actual cost"
         )
 
     return for_each_run(source, assertion)
@@ -535,17 +546,23 @@ def _no_approval_by_the_eval(source: RecordSource) -> tuple[bool, str]:
 @check("gate-audit-and-cost")
 def _audit_and_cost(source: RecordSource) -> tuple[bool, str]:
     def assertion(record: RunRecord) -> tuple[bool, str]:
+        # Same split as `crew-cost-logged`: every row carries a key, a state and a projection;
+        # only a succeeded one carries an actual cost and the evidence its `verify()` stored.
         incomplete = [
             action["id"]
             for action in record.actions
             if not action["idempotency_key"]
             or not action["state"]
-            or action["cost_usd"] is None
-            or (action["state"] == "succeeded" and not action["evidence"])
+            or action["projected_cost_usd"] is None
+            or (
+                action["state"] == "succeeded"
+                and (action["cost_usd"] is None or not action["evidence"])
+            )
         ]
         return not incomplete, (
-            f"{len(record.actions)} action rows, {len(incomplete)} missing a key, a cost or "
-            f"the evidence a verification stored"
+            f"{len(record.actions)} action rows, {len(incomplete)} missing a key, a state, a "
+            f"projected cost, or — where succeeded — an actual cost or the evidence a "
+            f"verification stored"
         )
 
     return for_each_run(source, assertion)
