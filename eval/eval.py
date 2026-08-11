@@ -766,11 +766,17 @@ def main(argv: list[str]) -> int:
 
     try:
         source = DeployedRecords(EvalClient.from_settings(), [Path(a) for a in argv])
+        return write_report(evaluate(source), source)
     except (CredentialNotConfigured, EvalRefused) as exc:
         print(f"evaluation refused: {exc}", file=sys.stderr)
         return REFUSED
-
-    return write_report(evaluate(source), source)
+    except httpx.HTTPError as exc:
+        # The deployed agency could not be read: a 401 from a grant not authorised for the
+        # audience, a wrong base URL, a sleeping machine. That is not a grade, and letting it
+        # escape would exit 1 — the code FR-068 reserves for a required check that failed.
+        # A run this never read is refused, not graded.
+        print(f"evaluation refused: could not read the deployed agency: {exc}", file=sys.stderr)
+        return REFUSED
 
 
 def write_report(results: list[Result], source: RecordSource) -> int:
