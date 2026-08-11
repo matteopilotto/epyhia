@@ -27,13 +27,30 @@ if __package__ in (None, ""):
     sys.path.insert(0, str(REPO_ROOT))
 
 import json  # noqa: E402
+from collections.abc import Callable  # noqa: E402
 from dataclasses import dataclass, field  # noqa: E402
+from datetime import UTC, datetime  # noqa: E402
 from typing import Protocol  # noqa: E402
 
 import httpx  # noqa: E402
 
+import epyhia.gate.adapters  # noqa: E402,F401  — registers every adapter pair
+from epyhia.agents.strategist import AGENT as STRATEGIST  # noqa: E402
+from epyhia.agents.strategist import MODEL_ID as STRATEGIST_MODEL  # noqa: E402
 from epyhia.config import CredentialNotConfigured, settings  # noqa: E402
+from epyhia.cost.pricing import rate_for  # noqa: E402
+from epyhia.gate.registry import get_adapter  # noqa: E402
+from epyhia.ingest.catalogue import resolve_catalogue  # noqa: E402
 from epyhia.ingest.hashing import content_sha256  # noqa: E402
+
+# Derived, not named: the top tier is whatever tier `pricing.yaml` gives the model the
+# orchestrator runs on. Writing "planning" here would be a third place that fact lives.
+TOP_TIER = rate_for(STRATEGIST_MODEL, datetime.now(UTC)).tier
+
+# EPYHIA's own deliverable names — infrastructure vocabulary, not client data.
+PACK_KINDS = ("copy", "posts", "email", "video_props")
+VIDEO_KINDS = ("video", "video_vertical")
+SITE_KIND = "site"
 
 RUBRIC_PATH = HERE / "rubric.json"
 REPORT_PATH = REPO_ROOT / "PRODUCT_EVAL.md"
@@ -139,6 +156,7 @@ class RecordSource(Protocol):
     with no credentials and no network — the checks themselves still need driven runs."""
 
     base_url: str
+    identity: str
     records: list[RunRecord]
 
     def resubmit(self, record: RunRecord) -> httpx.Response: ...
@@ -159,6 +177,10 @@ class DeployedRecords:
     @property
     def base_url(self) -> str:
         return self.client.base_url
+
+    @property
+    def identity(self) -> str:
+        return self.client.identity
 
     def resubmit(self, record: RunRecord) -> httpx.Response:
         return self.client.submit_brief(record.brief)
@@ -222,7 +244,243 @@ class Result:
 
 # Every `automated` rubric id, mapped to what asserts it. A row with no implementation fails
 # loudly rather than passing by omission.
-CHECKS: dict[str, object] = {}
+Assertion = Callable[[RunRecord], tuple[bool, str]]
+CHECKS: dict[str, Callable[[RecordSource], tuple[bool, str]]] = {}
+
+
+def check(check_id: str):
+    """Bind an assertion to the rubric row it earns points for, by id."""
+
+    def register(fn: Callable[[RecordSource], tuple[bool, str]]):
+        CHECKS[check_id] = fn
+        return fn
+
+    return register
+
+
+def for_each_run(source: RecordSource, assertion: Assertion) -> tuple[bool, str]:
+    """Every assertion holds for every run handed in, or the check fails.
+
+    Each run's detail is labelled by the brief file it was resolved from: the report has to
+    say which run it read without naming either business (Principle I).
+    """
+    outcomes = [(record.label, *assertion(record)) for record in source.records]
+    detail = "; ".join(f"{label}: {detail}" for label, _, detail in outcomes)
+    return all(passed for _, passed, _ in outcomes), detail
+
+
+def latest(record: RunRecord, kind: str) -> dict | None:
+    """The current revision of an artifact kind. A flagged draft superseded by a clean
+    revision is the remedy loop working, so it is the latest one that speaks for the run."""
+    of_kind = [artifact for artifact in record.artifacts if artifact["kind"] == kind]
+    return max(of_kind, key=lambda artifact: artifact["revision"]) if of_kind else None
+
+
+@check("deliverables-site-published")
+def _site_published(source: RecordSource) -> tuple[bool, str]:
+    def assertion(record: RunRecord) -> tuple[bool, str]:
+        deploys = [
+            action
+            for action in record.actions
+            if action["action_type"] == "deploy" and action["state"] == "succeeded"
+        ]
+        if len(deploys) != 1:
+            return False, f"{len(deploys)} succeeded deploy actions"
+        evidence = deploys[0]["evidence"] or {}
+        # Read from this run's own brand doc row, exactly as the probe did — the string a
+        # deploy is proved by varies per client and exists in no source file (FR-018).
+        expected_name = (record.brand_doc or {}).get("doc", {}).get("name")
+        passed = (
+            evidence.get("status") == 200
+            and expected_name is not None
+            and evidence.get("matched_name") == expected_name
+            and bool(evidence.get("matched_build_marker"))
+        )
+        return passed, f"deploy evidence {json.dumps(evidence, sort_keys=True)}"
+
+    return for_each_run(source, assertion)
+
+
+@check("deliverables-pack-grounded")
+def _pack_grounded(source: RecordSource) -> tuple[bool, str]:
+    def assertion(record: RunRecord) -> tuple[bool, str]:
+        current = {kind: latest(record, kind) for kind in PACK_KINDS}
+        missing = sorted(kind for kind, artifact in current.items() if artifact is None)
+        flagged = sorted(
+            kind
+            for kind, artifact in current.items()
+            if artifact is not None and artifact["grounding_status"] == "flagged"
+        )
+        return not missing and not flagged, f"missing {missing}, flagged {flagged}"
+
+    return for_each_run(source, assertion)
+
+
+@check("deliverables-order-persists")
+def _order_persists(source: RecordSource) -> tuple[bool, str]:
+    def assertion(record: RunRecord) -> tuple[bool, str]:
+        # The brief's own catalogue, slugged the way ingest slugs it — so "matching a
+        # product in that brief" is decided against the brief, not against a list here.
+        catalogue = {row["slug"]: row for row in resolve_catalogue(record.brief["products"])}
+        paid = [order for order in record.orders if order["paid"]]
+        matched = [
+            order
+            for order in paid
+            if order["product_slug"] in catalogue
+            and order["amount_minor"] == catalogue[order["product_slug"]]["price_minor"]
+        ]
+        passed = bool(paid) and len(matched) == len(paid)
+        return passed, f"{len(record.orders)} orders, {len(paid)} paid, {len(matched)} matching"
+
+    return for_each_run(source, assertion)
+
+
+@check("deliverables-video-rendered")
+def _video_rendered(source: RecordSource) -> tuple[bool, str]:
+    def assertion(record: RunRecord) -> tuple[bool, str]:
+        stored = [kind for kind in VIDEO_KINDS if latest(record, kind) is not None]
+        return len(stored) == len(VIDEO_KINDS), f"cuts stored: {stored}"
+
+    return for_each_run(source, assertion)
+
+
+@check("crew-strategist-delegates-only")
+def _strategist_delegates_only(source: RecordSource) -> tuple[bool, str]:
+    """The mechanical proof of §3.3: the orchestrator is constructed with no gate handles in
+    its toolset, so no action row can carry its name."""
+
+    def assertion(record: RunRecord) -> tuple[bool, str]:
+        theirs = [
+            action["id"] for action in record.actions if action["requested_by"] == STRATEGIST
+        ]
+        return not theirs, f"{len(record.actions)} actions, {len(theirs)} the orchestrator's"
+
+    return for_each_run(source, assertion)
+
+
+@check("crew-tiers-are-scoped")
+def _tiers_are_scoped(source: RecordSource) -> tuple[bool, str]:
+    def assertion(record: RunRecord) -> tuple[bool, str]:
+        calls = record.cost["calls"]
+        untiered = [call["id"] for call in calls if not call["model_id"] or not call["tier"]]
+        top = [call for call in calls if call["tier"] == TOP_TIER]
+        misattributed = [call["id"] for call in top if call["agent"] != STRATEGIST]
+        passed = bool(calls) and not untiered and not misattributed
+        return passed, (
+            f"{len(calls)} calls, {len(untiered)} without a model id or tier, "
+            f"{len(top)} at tier {TOP_TIER!r} of which {len(misattributed)} not the orchestrator's"
+        )
+
+    return for_each_run(source, assertion)
+
+
+@check("crew-cost-logged")
+def _cost_logged(source: RecordSource) -> tuple[bool, str]:
+    def assertion(record: RunRecord) -> tuple[bool, str]:
+        calls = record.cost["calls"]
+        uncosted_calls = [call["id"] for call in calls if call["cost_usd"] is None]
+        uncosted_actions = [
+            action["id"] for action in record.actions if action["cost_usd"] is None
+        ]
+        total = record.cost.get("total_usd")
+        passed = not uncosted_calls and not uncosted_actions and total is not None
+        return passed, (
+            f"one total of {total} covering {len(calls)} calls and {len(record.actions)} "
+            f"actions; {len(uncosted_calls)} calls and {len(uncosted_actions)} actions uncosted"
+        )
+
+    return for_each_run(source, assertion)
+
+
+@check("gate-approval-before-irreversible")
+def _approval_before_irreversible(source: RecordSource) -> tuple[bool, str]:
+    def assertion(record: RunRecord) -> tuple[bool, str]:
+        gated = [
+            action
+            for action in record.actions
+            if get_adapter(action["action_type"]).requires_approval
+        ]
+        undecided = [
+            action["id"]
+            for action in gated
+            if action["state"] == "succeeded"
+            and not (
+                action["approval_decision"] == "approved"
+                and action["approved_by"]
+                and action["approved_at"]
+            )
+        ]
+        return not undecided, (
+            f"{len(gated)} approval-gated actions, {len(undecided)} executed with no "
+            f"recorded decision, approver and time"
+        )
+
+    return for_each_run(source, assertion)
+
+
+@check("gate-no-approval-by-the-eval")
+def _no_approval_by_the_eval(source: RecordSource) -> tuple[bool, str]:
+    """FR-058 as an absence. The client above has no approve/deny call path in it at all;
+    this asserts the record agrees, which is the half a reader can check."""
+
+    def assertion(record: RunRecord) -> tuple[bool, str]:
+        theirs = [
+            action["id"]
+            for action in record.actions
+            if action["approved_by"] == source.identity
+        ]
+        decided = [action for action in record.actions if action["approved_by"]]
+        return not theirs, (
+            f"{len(decided)} approval decisions, {len(theirs)} attributed to {source.identity}"
+        )
+
+    return for_each_run(source, assertion)
+
+
+@check("gate-audit-and-cost")
+def _audit_and_cost(source: RecordSource) -> tuple[bool, str]:
+    def assertion(record: RunRecord) -> tuple[bool, str]:
+        incomplete = [
+            action["id"]
+            for action in record.actions
+            if not action["idempotency_key"]
+            or not action["state"]
+            or action["cost_usd"] is None
+            or (action["state"] == "succeeded" and not action["evidence"])
+        ]
+        return not incomplete, (
+            f"{len(record.actions)} action rows, {len(incomplete)} missing a key, a cost or "
+            f"the evidence a verification stored"
+        )
+
+    return for_each_run(source, assertion)
+
+
+@check("gate-refuses-flagged-and-unarmed")
+def _refuses_flagged_and_unarmed(source: RecordSource) -> tuple[bool, str]:
+    def assertion(record: RunRecord) -> tuple[bool, str]:
+        site = latest(record, SITE_KIND)
+        published = any(
+            action["action_type"] == "deploy" and action["state"] == "succeeded"
+            for action in record.actions
+        )
+        flagged_published = published and (
+            site is None or site["grounding_status"] == "flagged"
+        )
+
+        armed = any(
+            action["action_type"] == "arm_charge_path" and action["state"] == "succeeded"
+            for action in record.actions
+        )
+        purchases = len(record.orders) + sum(
+            1 for action in record.actions if action["action_type"] == "checkout_session"
+        )
+        return not flagged_published and not (purchases and not armed), (
+            f"site artifact {site and site['grounding_status']}, charge path "
+            f"{'armed' if armed else 'unarmed'}, {purchases} purchases"
+        )
+
+    return for_each_run(source, assertion)
 
 
 def load_rubric() -> list[dict]:

@@ -36,8 +36,8 @@
       "points": 6,
       "title": "The launch video rendered, including the vertical cut",
       "kind": "automated",
-      "assertion": "Each run's video render actions reached `succeeded` with stored evidence, covering both the launch cut and the vertical one.",
-      "evidence": "action:video_render#evidence",
+      "assertion": "Each run stored both cuts of the launch video — the launch cut and the vertical one — rendered from that run's one grounding-checked props artifact.",
+      "evidence": "artifact:video",
       "required": true
     },
 
