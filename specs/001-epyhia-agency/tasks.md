@@ -314,6 +314,11 @@ what those runs left behind. Its M2M client carries **no approval authority**, a
 action it may itself initiate is a byte-identical resubmission — free of external effect by
 construction (§7.2), which is how the re-run assertion is *produced* rather than arranged.
 
+- [X] T130 Update `CLAUDE.md` — "Repository state: design-first, no code yet" and "next step is
+  §12 step 2, the Action Gate" have both been false since Phase 2. Replace with the real build
+  state, the remaining phases and the working commands. **Not polish**: `CLAUDE.md` is loaded at
+  the start of every session, so a stale one misbriefs all remaining work, and Constitution
+  §Governance makes editing it the mandated direction of repair
 - [ ] T118 [P] [US6] Add a second, **unrelated** brief fixture at `tests/fixtures/briefs/two.json` sharing no facts with `one.json` — a different kind of business entirely. It must be real enough to harvest tokens from; a placeholder name silently weakens the lint (R10)
 - [ ] T119 [US6] Implement the prompt-tree lint in `tests/genericity/test_prompt_lint.py` per [research.md R10](./research.md) — harvest business names, taglines, one-liners, product names, `price_minor` as strings, currency codes and voice adjectives from **every** fixture; assert each fixture yields a non-empty token set; assert no token appears in any file under `prompts/` (raw scan); assert no token and no currency symbol appears in any template rendered against a sentinel context (empty render). Match on **word boundaries** — a voice adjective like `direct` otherwise hits `directory`/`directly` in ordinary source and the lint is red forever
 - [ ] T120 [P] [US6] Add the companion source scan in `tests/genericity/test_source_scan.py` — the same harvested tokens must not appear anywhere under `epyhia/`, `console/src/` or `video/src/`
@@ -339,7 +344,6 @@ businesses — and the report is honest about which half of it a machine checked
 - [ ] T127 [P] Polish the console limited to the approval view in `console/src/routes/approvals.tsx` — design effort belongs in the generated client site, not here (spec Assumptions)
 - [ ] T128 [P] Write `README.md` — the clone-to-running path from [quickstart.md](./quickstart.md) Prerequisites, and the explicit statement that the app starts with no credentials
 - [ ] T129 Run every section of [quickstart.md](./quickstart.md) S0–S6 against the running system and record the evidence each table asks for — S6 requires both briefs already driven end to end by an operator, since the eval grades stored records rather than driving them
-- [ ] T130 [P] Update `CLAUDE.md` — the "Repository state: design-first, no code yet" section is false once Phase 1 lands; replace it with the real layout and the working commands (`uv run ruff check`, `uv run pytest`, `uv run alembic upgrade head`, `docker compose up`)
 - [ ] T131 Record the 60–90s demo and put its URL in a **tracked file** so the `evidence`-kind row for it resolves through T138 — until the recording exists the row renders `missing`, which is the honest rendering and does not fail the eval (§12 step 13, FR-063, FR-068)
 
 ---
