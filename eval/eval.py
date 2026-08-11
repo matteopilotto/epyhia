@@ -625,6 +625,24 @@ tracked grading table in `specs/001-epyhia-agency/contracts/grading-rubric.md` �
 `tests/eval/test_rubric_contract.py` rather than by reading."""
 
 
+def failed_required(results: list[Result]) -> list[Result]:
+    """FR-068's signal, derived in one place.
+
+    A required row that a machine checked and that failed — and nothing else. A judged row
+    can never enter this list: it has no pass to fail, so a reference that resolved to
+    nothing is a gap in the evidence rather than a mechanical failure. The `kind` test is
+    explicit rather than implied by `passed is False`, so that marking an `evidence` row
+    required by mistake still cannot move the exit status.
+    """
+    return [
+        result
+        for result in results
+        if result.check["kind"] == "automated"
+        and result.check["required"]
+        and result.passed is False
+    ]
+
+
 def _cell(text: str) -> str:
     return (text or "").replace("|", "\\|").replace("\n", " ")
 
@@ -635,6 +653,22 @@ def _resolved(result: Result) -> str:
     return "<br>".join(
         f"`{label}`: {value}" if label else f"{value}" for label, value in result.resolved
     ) or MISSING
+
+
+def _failure_summary(results: list[Result]) -> list[str]:
+    """At the top, always. A grading tool that withholds its output when the news is bad is
+    the same self-deception the kind split exists to prevent (FR-068)."""
+    failures = failed_required(results)
+    if not failures:
+        return ["## Failed required checks", "", "None — every required check passed."]
+    return [
+        "## Failed required checks",
+        "",
+        *(
+            f"- **`{result.check['id']}`** — {result.check['title']}: {result.observed}"
+            for result in failures
+        ),
+    ]
 
 
 def _areas(results: list[Result]) -> dict[str, list[Result]]:
@@ -670,6 +704,8 @@ def render_report(results: list[Result], source: RecordSource) -> str:
         f"Read at {generated} from the stored records of the deployed agency at "
         f"`{source.base_url}`. The runs were driven by an operator; this evaluation graded "
         "what they left behind.",
+        "",
+        *_failure_summary(results),
         "",
         "## How to read this",
         "",
@@ -720,8 +756,7 @@ def render_report(results: list[Result], source: RecordSource) -> str:
 
 
 def exit_status(results: list[Result]) -> int:
-    failed = [r for r in results if r.check["required"] and r.passed is False]
-    return FAILED if failed else PASSED
+    return FAILED if failed_required(results) else PASSED
 
 
 def main(argv: list[str]) -> int:
@@ -736,8 +771,15 @@ def main(argv: list[str]) -> int:
         return REFUSED
 
     results = evaluate(source)
+    # Written before the verdict is computed, and unconditionally: a failing run is exactly
+    # the run whose report a reader needs (FR-068).
     REPORT_PATH.write_text(render_report(results, source))
-    return exit_status(results)
+
+    failures = failed_required(results)
+    for result in failures:
+        print(f"failed required check: {result.check['id']}", file=sys.stderr)
+    print(f"wrote {REPORT_PATH}", file=sys.stderr)
+    return FAILED if failures else PASSED
 
 
 if __name__ == "__main__":
