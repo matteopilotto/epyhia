@@ -29,7 +29,10 @@ extract the grounding set, open the run, enqueue the `plan` task (§3.5, FR-004,
 
 ### `GET /runs` · `GET /runs/{id}`
 
-The run record: status, brand doc version, prompt version, spend against budget, alias.
+The run record: status, brand doc version, prompt version, spend against budget, alias, and
+the brief's `content_sha256`. That hash is how `eval.py` resolves a run from a brief it was
+handed — run identity is brief identity (§7.1), so no run id is written into the repository
+and no "most recent run" rule can grade the wrong thing (FR-061).
 
 ### `GET /runs/{id}/events` — SSE
 
@@ -68,6 +71,13 @@ publication — the case that is supposed to fire (§7.2, US4 scenario 3).
 Includes `grounding_status` and itemised `violations`. **Flagged artifacts are listed and
 readable** — surfacing them is the remedy path, not hiding them (FR-024). Read-only: the fix is
 to correct the brief or the brand doc and re-run.
+
+### `GET /runs/{id}/orders`
+
+The orders the run's checkouts persisted, with the amount and currency the processor
+reported. Read-only. "A test purchase persisted a real order" is asserted from this row
+rather than from a success screen (FR-061), and `eval.py` reads it through this same
+authenticated path — there is no second way in (FR-058).
 
 ### `GET /runs/{id}/cost`
 

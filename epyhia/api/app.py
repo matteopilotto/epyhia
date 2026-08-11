@@ -13,6 +13,7 @@ from epyhia.api.routers import (
     briefs,
     checkout,
     cost,
+    orders,
     runs,
     sink,
     webhooks,
@@ -45,6 +46,7 @@ def create_app() -> FastAPI:
     app.include_router(artifacts.router)
     app.include_router(brand_docs.router)
     app.include_router(cost.router)
+    app.include_router(orders.router)
     app.include_router(sink.router)
     # Buyer-facing, and neither one an operator route: the buy click is authenticated by
     # nothing (it is a stranger on the generated site) and the webhook by its signature.

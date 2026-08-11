@@ -39,6 +39,14 @@ class Settings:
         self.sink_token = os.environ.get("SINK_TOKEN") or None
         self.auth0_domain = os.environ.get("AUTH0_DOMAIN") or None
         self.auth0_audience = os.environ.get("AUTH0_AUDIENCE") or None
+        # The eval's own machine-to-machine client, in the same Auth0 tenant as the console's
+        # and deliberately without approval authority (FR-058). Read here so that absence is
+        # a refusal by the eval naming what is missing, never a start-time failure for the
+        # app (FR-064) — `require()` falls back to the attribute name, so the message is
+        # `credential not configured: eval_auth0_client_id`.
+        self.eval_auth0_client_id = os.environ.get("EVAL_AUTH0_CLIENT_ID") or None
+        self.eval_auth0_client_secret = os.environ.get("EVAL_AUTH0_CLIENT_SECRET") or None
+        self.eval_api_base_url = os.environ.get("EVAL_API_BASE_URL") or None
         self.run_budget_usd = os.environ.get("RUN_BUDGET_USD") or None
         self.daily_ceiling_usd = os.environ.get("DAILY_CEILING_USD") or None
 
