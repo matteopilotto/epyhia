@@ -28,7 +28,7 @@ if __package__ in (None, ""):
 
 import json  # noqa: E402
 from collections.abc import Callable  # noqa: E402
-from dataclasses import dataclass, field  # noqa: E402
+from dataclasses import dataclass, field, replace  # noqa: E402
 from datetime import UTC, datetime  # noqa: E402
 from typing import Protocol  # noqa: E402
 
@@ -161,6 +161,8 @@ class RecordSource(Protocol):
 
     def resubmit(self, record: RunRecord) -> httpx.Response: ...
 
+    def reread(self, record: RunRecord) -> RunRecord: ...
+
 
 @dataclass
 class DeployedRecords:
@@ -184,6 +186,19 @@ class DeployedRecords:
 
     def resubmit(self, record: RunRecord) -> httpx.Response:
         return self.client.submit_brief(record.brief)
+
+    def reread(self, record: RunRecord) -> RunRecord:
+        """The two collections a second run would have added to, read again.
+
+        Still a read of stored records: what the resubmission is asserted by is what the
+        run's rows say afterwards, not anything the resubmission itself reported.
+        """
+        run_id = record.run["id"]
+        return replace(
+            record,
+            actions=self.client.get(f"/runs/{run_id}/actions"),
+            orders=self.client.get(f"/runs/{run_id}/orders"),
+        )
 
     def _record(self, path: Path, runs: list[dict]) -> RunRecord:
         brief = json.loads(path.read_text())
@@ -413,6 +428,42 @@ def _approval_before_irreversible(source: RecordSource) -> tuple[bool, str]:
         return not undecided, (
             f"{len(gated)} approval-gated actions, {len(undecided)} executed with no "
             f"recorded decision, approver and time"
+        )
+
+    return for_each_run(source, assertion)
+
+
+@check("gate-rerun-is-idempotent")
+def _rerun_is_idempotent(source: RecordSource) -> tuple[bool, str]:
+    """The one action the evaluation initiates, and the only one it may.
+
+    A byte-identical payload hashes to the existing brief, so the submission resolves to the
+    run that already exists and every gate key short-circuits — the re-run assertion is
+    *produced* by that rather than arranged (§7.2). One publication is asserted as one
+    succeeded deploy at one alias, not merely as one order.
+    """
+
+    def assertion(record: RunRecord) -> tuple[bool, str]:
+        response = source.resubmit(record)
+        body = response.json() if response.content else {}
+        deduplicated = (
+            response.status_code == 200
+            and body.get("deduplicated") is True
+            and str(body.get("run_id")) == str(record.run["id"])
+        )
+
+        after = source.reread(record)
+        deploys = [
+            action
+            for action in after.actions
+            if action["action_type"] == "deploy" and action["state"] == "succeeded"
+        ]
+        aliases = {(action["evidence"] or {}).get("url") for action in deploys}
+        passed = deduplicated and len(deploys) == 1 and len(aliases) == 1 and len(after.orders) == 1
+        return passed, (
+            f"resubmission {response.status_code} deduplicated={body.get('deduplicated')!r}; "
+            f"afterwards {len(deploys)} publication(s) at {len(aliases)} alias(es) and "
+            f"{len(after.orders)} order(s)"
         )
 
     return for_each_run(source, assertion)
