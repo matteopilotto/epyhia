@@ -9,10 +9,12 @@ import { API_BASE, authHeaders } from "./auth";
  * come down `fetch` with the one Bearer header, and the elements are handed a blob URL.
  */
 export async function fetchArtifactBlob(artifactId: string): Promise<Blob> {
-  const response = await fetch(`${API_BASE}/artifacts/${artifactId}/content`, {
-    headers: await authHeaders(),
-  });
-  if (!response.ok) throw new Error(`artifact content: ${response.status}`);
+  return fetchBlob(`/artifacts/${artifactId}/content`);
+}
+
+async function fetchBlob(path: string): Promise<Blob> {
+  const response = await fetch(`${API_BASE}${path}`, { headers: await authHeaders() });
+  if (!response.ok) throw new Error(`${path}: ${response.status}`);
   return response.blob();
 }
 
@@ -46,4 +48,13 @@ export function save(blob: Blob, filename: string): void {
 /** One artifact to disk, named from its own `path` — the sensible filename of FR-006. */
 export async function downloadArtifact(artifactId: string, path: string): Promise<void> {
   save(await fetchArtifactBlob(artifactId), path);
+}
+
+/**
+ * The whole pack in one action (FR-008). Named from the run id alone, the same name the
+ * endpoint puts in its `Content-Disposition` — a client name in the filename would be
+ * client data written by code.
+ */
+export async function downloadRunPack(runId: string): Promise<void> {
+  save(await fetchBlob(`/runs/${runId}/pack`), `pack-${runId}.zip`);
 }

@@ -11,7 +11,7 @@ import { PostCards } from "@/components/artifacts/PostCards";
 import { SitePreview } from "@/components/artifacts/SitePreview";
 import { Storyboard } from "@/components/artifacts/Storyboard";
 import { VideoPlayer } from "@/components/artifacts/VideoPlayer";
-import { downloadArtifact } from "@/lib/content";
+import { downloadArtifact, downloadRunPack } from "@/lib/content";
 
 type Violation = { kind?: string; quote?: string; why?: string; [key: string]: unknown };
 
@@ -154,6 +154,43 @@ function DownloadButton({ artifact }: { artifact: Artifact }) {
   );
 }
 
+/**
+ * The whole run in one archive (FR-008). With nothing produced yet there is nothing to
+ * pack, and the control says so rather than handing back an empty file or an opaque error.
+ */
+function PackDownloadButton({ runId, empty }: { runId: string; empty: boolean }) {
+  const [state, setState] = useState<"idle" | "busy" | "failed">("idle");
+
+  const download = async () => {
+    setState("busy");
+    try {
+      await downloadRunPack(runId);
+      setState("idle");
+    } catch {
+      setState("failed");
+    }
+  };
+
+  return (
+    <div className="ml-auto flex items-center gap-2">
+      {empty && <span className="text-xs text-ink-muted">Nothing produced yet to pack</span>}
+      <Button
+        variant="outline"
+        size="sm"
+        disabled={empty || state === "busy"}
+        onClick={download}
+        className={state === "failed" ? "border-red-800 text-red-300" : undefined}
+      >
+        {state === "idle"
+          ? "Download pack"
+          : state === "busy"
+            ? "Assembling…"
+            : "Pack download failed"}
+      </Button>
+    </div>
+  );
+}
+
 /** The kinds whose bytes are the deliverable itself, fetched from the content endpoint
  * rather than read as text out of the JSON detail route. */
 const MEDIA_KINDS = new Set(["site", "video", "video_vertical"]);
@@ -237,6 +274,9 @@ export function ArtifactsRoute() {
         </Link>
         <h1 className="text-sm font-semibold">Artifacts</h1>
         {flagged > 0 && <Badge variant="bad">{flagged} held</Badge>}
+        {artifacts.data && (
+          <PackDownloadButton runId={runId} empty={artifacts.data.length === 0} />
+        )}
       </header>
 
       {artifacts.isLoading && <p className="text-sm text-ink-muted">Loading…</p>}
