@@ -1,6 +1,7 @@
 import uuid
 
 import pytest
+from pydantic_ai.exceptions import ApprovalRequired
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from epyhia.gate import gate, registry
@@ -53,6 +54,36 @@ async def test_request_on_an_in_flight_row_refuses_by_type(
     assert raised.value.state == state
     # A second request() must never be a second execution — that is the whole reason the
     # gate refuses rather than re-driving (§7.2).
+    assert adapter.execute_calls == []
+
+
+async def test_request_on_a_parked_approval_parks_again_rather_than_failing(
+    gate_session: AsyncSession,
+) -> None:
+    """A re-run of a stage whose action is awaiting a human is waiting, not failing.
+
+    Observed on run 8d89a987: a deploy restarted the worker mid-stage, the sweeper correctly
+    re-ran it, and the re-run found its own deploy parked `awaiting_approval` and landed the
+    task `failed` — while the operator was still looking at the approval. Their click then
+    resumed an action whose stage had already given up.
+    """
+    adapter = FakeAdapter("test_in_flight_parked", requires_approval=True)
+    registry.register(adapter)
+    action = await _stranded(gate_session, adapter.action_type, "awaiting_approval")
+
+    with pytest.raises(ApprovalRequired) as raised:
+        await gate.request(
+            gate_session,
+            run_id=action.run_id,
+            requested_by="web_builder",
+            action_type=adapter.action_type,
+            action_request={"marker": "second attempt"},
+            idempotency_key=action.idempotency_key,
+        )
+
+    # Carries the parked row's id, so the task re-parks against the action the operator is
+    # actually looking at rather than one of its own.
+    assert raised.value.metadata["action_id"] == str(action.id)
     assert adapter.execute_calls == []
 
 

@@ -129,6 +129,18 @@ async def request(
         ).scalar_one()
         if existing.state in TERMINAL_STATES:
             return _result(existing)
+        if existing.state == "awaiting_approval":
+            # Parked exactly where a fresh request would park it, so the caller parks too —
+            # a re-run of a stage waiting on a human is waiting, not failing. Raising
+            # `ActionInProgress` here instead lands the task `failed` while the operator is
+            # still looking at the approval, and their click then resumes an action whose
+            # stage has already given up (run 8d89a987, 2026-08-12).
+            raise ApprovalRequired(
+                metadata={
+                    "action_id": str(existing.id),
+                    "idempotency_key": idempotency_key,
+                }
+            )
         # In-flight under someone else's ownership. Nothing executes here — a stuck row is
         # unstuck through `resume()`, not by a second request() racing the first. Raised, so
         # that a caller expecting evidence fails naming the action instead of on a KeyError.
