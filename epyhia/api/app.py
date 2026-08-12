@@ -1,8 +1,9 @@
 from pathlib import Path
 
 import logfire
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
 from epyhia.api.errors import register_exception_handlers
@@ -22,6 +23,10 @@ from epyhia.gate.keys import ALIAS_ORIGIN_PATTERN
 
 CONSOLE_DIST = Path(__file__).resolve().parent.parent.parent / "console" / "dist"
 
+# Where the operator surface lives, so the console can own the root namespace it routes in.
+# One origin still, therefore still no CORS between the two (DESIGN.md §11).
+API_PREFIX = "/api"
+
 
 def create_app() -> FastAPI:
     logfire.configure(send_to_logfire="if-token-present")
@@ -40,25 +45,53 @@ def create_app() -> FastAPI:
         allow_headers=["content-type"],
     )
 
-    app.include_router(briefs.router)
-    app.include_router(runs.router)
-    app.include_router(actions.router)
-    app.include_router(artifacts.router)
-    app.include_router(brand_docs.router)
-    app.include_router(cost.router)
-    app.include_router(orders.router)
-    app.include_router(sink.router)
+    # The operator surface is namespaced. The console is served from this same origin and
+    # routes on the client, and its route strings — `/runs`, `/runs/{id}/cost`, … — are the
+    # same strings as these. Sharing one namespace means the API wins every collision and a
+    # console reload answers with JSON instead of the page (contracts/rest-api.md).
+    for module in (briefs, runs, actions, artifacts, brand_docs, cost, orders):
+        app.include_router(module.router, prefix=API_PREFIX)
+
     # Buyer-facing, and neither one an operator route: the buy click is authenticated by
     # nothing (it is a stranger on the generated site) and the webhook by its signature.
+    # These keep their bare paths — both are held by systems outside this repository, in
+    # Stripe's dashboard and in the bytes of every already-deployed site, so prefixing them
+    # would move an address this app does not own. The sink is the same case (R4).
     app.include_router(checkout.router)
     app.include_router(webhooks.router)
+    app.include_router(sink.router)
 
-    # Serves the built SPA from the same origin as the API — no CORS.
+    # The built bundle. Everything else the console needs is `index.html`, served below.
     app.mount(
-        "/",
-        StaticFiles(directory=CONSOLE_DIST, html=True, check_dir=False),
-        name="console",
+        "/assets",
+        StaticFiles(directory=CONSOLE_DIST / "assets", check_dir=False),
+        name="assets",
     )
+
+    @app.get("/{full_path:path}", include_in_schema=False)
+    async def console_spa(full_path: str) -> FileResponse:
+        """The console shell, for any path the API did not claim.
+
+        The console routes on the client, so a reload of `/approvals` or `/runs/{id}` arrives
+        here as a path with no file behind it and must still be answered with the shell.
+
+        An unclaimed path *under the prefix* stays a 404 in the API's own shape: handing an
+        API client 200 OK carrying HTML would surface a typo as a parse error somewhere far
+        away from the mistake that caused it.
+        """
+        prefix = API_PREFIX.lstrip("/")
+        if full_path == prefix or full_path.startswith(f"{prefix}/"):
+            raise HTTPException(
+                status_code=404, detail={"error": "not_found", "detail": "no such route"}
+            )
+        index = CONSOLE_DIST / "index.html"
+        if not index.is_file():
+            # A source checkout with no `npm run build` behind it. Legible beats a 500.
+            raise HTTPException(
+                status_code=404,
+                detail={"error": "console_not_built", "detail": "console/dist is absent"},
+            )
+        return FileResponse(index)
 
     return app
 

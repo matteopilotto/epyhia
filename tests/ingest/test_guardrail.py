@@ -45,7 +45,7 @@ def client_for(session: AsyncSession) -> httpx.AsyncClient:
     app.dependency_overrides[get_session] = lambda: session
     app.dependency_overrides[require_operator] = lambda: {"sub": OPERATOR}
     return httpx.AsyncClient(
-        transport=httpx.ASGITransport(app=app), base_url="http://api.test"
+        transport=httpx.ASGITransport(app=app), base_url="http://api.test/api"
     )
 
 

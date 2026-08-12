@@ -37,6 +37,7 @@ import httpx  # noqa: E402
 import epyhia.gate.adapters  # noqa: E402,F401  — registers every adapter pair
 from epyhia.agents.strategist import AGENT as STRATEGIST  # noqa: E402
 from epyhia.agents.strategist import MODEL_ID as STRATEGIST_MODEL  # noqa: E402
+from epyhia.api.app import API_PREFIX  # noqa: E402
 from epyhia.config import CredentialNotConfigured, settings  # noqa: E402
 from epyhia.cost.pricing import rate_for  # noqa: E402
 from epyhia.gate.registry import get_adapter  # noqa: E402
@@ -92,7 +93,10 @@ class EvalClient:
         self.base_url = base_url.rstrip("/")
         self.identity = identity
         self._client = httpx.Client(
-            base_url=self.base_url,
+            # The operator surface is namespaced under the prefix the console's routes left
+            # it (`epyhia.api.app.API_PREFIX`); `base_url` stays the agency's own origin,
+            # because that is the address the report names.
+            base_url=f"{self.base_url}{API_PREFIX}",
             headers={"Authorization": f"Bearer {token}"},
             transport=transport,
             timeout=TIMEOUT_SECONDS,

@@ -10,6 +10,29 @@ marked below.
 
 ---
 
+## Namespacing
+
+**Every operator route below is served under `/api`** — `GET /runs` is `GET /api/runs` on the
+wire. The headings are written bare because the prefix is uniform and belongs to the mounting,
+not to the route.
+
+The console is a single-page app served from this same origin, and it routes on the client
+using the same strings the operator surface uses: `/runs`, `/runs/:id/cost`, `/approvals`.
+Sharing one namespace means the API claims every collision and a console **reload** answers
+with JSON instead of the page, while a non-colliding console route 404s against the static
+mount. One origin is still the rule (§11) and there is still no CORS between the two; what
+the prefix separates is the path namespace, not the origin.
+
+The three unauthenticated routes keep **bare** paths — `POST /checkout`,
+`POST /webhooks/stripe` and the recording sink. Their addresses are held outside this
+repository: in Stripe's dashboard, in `SINK_BASE_URL`, and in the bytes of every site already
+deployed. Moving them would break addresses this application does not own.
+
+Anything under `/api` that matches no route is a `404` in the error shape below. Anything else
+is the console's shell, so that a deep link survives a refresh.
+
+---
+
 ## Operator routes
 
 ### `POST /briefs`
