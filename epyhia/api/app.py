@@ -17,6 +17,7 @@ from epyhia.api.routers import (
     orders,
     runs,
     sink,
+    tasks,
     webhooks,
 )
 from epyhia.gate.keys import ALIAS_ORIGIN_PATTERN
@@ -49,7 +50,7 @@ def create_app() -> FastAPI:
     # routes on the client, and its route strings — `/runs`, `/runs/{id}/cost`, … — are the
     # same strings as these. Sharing one namespace means the API wins every collision and a
     # console reload answers with JSON instead of the page (contracts/rest-api.md).
-    for module in (briefs, runs, actions, artifacts, brand_docs, cost, orders):
+    for module in (briefs, runs, actions, tasks, artifacts, brand_docs, cost, orders):
         app.include_router(module.router, prefix=API_PREFIX)
 
     # Buyer-facing, and neither one an operator route: the buy click is authenticated by
