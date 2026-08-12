@@ -79,6 +79,16 @@ class EvalRefused(Exception):
     """
 
 
+def _auth0_reason(response: httpx.Response) -> str:
+    """Auth0's `error_description`, falling back to the raw body. A token endpoint that
+    refuses always says why; the only thing worth guarding is that it answered in JSON."""
+    try:
+        body = response.json()
+    except ValueError:
+        return response.text.strip() or "no reason given"
+    return body.get("error_description") or body.get("error") or "no reason given"
+
+
 class EvalClient:
     """The evaluation's Auth0 machine-to-machine client.
 
@@ -126,8 +136,12 @@ class EvalClient:
             timeout=TIMEOUT_SECONDS,
         )
         if response.status_code != 200:
+            # Auth0's own explanation, not just the status. A bare 403 sends a reader to the
+            # dashboard guessing; "not authorized to access resource server <audience>" names
+            # the missing client grant outright, which is the refusal shape FR-064 asks for.
             raise EvalRefused(
-                f"Auth0 refused the machine-to-machine grant: {response.status_code}"
+                "Auth0 refused the machine-to-machine grant "
+                f"({response.status_code}): {_auth0_reason(response)}"
             )
         # The `sub` Auth0 mints for a client-credentials grant. Held so the record can be
         # asserted to carry no approval decision attributed to it (FR-058).
