@@ -35,7 +35,7 @@ backend (`epyhia/`) and console (`console/`) exist; this feature adds files with
 **Purpose**: The one shared extraction other phases build on. Everything else in this
 feature is story-scoped.
 
-- [ ] T003 Extract `formatAmount` from `console/src/routes/approvals.tsx` into new `console/src/lib/format.ts` (keeping its `Intl.NumberFormat` + minor-unit-exponent behavior exactly — no two-decimal guess, research R7) and update `console/src/routes/approvals.tsx` to import it; verify `npx tsc -b && npm run build` still passes
+- [x] T003 Extract `formatAmount` from `console/src/routes/approvals.tsx` into new `console/src/lib/format.ts` (keeping its `Intl.NumberFormat` + minor-unit-exponent behavior exactly — no two-decimal guess, research R7) and update `console/src/routes/approvals.tsx` to import it; verify `npx tsc -b && npm run build` still passes
 
 **Checkpoint**: Foundation ready — user story phases can begin.
 
