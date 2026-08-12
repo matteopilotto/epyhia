@@ -121,15 +121,24 @@ async def run_worker(
     *,
     poll_interval_seconds: float = 1.0,
     sweep_interval_seconds: float = SWEEP_INTERVAL_SECONDS,
+    session_factory: async_sessionmaker | None = None,
 ) -> None:
-    """The `worker` Fly process entrypoint (fly.toml `[processes] worker`)."""
+    """The `worker` Fly process entrypoint (fly.toml `[processes] worker`).
+
+    `session_factory` exists so a test can point this loop at the test database — the
+    entrypoint otherwise builds its own engine from `settings.database_url` and cannot be
+    reached. That seam is not decoration: the recovery call below was missing for four
+    phases precisely because nothing could assert this loop makes it.
+    """
     # Imported here rather than at module scope: each handler module registers itself by
     # calling `register_handler` above, so importing the package from the top would close
     # a cycle back onto this one.
     import epyhia.queue.handlers  # noqa: F401
 
-    engine = create_async_engine(settings.database_url)
-    session_factory = async_sessionmaker(bind=engine, expire_on_commit=False)
+    engine = None
+    if session_factory is None:
+        engine = create_async_engine(settings.database_url)
+        session_factory = async_sessionmaker(bind=engine, expire_on_commit=False)
     next_sweep = 0.0
     try:
         while True:
@@ -148,7 +157,8 @@ async def run_worker(
             if not claimed:
                 await asyncio.sleep(poll_interval_seconds)
     finally:
-        await engine.dispose()
+        if engine is not None:
+            await engine.dispose()
 
 
 if __name__ == "__main__":
