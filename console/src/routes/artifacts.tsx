@@ -1,9 +1,14 @@
-import { useState } from "react";
+import { Component, useState, type ReactNode } from "react";
 import { Link, useParams } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { parseCopy, parseEmail, parsePosts, parseVideoProps } from "@/components/artifacts/guards";
+import { CopyDoc } from "@/components/artifacts/CopyDoc";
+import { EmailPreview } from "@/components/artifacts/EmailPreview";
+import { PostCards } from "@/components/artifacts/PostCards";
+import { Storyboard } from "@/components/artifacts/Storyboard";
 
 type Violation = { kind?: string; quote?: string; why?: string; [key: string]: unknown };
 
@@ -50,6 +55,72 @@ function Violations({ violations }: { violations: Violation[] }) {
   );
 }
 
+/**
+ * Dispatch keyed on the system's closed kind vocabulary. An unknown kind or a guard
+ * failure returns null, meaning raw is the only view for that artifact (FR-014).
+ */
+function renderDeliverable(kind: string, content: string): ReactNode | null {
+  switch (kind) {
+    case "copy": {
+      const copy = parseCopy(content);
+      return copy && <CopyDoc copy={copy} />;
+    }
+    case "posts": {
+      const posts = parsePosts(content);
+      return posts && <PostCards posts={posts} />;
+    }
+    case "email": {
+      const email = parseEmail(content);
+      return email && <EmailPreview email={email} />;
+    }
+    case "video_props": {
+      const videoProps = parseVideoProps(content);
+      return videoProps && <Storyboard videoProps={videoProps} />;
+    }
+    default:
+      return null;
+  }
+}
+
+/**
+ * A render-time throw (content the guards accepted but a renderer chokes on) must stay
+ * contained to the one artifact, like a guard failure — the fallback is the same raw view.
+ */
+class RenderFallback extends Component<{ raw: ReactNode; children: ReactNode }, { failed: boolean }> {
+  state = { failed: false };
+
+  static getDerivedStateFromError() {
+    return { failed: true };
+  }
+
+  render() {
+    return this.state.failed ? this.props.raw : this.props.children;
+  }
+}
+
+function ArtifactContent({ artifact, content }: { artifact: Artifact; content: string }) {
+  const [showRaw, setShowRaw] = useState(false);
+  const rendered = renderDeliverable(artifact.kind, content);
+  const raw = (
+    <pre className="max-h-96 overflow-auto rounded-md border border-line bg-surface-raised p-3 font-mono text-[11px] whitespace-pre-wrap">
+      {content}
+    </pre>
+  );
+
+  if (rendered === null) return raw;
+
+  return (
+    <div>
+      <div className="mb-2 flex justify-end">
+        <Button variant="ghost" size="sm" onClick={() => setShowRaw((value) => !value)}>
+          {showRaw ? "Rendered" : "Raw"}
+        </Button>
+      </div>
+      {showRaw ? raw : <RenderFallback raw={raw}>{rendered}</RenderFallback>}
+    </div>
+  );
+}
+
 function ArtifactCard({ artifact }: { artifact: Artifact }) {
   const [open, setOpen] = useState(false);
   const flagged = artifact.grounding_status !== "clean";
@@ -91,9 +162,7 @@ function ArtifactCard({ artifact }: { artifact: Artifact }) {
                 Binary artifact — {artifact.size_bytes} bytes, sha256 {artifact.sha256}.
               </p>
             ) : (
-              <pre className="max-h-96 overflow-auto rounded-md border border-line bg-surface-raised p-3 font-mono text-[11px] whitespace-pre-wrap">
-                {detail.data.content}
-              </pre>
+              <ArtifactContent artifact={artifact} content={detail.data.content} />
             ))}
         </div>
       )}
