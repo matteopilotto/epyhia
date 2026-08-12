@@ -9,7 +9,7 @@ from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from epyhia.config import settings
-from epyhia.gate.errors import PreconditionFailed, VerificationFailed
+from epyhia.gate.errors import ActionInProgress, PreconditionFailed, VerificationFailed
 from epyhia.gate.registry import Adapter, GateContext, get_adapter
 from epyhia.models.actions import Action
 
@@ -117,8 +117,9 @@ async def request(
         if existing.state in TERMINAL_STATES:
             return _result(existing)
         # In-flight under someone else's ownership. Nothing executes here — a stuck row is
-        # unstuck through `resume()`, not by a second request() racing the first.
-        return {"action_id": existing.id, "state": existing.state, "in_progress": True}
+        # unstuck through `resume()`, not by a second request() racing the first. Raised, so
+        # that a caller expecting evidence fails naming the action instead of on a KeyError.
+        raise ActionInProgress(existing.id, existing.state)
 
     action = await session.get(Action, action_id)
 

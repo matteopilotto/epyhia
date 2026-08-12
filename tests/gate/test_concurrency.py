@@ -6,6 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from epyhia.gate import gate, registry
 from epyhia.gate.adapters.fake import FakeAdapter
+from epyhia.gate.errors import ActionInProgress
 from epyhia.models.actions import Action
 
 
@@ -30,7 +31,7 @@ async def test_concurrent_requests_on_one_key_produce_one_execution_and_one_row(
                 idempotency_key=key,
             )
 
-    results = await asyncio.gather(call(), call())
+    results = await asyncio.gather(call(), call(), return_exceptions=True)
 
     assert len(adapter.execute_calls) == 1
 
@@ -41,9 +42,14 @@ async def test_concurrent_requests_on_one_key_produce_one_execution_and_one_row(
     ).scalar_one()
     assert count == 1
 
-    states = {result["state"] for result in results}
-    assert states <= {"succeeded", "executing", "verifying", "pending"}
-    assert "succeeded" in states or any(r.get("in_progress") for r in results)
+    # The loser resolves one of exactly two ways, both of which are one execution: it arrived
+    # while the winner still held the row and was refused by type, or it arrived after the
+    # winner finished and read the succeeded row. Nothing else may come back.
+    refusals = [r for r in results if isinstance(r, ActionInProgress)]
+    outcomes = [r for r in results if not isinstance(r, BaseException)]
+    assert len(refusals) + len(outcomes) == 2
+    assert all(result["state"] == "succeeded" for result in outcomes)
+    assert outcomes, "the winner must return its own result"
 
 
 async def test_second_caller_reads_first_callers_result(gate_session: AsyncSession) -> None:
