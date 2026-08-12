@@ -170,6 +170,44 @@ async def test_an_action_awaiting_approval_is_never_resurrected(
     assert adapter.execute_calls == []
 
 
+async def test_one_failing_orphan_does_not_stop_the_others(
+    recovery_session: AsyncSession,
+) -> None:
+    """Observed in production on the first deploy of this pass.
+
+    `product.get("active")` raised `AttributeError` inside `verify()`, the exception left
+    the loop, and the worker process exited — so a pass written to recover crashed runs
+    became the thing that stopped every run instead. An adapter raising something other than
+    `VerificationFailed` is a bug, and a bug in one adapter must not be an outage.
+    """
+
+    class Exploding(FakeAdapter):
+        async def verify(self, request: dict, ctx=None, *args, **kwargs) -> dict:
+            raise AttributeError("get")
+
+    broken = Exploding("test_orphan_broken")
+    healthy = FakeAdapter("test_orphan_healthy")
+    registry.register(broken)
+    registry.register(healthy)
+
+    doomed = await _stranded_action(
+        recovery_session, action_type=broken.action_type, lease=-PAST
+    )
+    other = await _stranded_action(
+        recovery_session, action_type=healthy.action_type, lease=-PAST
+    )
+
+    # Must not raise, whichever order the two come back in.
+    await resume_orphaned_actions(recovery_session)
+    await recovery_session.commit()
+
+    await recovery_session.refresh(doomed)
+    await recovery_session.refresh(other)
+    assert doomed.state == "verifying"
+    # The healthy one was recovered regardless of the broken one's company.
+    assert other.state == "succeeded"
+
+
 async def test_the_worker_loop_actually_runs_the_recovery_pass(
     recovery_session: AsyncSession,
 ) -> None:

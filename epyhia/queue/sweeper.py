@@ -1,8 +1,12 @@
+import logging
+
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from epyhia.gate import gate
 from epyhia.gate.registry import get_adapter
+
+logger = logging.getLogger(__name__)
 
 TASK_ATTEMPTS_CAP = 5
 
@@ -79,4 +83,15 @@ async def resume_orphaned_actions(session: AsyncSession) -> None:
             # until the buyer pays. Resuming it would spend its attempts against a world
             # that has not caught up yet (contracts/action-gate.md §4).
             continue
-        await gate.resume(session, action_id)
+        try:
+            await gate.resume(session, action_id)
+        except Exception:
+            # An adapter raising something other than `VerificationFailed` is a bug, not a
+            # verdict, and it must not leave this loop — a worker that dies on one orphan
+            # stops recovering every other run, which is this pass's own purpose arriving
+            # inverted. The row keeps its state and is retried on the next sweep; the
+            # traceback is how the bug gets found.
+            await session.rollback()
+            logger.exception(
+                "resuming orphaned action %s (%s) failed", action_id, action_type
+            )
