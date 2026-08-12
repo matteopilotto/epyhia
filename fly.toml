@@ -2,6 +2,10 @@ app = "epyhia"
 primary_region = "iad"
 
 [build]
+  [build.args]
+    VITE_AUTH0_DOMAIN = "dev-rxbgif7bces27stj.us.auth0.com"
+    VITE_AUTH0_CLIENT_ID = "JuMeYczY79wkhbvDEjUPHkuLzppxgYhW"
+    VITE_AUTH0_AUDIENCE = "https://epyhia.fly.dev/api"
 
 [env]
   PORT = "8000"
@@ -23,6 +27,9 @@ primary_region = "iad"
 
 [[vm]]
   processes = ["web"]
+  memory = "1gb"
 
 [[vm]]
   processes = ["worker"]
+  cpus = 2
+  memory = "4gb"
