@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
+import { Marked } from "@/lib/highlight";
 import type { SocialPosts } from "./guards";
 
 type CopyState = "idle" | "copied" | "failed";
@@ -38,8 +39,9 @@ export function CopyButton({ text, label = "Copy" }: { text: string; label?: str
   );
 }
 
-/** The `posts` artifact as one card per post: angle, body, character count, copy control. */
-export function PostCards({ posts }: { posts: SocialPosts }) {
+/** The `posts` artifact as one card per post: angle, body, character count, copy control —
+ * the body carrying any inline violation marks (FR-012). */
+export function PostCards({ posts, quotes = [] }: { posts: SocialPosts; quotes?: string[] }) {
   return (
     <ul className="space-y-3">
       {posts.posts.map((post, index) => (
@@ -48,7 +50,9 @@ export function PostCards({ posts }: { posts: SocialPosts }) {
             <span className="text-xs font-medium text-ink-muted">{post.angle}</span>
             <span className="ml-auto text-xs text-ink-muted">{post.body.length} chars</span>
           </div>
-          <p className="mt-2 text-sm whitespace-pre-wrap">{post.body}</p>
+          <p className="mt-2 text-sm whitespace-pre-wrap">
+            <Marked text={post.body} quotes={quotes} />
+          </p>
           <div className="mt-2">
             <CopyButton text={post.body} />
           </div>

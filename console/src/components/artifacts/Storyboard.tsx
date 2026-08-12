@@ -1,18 +1,33 @@
 import { formatAmount } from "@/lib/format";
+import { Marked } from "@/lib/highlight";
 import type { VideoProps } from "./guards";
 
 /**
  * The `video_props` artifact as a scene-by-scene storyboard. Every on-screen value is
  * formatted as money in the currency that value itself carries — the currency is data
- * from the artifact, never code (FR-003).
+ * from the artifact, never code (FR-003). Every text leaf under `content` carries inline
+ * violation marks, matching what grounding checks (`extract_video_props_content`); a
+ * flagged storyboard renders with its marks rather than being hidden (FR-012).
  */
-export function Storyboard({ videoProps }: { videoProps: VideoProps }) {
+export function Storyboard({
+  videoProps,
+  quotes = [],
+}: {
+  videoProps: VideoProps;
+  quotes?: string[];
+}) {
   const { headline, subhead, scenes, cta } = videoProps.content;
   return (
     <div className="space-y-3">
       <div>
-        <h3 className="text-sm font-semibold">{headline}</h3>
-        {subhead && <p className="text-sm text-ink-muted">{subhead}</p>}
+        <h3 className="text-sm font-semibold">
+          <Marked text={headline} quotes={quotes} />
+        </h3>
+        {subhead && (
+          <p className="text-sm text-ink-muted">
+            <Marked text={subhead} quotes={quotes} />
+          </p>
+        )}
       </div>
       <ol className="space-y-2">
         {scenes.map((scene, index) => (
@@ -23,7 +38,7 @@ export function Storyboard({ videoProps }: { videoProps: VideoProps }) {
             </div>
             {scene.lines.map((line, lineIndex) => (
               <p key={lineIndex} className="mt-1 text-sm">
-                {line}
+                <Marked text={line} quotes={quotes} />
               </p>
             ))}
             {scene.values?.length ? (
@@ -41,7 +56,11 @@ export function Storyboard({ videoProps }: { videoProps: VideoProps }) {
           </li>
         ))}
       </ol>
-      {cta && <p className="text-sm font-medium">{cta}</p>}
+      {cta && (
+        <p className="text-sm font-medium">
+          <Marked text={cta} quotes={quotes} />
+        </p>
+      )}
     </div>
   );
 }

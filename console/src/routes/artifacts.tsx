@@ -61,28 +61,37 @@ function Violations({ violations }: { violations: Violation[] }) {
 /**
  * Dispatch keyed on the system's closed kind vocabulary. An unknown kind or a guard
  * failure returns null, meaning raw is the only view for that artifact (FR-014).
+ * `quotes` are this artifact's own violation quotes, marked inline by the renderers.
  */
-function renderDeliverable(kind: string, content: string): ReactNode | null {
+function renderDeliverable(kind: string, content: string, quotes: string[]): ReactNode | null {
   switch (kind) {
     case "copy": {
       const copy = parseCopy(content);
-      return copy && <CopyDoc copy={copy} />;
+      return copy && <CopyDoc copy={copy} quotes={quotes} />;
     }
     case "posts": {
       const posts = parsePosts(content);
-      return posts && <PostCards posts={posts} />;
+      return posts && <PostCards posts={posts} quotes={quotes} />;
     }
     case "email": {
       const email = parseEmail(content);
-      return email && <EmailPreview email={email} />;
+      return email && <EmailPreview email={email} quotes={quotes} />;
     }
     case "video_props": {
       const videoProps = parseVideoProps(content);
-      return videoProps && <Storyboard videoProps={videoProps} />;
+      return videoProps && <Storyboard videoProps={videoProps} quotes={quotes} />;
     }
     default:
       return null;
   }
+}
+
+/** The quoted strings of an artifact's own violations — the only thing that may drive its
+ * inline marks. A violation without a quote marks nothing (FR-012). */
+function violationQuotes(violations: Violation[] | null): string[] {
+  return (violations ?? [])
+    .map((violation) => violation.quote)
+    .filter((quote): quote is string => typeof quote === "string");
 }
 
 /**
@@ -103,7 +112,7 @@ class RenderFallback extends Component<{ raw: ReactNode; children: ReactNode }, 
 
 function ArtifactContent({ artifact, content }: { artifact: Artifact; content: string }) {
   const [showRaw, setShowRaw] = useState(false);
-  const rendered = renderDeliverable(artifact.kind, content);
+  const rendered = renderDeliverable(artifact.kind, content, violationQuotes(artifact.violations));
   const raw = (
     <pre className="max-h-96 overflow-auto rounded-md border border-line bg-surface-raised p-3 font-mono text-[11px] whitespace-pre-wrap">
       {content}
