@@ -83,6 +83,32 @@ The approval decision. Writes `approval_decision`, `approved_by` (the Auth0 `sub
 Idempotent by construction: the decision is a transition on a keyed row, so a double-click,
 a reload, or a click after a redeploy all resolve to the same single execution (FR-038).
 
+### `POST /tasks/{id}/retry`
+
+Puts a **failed** stage back on the queue: `state = 'pending'`, `error` cleared,
+`lease_expires_at` cleared, `attempts` reset to 0.
+
+| Response | Meaning |
+|---|---|
+| `200 {state: "pending"}` | Re-queued |
+| `404 {error: "not_found"}` | No such task |
+| `409 {error: "not_failed", state}` | Only a `failed` task is re-queueable |
+| `409 {error: "run_halted"}` | The run is at `halted_budget`, and the claim would fail immediately |
+
+`failed` is terminal by design — the lease sweep reclaims lapsed leases and deliberately does
+not touch it, because auto-retrying a handler exception is the loop the attempts cap exists to
+prevent. This is the operator's route out of the one state nothing else can leave, and the
+human clicking it is the circuit breaker that cap stands in for, which is why `attempts` resets.
+A `running` task belongs to the lease sweep and an `awaiting_approval` one to the approve
+button, so neither is reachable here.
+
+Repeating no effect is what makes it safe: every gate key derives from the brief hash (§7.2),
+so a re-queued stage's `gate.request` short-circuits onto the rows that already succeeded and
+returns their stored evidence — a re-queued `site` whose deploy already succeeded republishes
+nothing (FR-044). Dependents need no handling: the claim statement already refuses a task whose
+`depends_on` are not all `done`. The audit trail is the `task` event the SSE timeline emits on
+every state transition.
+
 ### `GET /runs/{id}/brand-doc` · `PUT /runs/{id}/brand-doc` · `GET /briefs/{id}/brand-docs/diff?from=&to=`
 
 Read, edit, and diff. `PUT` **inserts a new version**; it never updates in place (FR-012, §5.3).
