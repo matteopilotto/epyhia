@@ -4,17 +4,30 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Repository state
 
-**Implemented through Phase 7.** `DESIGN.md` is the architecture of record; when it and this
-file disagree, `DESIGN.md` wins and this file is the thing to fix. The feature's spec, plan and
-task list live in `specs/001-epyhia-agency/`, and `tasks.md` is the current build state — read
-it before starting anything, since it carries per-task checkboxes this file cannot.
+**Implemented through Phase 8, and deployed.** `DESIGN.md` is the architecture of record; when
+it and this file disagree, `DESIGN.md` wins and this file is the thing to fix. The feature's
+spec, plan and task list live in `specs/001-epyhia-agency/`, and `tasks.md` is the current
+build state — read it before starting anything, since it carries per-task checkboxes this
+file cannot.
 
 Complete: the Action Gate and its adapters, the schema and migrations, the task queue, brief
 ingest and grounding, the five agents, the site / pack / checkout pipelines, re-run and crash
-handling, and the cost ledger with budgets.
+handling, the cost ledger with budgets, and US6 — the second brief fixture, the genericity
+lint, and `eval/`. Recovery is complete in both directions a stage can die: a transient
+provider refusal is retried in `epyhia/agents/retry.py`, a lapsed lease is swept, an action
+orphaned mid-verify is re-driven, and a `failed` stage is re-queued by an operator through
+`POST /tasks/{id}/retry`. The Fly deploy (T126) is live — `web` + `worker` from one image.
 
-Remaining: Phase 8 (US6 — the second brief fixture, the genericity lint, and `eval/`) and
-Phase 9 (Fly deploy, README, the demo recording).
+Remaining: Phase 9 — the console's approval-view polish (T127), `README.md` (T128), the
+quickstart evidence pass (T129), the demo recording (T131), and two filed defects: T143 (the
+deploy key cannot see the Web Builder's prompt version, so a Web-Builder-only prompt fix
+republishes nothing) and T144 (`runs.status` has no path to `succeeded` or `failed`, so a run
+never settles).
+
+One thing the checkpoint language can mislead about: **`eval/` is implemented and unit-tested
+against a stubbed record source, but has never been run against the deployed system.** FR-061
+is about asserting over deployed records, so that run — T129 — is what turns the dynamic half
+of the genericity claim from code into evidence. `PRODUCT_EVAL.md` does not exist yet.
 
 Commands: `uv run ruff check`, `uv run pytest`, `uv run alembic upgrade head`,
 `docker compose up` (Postgres + Mailpit + web + worker from `.env.example` defaults).
