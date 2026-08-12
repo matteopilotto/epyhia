@@ -150,9 +150,9 @@ error (quickstart § US4).
 
 ### Implementation for User Story 4
 
-- [ ] T027 [P] [US4] Create `console/src/lib/highlight.ts` — pure helper: given a text string and the set of violation `quote` strings for the artifact revision in view, split on exact substring occurrences (no fuzzy or normalised matching, R8) and wrap each match in a visible `<mark>`-styled span; a quote with zero occurrences marks nothing and raises nothing
-- [ ] T028 [US4] Apply T027 inside the text renderers — `console/src/components/artifacts/CopyDoc.tsx` (headlines and bodies), `PostCards.tsx` (post bodies), `EmailPreview.tsx` (subject, preheader, body), `Storyboard.tsx` (scene lines) — driven by the selected revision's own `violations[].quote`; the itemised violation list in `console/src/routes/artifacts.tsx` remains rendered in all cases; a flagged `video_props` storyboard still renders with its marks, never hidden (edge case) (depends on T005–T008, T027)
-- [ ] T029 [US4] Verify US4: console builds; walk quickstart § US4 (every occurrence marked including duplicates; non-matching quote → list-only degradation, no error)
+- [x] T027 [P] [US4] Create `console/src/lib/highlight.ts` — pure helper: given a text string and the set of violation `quote` strings for the artifact revision in view, split on exact substring occurrences (no fuzzy or normalised matching, R8) and wrap each match in a visible `<mark>`-styled span; a quote with zero occurrences marks nothing and raises nothing
+- [x] T028 [US4] Apply T027 inside the text renderers — `console/src/components/artifacts/CopyDoc.tsx` (headlines and bodies), `PostCards.tsx` (post bodies), `EmailPreview.tsx` (subject, preheader, body), `Storyboard.tsx` (scene lines) — driven by the selected revision's own `violations[].quote`; the itemised violation list in `console/src/routes/artifacts.tsx` remains rendered in all cases; a flagged `video_props` storyboard still renders with its marks, never hidden (edge case) (depends on T005–T008, T027)
+- [x] T029 [US4] Verify US4: console builds; walk quickstart § US4 (every occurrence marked including duplicates; non-matching quote → list-only degradation, no error)
 
 **Checkpoint**: Violations are visible in context, not just in a list.
 
