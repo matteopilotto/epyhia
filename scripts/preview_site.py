@@ -39,7 +39,7 @@ from epyhia.gate.keys import alias_for
 from epyhia.ingest.catalogue import resolve_catalogue
 from epyhia.ingest.grounding import build_grounding_set
 from epyhia.ingest.hashing import content_sha256
-from epyhia.ingest.normalise import _MINOR_EXPONENT
+from epyhia.ingest.normalise import MINOR_EXPONENT
 from epyhia.models.actions import Action
 from epyhia.models.artifacts import Artifact
 from epyhia.models.brand_docs import BrandDoc
@@ -115,7 +115,7 @@ def _major_form(offering: dict) -> str:
     """`price_minor` as a customer would see it written. The exponent comes from the table
     the normaliser reduces by, so a stub price cannot read as an ungrounded numeral for the
     want of a decimal point."""
-    exponent = _MINOR_EXPONENT.get(offering["currency_display"], 2)
+    exponent = MINOR_EXPONENT.get(offering["currency_display"], 2)
     return f"{offering['currency_display']} {Decimal(offering['price_minor']).scaleb(-exponent)}"
 
 

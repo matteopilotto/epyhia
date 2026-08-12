@@ -3,8 +3,10 @@ from dataclasses import dataclass
 from decimal import Decimal
 
 # Currencies whose minor unit is not 1/100th of the major unit. Anything absent
-# defaults to 2 (research.md R6).
-_MINOR_EXPONENT = {"JPY": 0, "KRW": 0, "BHD": 3, "KWD": 3, "OMR": 3}
+# defaults to 2 (research.md R6). Public because reading minor units back out is the
+# same table read backwards: the pack's storyboard companion renders `amount_minor` with
+# it, and a second table that disagreed would print the wrong money (002 research R7).
+MINOR_EXPONENT = {"JPY": 0, "KRW": 0, "BHD": 3, "KWD": 3, "OMR": 3}
 
 _CURRENCY_SYMBOLS = {"$": "USD", "€": "EUR", "£": "GBP", "¥": "JPY"}
 _ISO_CODE_RE = re.compile(r"\b[A-Z]{3}\b")
@@ -120,7 +122,7 @@ def _to_minor(value: Decimal, currency: str | None) -> Decimal:
     """Reduces an amount to minor units when a currency is present (FR-006)."""
     if currency is None:
         return value
-    minor_exponent = _MINOR_EXPONENT.get(currency, 2)
+    minor_exponent = MINOR_EXPONENT.get(currency, 2)
     return (value * (10**minor_exponent)).quantize(Decimal(1))
 
 

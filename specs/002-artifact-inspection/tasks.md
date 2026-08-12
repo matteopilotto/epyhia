@@ -118,7 +118,7 @@ artifact-less run yields a valid archive with an empty manifest (quickstart § U
 
 ### Tests for User Story 3
 
-- [ ] T018 [P] [US3] Make the minor-unit exponent table in `epyhia/ingest/normalise.py` importable (`_MINOR_EXPONENT` per research R7) with no behavior change to ingest; `uv run pytest` stays green
+- [x] T018 [P] [US3] Make the minor-unit exponent table in `epyhia/ingest/normalise.py` importable (`_MINOR_EXPONENT` per research R7) with no behavior change to ingest; `uv run pytest` stays green
 - [ ] T019 [P] [US3] Create `tests/export/test_companions.py` — pure-function tests, zero credentials/agents/network: copy/posts/email/video_props records render to Markdown whose every string is a field of the record (FR-011: no content introduced); storyboard money renders `amount_minor` + `currency` through the exponent table including a zero-decimal currency case; content that fails to parse as its kind's shape yields NO companion (skip, never fabricate); confirm failing before T021
 - [ ] T020 [P] [US3] Create `tests/export/test_archive.py` — pure-function tests: layout matches data-model.md (`manifest.json`, `deliverables/<artifact.path>` + `<stem>.md`, `flagged/<artifact.path>` + `<stem>.violations.json` + `<stem>.md`); "latest" is max `revision` per `kind`; a flagged latest revision ships under `flagged/` even when an earlier revision was clean, and never under `deliverables/`; manifest entries match contracts/pack-manifest.schema.json with `record` hashes copied from the rows and `companion`/`violations` hashes computed over emitted bytes, every hash matching its member's bytes; a run with no artifacts yields a valid archive with an empty `files` list; confirm failing before T022
 
