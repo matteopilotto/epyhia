@@ -28,6 +28,22 @@ def test_database_url() -> str:
     return url
 
 
+@pytest.fixture(autouse=True)
+def _collapse_verify_backoff(request: pytest.FixtureRequest, monkeypatch) -> None:
+    """Run the gate's verify schedule at zero wall clock.
+
+    Every test here asserts attempt *counts*, never elapsed time, so the seconds the gate
+    waits in production would be pure suite latency. The one test that guards those
+    production values opts out with `@pytest.mark.realistic_backoff`.
+    """
+    if "realistic_backoff" in request.keywords:
+        return
+    from epyhia.gate import gate
+
+    monkeypatch.setattr(gate, "VERIFY_BACKOFF_BASE_SECONDS", 1.0)
+    monkeypatch.setattr(gate, "VERIFY_BACKOFF_CAP_SECONDS", 0.001)
+
+
 @pytest.fixture(scope="session", autouse=True)
 def test_schema() -> None:
     """Bring the test database up to head once per session.
