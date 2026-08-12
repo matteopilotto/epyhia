@@ -8,7 +8,10 @@ import { parseCopy, parseEmail, parsePosts, parseVideoProps } from "@/components
 import { CopyDoc } from "@/components/artifacts/CopyDoc";
 import { EmailPreview } from "@/components/artifacts/EmailPreview";
 import { PostCards } from "@/components/artifacts/PostCards";
+import { SitePreview } from "@/components/artifacts/SitePreview";
 import { Storyboard } from "@/components/artifacts/Storyboard";
+import { VideoPlayers } from "@/components/artifacts/VideoPlayers";
+import { downloadArtifact } from "@/lib/content";
 
 type Violation = { kind?: string; quote?: string; why?: string; [key: string]: unknown };
 
@@ -121,14 +124,61 @@ function ArtifactContent({ artifact, content }: { artifact: Artifact; content: s
   );
 }
 
-function ArtifactCard({ artifact }: { artifact: Artifact }) {
+/**
+ * Download of one artifact, named from its own `path` (FR-006). A failure is said out loud
+ * — a control that silently does nothing reads as a browser that swallowed the file.
+ */
+function DownloadButton({ artifact }: { artifact: Artifact }) {
+  const [state, setState] = useState<"idle" | "busy" | "failed">("idle");
+
+  const download = async () => {
+    setState("busy");
+    try {
+      await downloadArtifact(artifact.id, artifact.path);
+      setState("idle");
+    } catch {
+      setState("failed");
+    }
+  };
+
+  return (
+    <Button
+      variant="outline"
+      size="sm"
+      disabled={state === "busy"}
+      onClick={download}
+      className={state === "failed" ? "border-red-800 text-red-300" : undefined}
+    >
+      {state === "idle" ? "Download" : state === "busy" ? "Downloading…" : "Download failed"}
+    </Button>
+  );
+}
+
+/** The kinds whose bytes are the deliverable itself, fetched from the content endpoint
+ * rather than read as text out of the JSON detail route. */
+const MEDIA_KINDS = new Set(["site", "video", "video_vertical"]);
+
+function ArtifactCard({ artifact, artifacts }: { artifact: Artifact; artifacts: Artifact[] }) {
   const [open, setOpen] = useState(false);
   const flagged = artifact.grounding_status !== "clean";
+  const media = MEDIA_KINDS.has(artifact.kind);
+
+  // One props artifact produces both cuts at the same revision, so the horizontal entry is
+  // where the pair is shown side by side; the vertical entry plays its own cut alone.
+  const cuts =
+    artifact.kind === "video"
+      ? [
+          artifact,
+          ...artifacts.filter(
+            (other) => other.kind === "video_vertical" && other.revision === artifact.revision,
+          ),
+        ]
+      : [artifact];
 
   const detail = useQuery({
     queryKey: ["artifact", artifact.id],
     queryFn: () => api.get<ArtifactDetail>(`/artifacts/${artifact.id}`),
-    enabled: open,
+    enabled: open && !media,
   });
 
   return (
@@ -147,23 +197,34 @@ function ArtifactCard({ artifact }: { artifact: Artifact }) {
 
       {artifact.violations?.length ? <Violations violations={artifact.violations} /> : null}
 
-      <div className="mt-3">
+      <div className="mt-3 flex gap-2">
         <Button variant="outline" size="sm" onClick={() => setOpen((value) => !value)}>
           {open ? "Hide contents" : "Read contents"}
         </Button>
+        <DownloadButton artifact={artifact} />
       </div>
 
       {open && (
         <div className="mt-3">
-          {detail.isLoading && <p className="text-xs text-ink-muted">Loading…</p>}
-          {detail.data &&
-            (detail.data.content === null ? (
-              <p className="text-xs text-ink-muted">
-                Binary artifact — {artifact.size_bytes} bytes, sha256 {artifact.sha256}.
-              </p>
+          {media ? (
+            artifact.kind === "site" ? (
+              <SitePreview artifactId={artifact.id} />
             ) : (
-              <ArtifactContent artifact={artifact} content={detail.data.content} />
-            ))}
+              <VideoPlayers cuts={cuts} />
+            )
+          ) : (
+            <>
+              {detail.isLoading && <p className="text-xs text-ink-muted">Loading…</p>}
+              {detail.data &&
+                (detail.data.content === null ? (
+                  <p className="text-xs text-ink-muted">
+                    Binary artifact — {artifact.size_bytes} bytes, sha256 {artifact.sha256}.
+                  </p>
+                ) : (
+                  <ArtifactContent artifact={artifact} content={detail.data.content} />
+                ))}
+            </>
+          )}
         </div>
       )}
     </li>
@@ -194,7 +255,7 @@ export function ArtifactsRoute() {
 
       <ul className="space-y-3">
         {artifacts.data?.map((artifact) => (
-          <ArtifactCard key={artifact.id} artifact={artifact} />
+          <ArtifactCard key={artifact.id} artifact={artifact} artifacts={artifacts.data} />
         ))}
         {artifacts.data?.length === 0 && (
           <li className="text-sm text-ink-muted">This run has produced nothing yet.</li>
