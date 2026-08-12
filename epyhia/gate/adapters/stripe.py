@@ -24,6 +24,35 @@ class StripeCallFailed(Exception):
     verification runs (contracts/action-gate.md §7)."""
 
 
+def plain(value):
+    """A provider object rendered as plain JSON.
+
+    `evidence` is a JSONB column and a `StripeObject` is not serialisable into one, so
+    anything read off the provider and stored as evidence passes through here. Recursive
+    because the nested reads are objects in their own right — a price's `recurring` clause
+    is the one that actually reaches the column.
+    """
+    if isinstance(value, stripe.StripeObject):
+        return {key: plain(item) for key, item in value.to_dict().items()}
+    if isinstance(value, list):
+        return [plain(item) for item in value]
+    return value
+
+
+def field(obj, name: str, default=None):
+    """Read one field off a parsed Stripe object.
+
+    `StripeObject` supports indexing and nothing else — it is not a mapping, and `.get` on
+    one raises `AttributeError: get` rather than returning a default. Every optional read on
+    a provider object goes through here; reaching for `.get` out of habit is a crash that
+    only appears against the real client.
+    """
+    try:
+        return obj[name]
+    except (KeyError, TypeError):
+        return default
+
+
 ClientFactory = Callable[[str], stripe.StripeClient]
 
 
@@ -115,12 +144,12 @@ class StripeProductAdapter(_StripeAdapter):
             product = await self._client(ctx).v1.products.retrieve_async(product_id)
         except stripe.StripeError as exc:
             raise VerificationFailed(f"product {product_id}: {exc}") from exc
-        if product is None or not product.get("active"):
+        if product is None or not field(product, "active"):
             raise VerificationFailed(f"product {product_id} is not active")
         return {
             "product_id": product["id"],
             "name": product["name"],
-            "slug": (product.get("metadata") or {}).get("slug"),
+            "slug": field(field(product, "metadata"), "slug"),
         }
 
 
@@ -158,7 +187,7 @@ class StripePriceAdapter(_StripeAdapter):
             "price_id": price["id"],
             "unit_amount": price["unit_amount"],
             "currency": price["currency"],
-            "recurring": price.get("recurring"),
+            "recurring": plain(field(price, "recurring")),
         }
 
 
@@ -272,7 +301,7 @@ def assert_matches(price: dict, expected: dict) -> None:
     """The catalogue row, re-read from the processor. Both fields are compared against the
     brief's own values — an amount or a currency that drifted is what FR-029 exists to
     catch, and it must fail rather than be reported."""
-    if not price.get("active"):
+    if not field(price, "active"):
         raise VerificationFailed(f"price {price['id']} is not active")
     if price["unit_amount"] != expected["price_minor"]:
         raise VerificationFailed(

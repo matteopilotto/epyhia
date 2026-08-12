@@ -10,6 +10,7 @@ from epyhia.gate.adapters.stripe import (
     CheckoutSessionAdapter,
     StripePriceAdapter,
     StripeProductAdapter,
+    plain,
     price_lookup_key,
     product_id_for,
 )
@@ -92,7 +93,9 @@ async def test_the_recurring_clause_is_the_briefs_own_cadence() -> None:
         created = api.prices.rows[(await prices.execute(request, _ctx()))["price_id"]]
 
         if row["billing"] == "subscription":
-            assert created["recurring"] == {
+            # `plain()` because the provider hands back a nested object, not a mapping —
+            # comparing one to a dict is always false (see `stripe_stub`).
+            assert plain(created["recurring"]) == {
                 "interval": row["billing_interval"],
                 "interval_count": row["billing_interval_count"],
             }
@@ -209,7 +212,7 @@ async def test_checkout_is_not_gated_and_defers_the_proof_it_cannot_have_yet() -
 
     assert result["checkout_url"] == created["url"]
     assert created["mode"] == ("subscription" if row["billing"] == "subscription" else "payment")
-    assert created["line_items"] == [{"price": "price_0", "quantity": 1}]
+    assert plain(created["line_items"]) == [{"price": "price_0", "quantity": 1}]
     assert created["metadata"]["slug"] == row["slug"]
 
 
