@@ -11,7 +11,7 @@ from epyhia.config import settings
 from epyhia.cost.budget import HALTED, enforce_run_budget
 from epyhia.models.tasks import Task
 from epyhia.queue.claim import claim_task
-from epyhia.queue.sweeper import sweep_expired_leases
+from epyhia.queue.sweeper import resume_orphaned_actions, sweep_expired_leases
 
 logger = logging.getLogger(__name__)
 
@@ -148,6 +148,10 @@ async def run_worker(
             # idle poll, because a busy worker is exactly when a crashed sibling needs it.
             if (now := time.monotonic()) >= next_sweep:
                 async with session_factory() as session:
+                    # Actions first, then their tasks. An orphaned row must reach terminal
+                    # before its task returns to `pending`, or the re-claimed stage asks
+                    # `request()` about a row still in flight and is refused all over again.
+                    await resume_orphaned_actions(session)
                     await sweep_expired_leases(session)
                     await session.commit()
                 next_sweep = now + sweep_interval_seconds
