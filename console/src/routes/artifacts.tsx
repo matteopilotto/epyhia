@@ -10,7 +10,7 @@ import { EmailPreview } from "@/components/artifacts/EmailPreview";
 import { PostCards } from "@/components/artifacts/PostCards";
 import { SitePreview } from "@/components/artifacts/SitePreview";
 import { Storyboard } from "@/components/artifacts/Storyboard";
-import { VideoPlayers } from "@/components/artifacts/VideoPlayers";
+import { VideoPlayer } from "@/components/artifacts/VideoPlayer";
 import { downloadArtifact } from "@/lib/content";
 
 type Violation = { kind?: string; quote?: string; why?: string; [key: string]: unknown };
@@ -158,22 +158,10 @@ function DownloadButton({ artifact }: { artifact: Artifact }) {
  * rather than read as text out of the JSON detail route. */
 const MEDIA_KINDS = new Set(["site", "video", "video_vertical"]);
 
-function ArtifactCard({ artifact, artifacts }: { artifact: Artifact; artifacts: Artifact[] }) {
+function ArtifactCard({ artifact }: { artifact: Artifact }) {
   const [open, setOpen] = useState(false);
   const flagged = artifact.grounding_status !== "clean";
   const media = MEDIA_KINDS.has(artifact.kind);
-
-  // One props artifact produces both cuts at the same revision, so the horizontal entry is
-  // where the pair is shown side by side; the vertical entry plays its own cut alone.
-  const cuts =
-    artifact.kind === "video"
-      ? [
-          artifact,
-          ...artifacts.filter(
-            (other) => other.kind === "video_vertical" && other.revision === artifact.revision,
-          ),
-        ]
-      : [artifact];
 
   const detail = useQuery({
     queryKey: ["artifact", artifact.id],
@@ -210,7 +198,7 @@ function ArtifactCard({ artifact, artifacts }: { artifact: Artifact; artifacts: 
             artifact.kind === "site" ? (
               <SitePreview artifactId={artifact.id} />
             ) : (
-              <VideoPlayers cuts={cuts} />
+              <VideoPlayer cut={artifact} />
             )
           ) : (
             <>
@@ -255,7 +243,7 @@ export function ArtifactsRoute() {
 
       <ul className="space-y-3">
         {artifacts.data?.map((artifact) => (
-          <ArtifactCard key={artifact.id} artifact={artifact} artifacts={artifacts.data} />
+          <ArtifactCard key={artifact.id} artifact={artifact} />
         ))}
         {artifacts.data?.length === 0 && (
           <li className="text-sm text-ink-muted">This run has produced nothing yet.</li>

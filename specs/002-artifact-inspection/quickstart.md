@@ -47,8 +47,8 @@ must stay green over the new console code (it scans `console/src`).
 1. Open the `site` artifact → it renders inside the sandboxed preview; toggle
    desktop/mobile widths; open-in-new-tab shows the same content. In devtools, confirm the
    preview frame has an opaque origin (sandbox without `allow-same-origin`).
-2. Open the video group → both cuts play to completion side by side with native controls,
-   the vertical cut in a phone-aspect frame. The view stays responsive while bytes load.
+2. Open each video entry → both cuts play to completion with native controls, the vertical
+   cut in a phone-aspect frame. The view stays responsive while bytes load.
 3. Download a video → file arrives named from `artifact.path`; `shasum -a 256` matches the
    artifact's `sha256`.
 4. `curl` the content endpoint without a Bearer token → `401`; with one → bytes whose hash

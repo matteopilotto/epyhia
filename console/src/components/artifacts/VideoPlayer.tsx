@@ -6,12 +6,17 @@ export type Cut = { id: string; kind: string; path: string };
 // epyhia/queue/handlers/video.py). Framed at 9:16 so the operator sees it as it will appear.
 const VERTICAL = "video_vertical";
 
-function VideoCut({ cut }: { cut: Cut }) {
+/**
+ * One rendered cut in the browser's own playback controls, framed at the aspect it was
+ * rendered for. Each cut is its own artifact and so plays in its own entry — showing the
+ * vertical cut again beside the horizontal one would be the same file in two places.
+ */
+export function VideoPlayer({ cut }: { cut: Cut }) {
   const { url, error } = useArtifactUrl(cut.id);
   const vertical = cut.kind === VERTICAL;
 
   return (
-    <figure className={vertical ? "w-48 shrink-0" : "min-w-0 flex-1"}>
+    <figure className={vertical ? "w-48" : "w-full"}>
       <figcaption className="mb-1 font-mono text-xs text-ink-muted">{cut.path}</figcaption>
       <div
         className="flex items-center justify-center rounded-md border border-line bg-black"
@@ -28,16 +33,5 @@ function VideoCut({ cut }: { cut: Cut }) {
         )}
       </div>
     </figure>
-  );
-}
-
-/** Both cuts of the launch video, side by side, in the browser's own playback controls. */
-export function VideoPlayers({ cuts }: { cuts: Cut[] }) {
-  return (
-    <div className="flex flex-wrap items-start gap-4">
-      {cuts.map((cut) => (
-        <VideoCut key={cut.id} cut={cut} />
-      ))}
-    </div>
   );
 }

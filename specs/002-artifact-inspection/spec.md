@@ -58,9 +58,9 @@ shows the exact stored content.
 
 The operator previews the generated site inside the console — rendered in an isolated frame
 that cannot act on the console's own session — with an option to open it in a new tab and a
-toggle between desktop and mobile widths. The two rendered video cuts play side by side in
-native players, the vertical cut framed at phone aspect, so the operator can watch both films
-before approving anything that publishes them. Today these binary artifacts cannot be viewed
+toggle between desktop and mobile widths. Each rendered video cut plays in a native player
+under its own entry, the vertical cut framed at phone aspect, so the operator can watch both
+films before approving anything that publishes them. Today these binary artifacts cannot be viewed
 at all; the operator's only option is a byte count and a hash.
 
 **Why this priority**: The videos are currently uninspectable — the sharpest gap — but the
@@ -78,8 +78,8 @@ videos play to completion in the console.
 2. **Given** the site preview is open, **When** the operator toggles between desktop and
    mobile widths, **Then** the preview re-renders at the selected width.
 3. **Given** a run with `video` and `video_vertical` artifacts, **When** the operator opens
-   them, **Then** both play with standard playback controls, side by side, the vertical cut
-   presented in a phone-aspect frame.
+   them, **Then** each plays with standard playback controls under its own entry, the
+   vertical cut presented in a phone-aspect frame.
 4. **Given** any binary artifact, **When** the operator requests a download, **Then** the
    file downloads with a sensible filename and its bytes match the stored artifact.
 
@@ -203,7 +203,8 @@ renders showing the latest, with a control that switches the view to each earlie
   cannot act on the operator's console session, with an open-in-new-tab control and a
   desktop/mobile width toggle.
 - **FR-005**: The system MUST play both rendered video cuts in the console with standard
-  playback controls, presented side by side with the vertical cut in a phone-aspect frame.
+  playback controls, each under its own artifact entry, the vertical cut in a phone-aspect
+  frame.
 - **FR-006**: The system MUST allow any single artifact, including binary ones, to be
   downloaded with a sensible filename, its bytes identical to the stored artifact.
 - **FR-007**: Retrieval of artifact content for display, playback, or download MUST enforce
