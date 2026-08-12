@@ -1,0 +1,71 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "epyhia/specs/002-artifact-inspection/pack-manifest",
+  "title": "Deliverable pack manifest (manifest.json at archive root)",
+  "description": "Self-description of a deliverable pack (FR-009). One entry per contained file, manifest.json excepted. 'record' entries carry the sha256 stored on the artifact row, so every file is checkable against the run's audit trail (SC-004); derived files are hashed at assembly.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["run_id", "generated_at", "files"],
+  "properties": {
+    "run_id": {
+      "type": "string",
+      "format": "uuid",
+      "description": "The run this pack was assembled from."
+    },
+    "generated_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Assembly time, UTC ISO 8601. The pack is assembled per request and never stored; this stamps the request."
+    },
+    "files": {
+      "type": "array",
+      "description": "Every file in the archive except manifest.json itself. Empty for a run that has produced no artifacts — an accurate empty manifest, never an error.",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "archive_path",
+          "kind",
+          "role",
+          "revision",
+          "grounding_status",
+          "content_type",
+          "sha256"
+        ],
+        "properties": {
+          "archive_path": {
+            "type": "string",
+            "description": "Path of the file inside the archive, e.g. 'deliverables/copy.json' or 'flagged/video_props.violations.json'.",
+            "pattern": "^(deliverables|flagged)/[^/]+$"
+          },
+          "kind": {
+            "type": "string",
+            "description": "The artifact kind this file belongs to (copy, posts, email, video_props, site, video, video_vertical — or any future kind; the set is the system's, not this schema's)."
+          },
+          "role": {
+            "enum": ["record", "companion", "violations"],
+            "description": "record: the stored artifact bytes verbatim. companion: mechanical human-readable rendering of a structured record (FR-011). violations: the flagged record's itemised violations."
+          },
+          "revision": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Revision of the artifact this file was produced from — the latest for its kind at assembly time."
+          },
+          "grounding_status": {
+            "type": "string",
+            "description": "The artifact's grounding status. Anything other than 'clean' places the file under flagged/ (FR-010)."
+          },
+          "content_type": {
+            "type": "string",
+            "description": "MIME type of this file: the artifact's stored content_type for records; text/markdown for companions; application/json for violations."
+          },
+          "sha256": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{64}$",
+            "description": "For role=record, copied from the artifact row — hashing the extracted file must reproduce it. For derived roles, computed over the emitted bytes at assembly."
+          }
+        }
+      }
+    }
+  }
+}
