@@ -23,7 +23,11 @@ REPO_ROOT = HERE.parent
 
 if __package__ in (None, ""):
     # The documented invocation runs this as a script, which puts `eval/` on `sys.path` and
-    # not the repository root — its sibling modules would not import.
+    # not the repository root — its sibling modules would not import. Dropping `eval/` is
+    # the other half: left ahead of the root, it resolves `import eval.resolve` to *this
+    # file* rather than to the package directory holding it, and the sibling import fails
+    # with "not a package".
+    sys.path[:] = [entry for entry in sys.path if Path(entry or ".").resolve() != HERE]
     sys.path.insert(0, str(REPO_ROOT))
 
 import json  # noqa: E402
