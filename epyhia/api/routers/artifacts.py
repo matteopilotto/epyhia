@@ -1,6 +1,6 @@
 import uuid
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Response
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -63,3 +63,28 @@ async def get_artifact(
     if artifact.content_type.startswith(_INLINE_TYPES):
         content = artifact.bytes.decode("utf-8", "replace")
     return _summary(artifact) | {"content": content}
+
+
+@router.get("/artifacts/{artifact_id}/content")
+async def get_artifact_content(
+    artifact_id: uuid.UUID, session: AsyncSession = Depends(get_session)
+) -> Response:
+    """The stored bytes, unmodified — what the site preview, the video players and a
+    single-artifact download are fed.
+
+    It carries the same operator dependency as every other route rather than a signed URL or
+    a token in a query string: `<video src>` cannot send an `Authorization` header, so the
+    console fetches here and hands the elements a blob URL instead (FR-007, research R1).
+    Byte-identity with the row is the contract — `sha256(body) == artifact.sha256`.
+    """
+    artifact = await session.get(Artifact, artifact_id)
+    if artifact is None:
+        raise HTTPException(
+            status_code=404, detail={"error": "not_found", "detail": "artifact not found"}
+        )
+
+    return Response(
+        content=artifact.bytes,
+        media_type=artifact.content_type,
+        headers={"Content-Disposition": f'attachment; filename="{artifact.path}"'},
+    )
