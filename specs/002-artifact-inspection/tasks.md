@@ -95,7 +95,7 @@ byte-identical content with one (quickstart § US2).
 - [x] T014 [US2] Create `console/src/components/artifacts/SitePreview.tsx` — `<iframe sandbox="allow-scripts">` deliberately WITHOUT `allow-same-origin` (opaque origin — the isolation FR-004 requires, R2) over the site's blob URL; desktop/mobile container-width toggle; open-in-new-tab opens a small static console-authored wrapper document embedding the same sandboxed iframe so the opaque origin holds top-level too (depends on T013)
 - [x] T015 [P] [US2] Create `console/src/components/artifacts/VideoPlayers.tsx` — both cuts in native `<video controls>` elements fed by blob URLs, laid out side by side, `video_vertical` inside a 9:16 phone-aspect frame; asynchronous fetch with a visible loading state so the view never freezes during transfer (edge case); revoke object URLs on unmount (R3; depends on T013)
 - [x] T016 [US2] Wire `site`, `video`, and `video_vertical` kinds into the dispatch in `console/src/routes/artifacts.tsx` (T014/T015) and add a per-artifact download control using T013's download helper on every artifact including binary ones (FR-006) (depends on T009, T013–T015)
-- [ ] T017 [US2] Verify US2: `uv run pytest tests/integration/test_us_artifact_views.py` passes; console builds; walk quickstart § US2 steps 1–4 (opaque-origin check in devtools, playback to completion, download hash match, curl 401/byte-identity)
+- [x] T017 [US2] Verify US2: `uv run pytest tests/integration/test_us_artifact_views.py` passes; console builds; walk quickstart § US2 steps 1–4 (opaque-origin check in devtools, playback to completion, download hash match, curl 401/byte-identity)
 
 **Checkpoint**: US1 and US2 both work — every artifact kind is now inspectable in the
 console.
