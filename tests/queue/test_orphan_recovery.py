@@ -1,19 +1,39 @@
+import asyncio
 import uuid
 from collections.abc import AsyncIterator
 from datetime import UTC, datetime, timedelta
 
+import pytest
 import pytest_asyncio
 from sqlalchemy import text
-from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from epyhia.gate import registry
 from epyhia.gate.adapters.fake import FakeAdapter
 from epyhia.models.actions import Action
+from epyhia.models.tasks import Task
 from epyhia.queue.sweeper import resume_orphaned_actions
+from epyhia.queue.worker import HANDLERS, register_handler, run_worker
 from tests.queue.conftest import _insert_task, make_run
 
 PAST = timedelta(hours=1)
 FUTURE = timedelta(minutes=5)
+
+
+async def _noop(session: AsyncSession, task: Task) -> None:
+    """So the loop can claim the swept task without running a real stage."""
+
+
+async def _until_succeeded(session: AsyncSession, action_id: uuid.UUID) -> None:
+    while True:
+        # A fresh snapshot each poll: the loop commits from its own sessions.
+        await session.rollback()
+        state = await session.scalar(
+            text("SELECT state FROM actions WHERE id = :id").bindparams(id=action_id)
+        )
+        if state == "succeeded":
+            return
+        await asyncio.sleep(0.02)
 
 
 @pytest_asyncio.fixture
@@ -38,13 +58,14 @@ async def _stranded_action(
     lease: timedelta,
     state: str = "verifying",
     task_state: str = "running",
+    kind: str = "money",
 ) -> Action:
     """One action mid-flight under a task whose lease is `lease` away from now."""
     run_id = await make_run(session)
     task_id = await _insert_task(
         session,
         run_id,
-        kind="money",
+        kind=kind,
         state=task_state,
         lease_expires_at=datetime.now(UTC) + lease,
     )
@@ -147,3 +168,41 @@ async def test_an_action_awaiting_approval_is_never_resurrected(
     await recovery_session.refresh(action)
     assert action.state == "awaiting_approval"
     assert adapter.execute_calls == []
+
+
+async def test_the_worker_loop_actually_runs_the_recovery_pass(
+    recovery_session: AsyncSession,
+) -> None:
+    """The wiring, not the function.
+
+    `sweep_expired_leases` was correct and unit-tested for four phases while nothing in
+    production called it. A recovery pass exercised only by tests that call it directly is
+    that same bug wearing a different hat, so this drives the real loop.
+    """
+    kind = "test_orphan_loop"
+    adapter = FakeAdapter("test_orphan_loop_action")
+    registry.register(adapter)
+    register_handler(kind, _noop)
+    try:
+        action = await _stranded_action(
+            recovery_session, action_type=adapter.action_type, lease=-PAST, kind=kind
+        )
+
+        session_factory = async_sessionmaker(
+            bind=recovery_session.bind, expire_on_commit=False
+        )
+        worker = asyncio.create_task(
+            run_worker(
+                poll_interval_seconds=0.01,
+                sweep_interval_seconds=0.0,
+                session_factory=session_factory,
+            )
+        )
+        try:
+            await asyncio.wait_for(_until_succeeded(recovery_session, action.id), timeout=10)
+        finally:
+            worker.cancel()
+            with pytest.raises(asyncio.CancelledError):
+                await worker
+    finally:
+        HANDLERS.pop(kind, None)
