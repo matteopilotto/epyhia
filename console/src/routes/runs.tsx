@@ -141,6 +141,34 @@ function summarise(event: RunEvent): string {
   }
 }
 
+/**
+ * The operator's route out of `failed` — the one task state nothing else can leave (T142).
+ *
+ * A `running` task belongs to the lease sweep and an `awaiting_approval` one to the approve
+ * button, so neither gets a button here. Re-queueing repeats no effect: every gate key
+ * derives from the brief hash, so the stage resumes onto the rows that already succeeded.
+ */
+function RetryTask({ taskId }: { taskId: string }) {
+  const retry = useMutation({
+    mutationFn: () => api.post<{ state: string }>(`/tasks/${taskId}/retry`),
+  });
+  const error = retry.error as ApiError | null;
+
+  return (
+    <>
+      <Button
+        size="sm"
+        variant="outline"
+        disabled={retry.isPending || retry.isSuccess}
+        onClick={() => retry.mutate()}
+      >
+        {retry.isSuccess ? "Re-queued" : "Retry"}
+      </Button>
+      {error && <span className="text-xs text-red-400">{error.error}</span>}
+    </>
+  );
+}
+
 export function RunDetailRoute() {
   const { runId } = useParams({ from: "/runs/$runId" });
   const run = useQuery({
@@ -172,6 +200,14 @@ export function RunDetailRoute() {
 
     return () => controller.abort();
   }, [runId]);
+
+  // The timeline is append-only and de-duplicated by `${kind}:${id}:${at}`, so a task that
+  // fails and is re-queued leaves *both* rows on screen — and the stale one would still offer
+  // a button that now 409s. Only the newest event for a task id carries one.
+  const latestTaskEvent = new Map<string, unknown>();
+  for (const event of events) {
+    if (event.kind === "task") latestTaskEvent.set(String(event.data.id), event.data.at);
+  }
 
   return (
     <div className="mx-auto max-w-4xl">
@@ -217,6 +253,11 @@ export function RunDetailRoute() {
           <li key={index} className="flex items-center gap-3 px-4 py-2 text-sm">
             <Badge variant={eventVariant(event)}>{event.kind}</Badge>
             <span>{summarise(event)}</span>
+            {event.kind === "task" &&
+              event.data.state === "failed" &&
+              latestTaskEvent.get(String(event.data.id)) === event.data.at && (
+                <RetryTask taskId={String(event.data.id)} />
+              )}
             <span className="ml-auto font-mono text-[11px] text-ink-muted">
               {String(event.data.at).slice(11, 19)}
             </span>
