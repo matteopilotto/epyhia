@@ -824,6 +824,15 @@ inside the life of this project and then roughly reverts upward; undated rates w
 report cost by a large margin from that date, silently. A cost table that quietly goes wrong is
 worse than one that is obviously missing.
 
+**A failed call is invisible to the ledger, and that is the one place these numbers are known
+to be low.** `record_call` runs after a call returns, and a stream that raises mid-flight
+carries no readable `RunUsage` — so tokens the provider billed for an attempt that died are
+absent from `agent_calls`, and `runs.spend_usd` under-reports by exactly that. Retrying a
+transient refusal (`epyhia/agents/retry.py`) makes it reachable up to three times per stage
+rather than once. The bound is small and enumerated; the alternative is estimating the tokens,
+which would put a fabricated number into a table whose whole claim is that it is derived from
+`RunUsage`.
+
 Enforcement chain: `UsageLimits` per run (tokens) → dollars derived from `RunUsage` via the
 rate table → per-run dollar budget → global daily kill-switch env var. LLM spend and
 gate-action spend roll up together against the run budget (§4.2). And transcripts are not

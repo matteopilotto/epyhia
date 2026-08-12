@@ -5,11 +5,13 @@ import uuid
 
 from pydantic_ai import Agent
 from pydantic_ai.settings import ModelSettings
+from pydantic_ai.usage import RunUsage
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from epyhia.agents.memo import memo_key
 from epyhia.agents.memo import read as memo_read
 from epyhia.agents.memo import write as memo_write
+from epyhia.agents.retry import call_with_retry
 from epyhia.cost.ledger import record_call
 from epyhia.cost.limits import limits_for_run
 from epyhia.prompts_service import prompt_service
@@ -99,9 +101,16 @@ async def build_site(
 
     started = time.perf_counter()
     limits = await limits_for_run(session, run_id)
-    async with agent.run_stream(prompt, usage_limits=limits) as result:
-        html = await result.get_output()
-        usage = result.usage
+
+    async def generate() -> tuple[str, RunUsage]:
+        # Opened *and drained* inside the retried operation. The overload that motivated this
+        # arrives on the stream's first chunk, inside a response the transport already
+        # returned as 200 — so a closure that handed the context manager back and let the
+        # caller read it would put the failure outside the retry, which is where it was.
+        async with agent.run_stream(prompt, usage_limits=limits) as result:
+            return await result.get_output(), result.usage
+
+    html, usage = await call_with_retry(generate, agent=AGENT)
     latency_ms = int((time.perf_counter() - started) * 1000)
 
     await record_call(
