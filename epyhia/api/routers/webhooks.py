@@ -10,6 +10,10 @@ import epyhia.gate.adapters  # noqa: F401  — registers the Stripe pairs
 from epyhia.api.db import get_session
 from epyhia.config import settings
 from epyhia.gate import gate
+
+# One definition of "read a field off a provider object", beside the adapters that own the
+# provider. Two copies is how one of them ends up reaching for `.get`.
+from epyhia.gate.adapters.stripe import field
 from epyhia.models.actions import Action
 from epyhia.models.orders import Order
 
@@ -19,15 +23,6 @@ router = APIRouter()
 
 COMPLETED = "checkout.session.completed"
 PAID = "paid"
-
-
-def field(obj, name: str, default=None):
-    """Read one field off a parsed Stripe object, which supports indexing and nothing else —
-    it is not a mapping, so `.get` is not available on it."""
-    try:
-        return obj[name]
-    except (KeyError, TypeError):
-        return default
 
 
 def construct_event(payload: bytes, signature: str) -> dict:

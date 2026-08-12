@@ -1,5 +1,6 @@
 import asyncio
 import logging
+import time
 from collections.abc import Awaitable, Callable
 
 from pydantic_ai.exceptions import ApprovalRequired
@@ -10,8 +11,14 @@ from epyhia.config import settings
 from epyhia.cost.budget import HALTED, enforce_run_budget
 from epyhia.models.tasks import Task
 from epyhia.queue.claim import claim_task
+from epyhia.queue.sweeper import resume_orphaned_actions, sweep_expired_leases
 
 logger = logging.getLogger(__name__)
+
+# How often the loop reclaims leases a dead worker left behind. Well under the shortest
+# lease in `LEASE_MINUTES_BY_KIND`, so a crash costs the lease's remainder and not a
+# multiple of this.
+SWEEP_INTERVAL_SECONDS = 30.0
 
 Handler = Callable[[AsyncSession, Task], Awaitable[None]]
 
@@ -110,23 +117,52 @@ async def run_once(session: AsyncSession, *, kind: str | None = None) -> bool:
     return True
 
 
-async def run_worker(*, poll_interval_seconds: float = 1.0) -> None:
-    """The `worker` Fly process entrypoint (fly.toml `[processes] worker`)."""
+async def run_worker(
+    *,
+    poll_interval_seconds: float = 1.0,
+    sweep_interval_seconds: float = SWEEP_INTERVAL_SECONDS,
+    session_factory: async_sessionmaker | None = None,
+) -> None:
+    """The `worker` Fly process entrypoint (fly.toml `[processes] worker`).
+
+    `session_factory` exists so a test can point this loop at the test database — the
+    entrypoint otherwise builds its own engine from `settings.database_url` and cannot be
+    reached. That seam is not decoration: the recovery call below was missing for four
+    phases precisely because nothing could assert this loop makes it.
+    """
     # Imported here rather than at module scope: each handler module registers itself by
     # calling `register_handler` above, so importing the package from the top would close
     # a cycle back onto this one.
     import epyhia.queue.handlers  # noqa: F401
 
-    engine = create_async_engine(settings.database_url)
-    session_factory = async_sessionmaker(bind=engine, expire_on_commit=False)
+    engine = None
+    if session_factory is None:
+        engine = create_async_engine(settings.database_url)
+        session_factory = async_sessionmaker(bind=engine, expire_on_commit=False)
+    next_sweep = 0.0
     try:
         while True:
+            # A killed worker leaves its task `running` against a lease that then expires
+            # with nothing watching it. Recovery is what `sweep_expired_leases` is for, and
+            # it only recovers anything if something calls it — on a timer rather than on an
+            # idle poll, because a busy worker is exactly when a crashed sibling needs it.
+            if (now := time.monotonic()) >= next_sweep:
+                async with session_factory() as session:
+                    # Actions first, then their tasks. An orphaned row must reach terminal
+                    # before its task returns to `pending`, or the re-claimed stage asks
+                    # `request()` about a row still in flight and is refused all over again.
+                    await resume_orphaned_actions(session)
+                    await sweep_expired_leases(session)
+                    await session.commit()
+                next_sweep = now + sweep_interval_seconds
+
             async with session_factory() as session:
                 claimed = await run_once(session)
             if not claimed:
                 await asyncio.sleep(poll_interval_seconds)
     finally:
-        await engine.dispose()
+        if engine is not None:
+            await engine.dispose()
 
 
 if __name__ == "__main__":

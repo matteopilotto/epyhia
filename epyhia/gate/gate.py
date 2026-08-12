@@ -9,7 +9,7 @@ from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from epyhia.config import settings
-from epyhia.gate.errors import PreconditionFailed, VerificationFailed
+from epyhia.gate.errors import ActionInProgress, PreconditionFailed, VerificationFailed
 from epyhia.gate.registry import Adapter, GateContext, get_adapter
 from epyhia.models.actions import Action
 
@@ -29,8 +29,21 @@ _CREDENTIAL_BY_ACTION_TYPE = {
 }
 
 
+# Verification races the world, not the process. A CDN alias keeps serving the previous build
+# for seconds after the deploy call returns, and a processor's object is not always readable
+# the instant it is created — so this schedule is measured in seconds.
+#
+# It was `2**attempt * 0.01` capped at 1.0, which spends 0.30s across all five attempts. That
+# is a schedule tuned to keep the suite fast, and it survived because the first deploy of a
+# run creates a *new* alias, which is correct immediately. The second deploy has to replace an
+# existing alias target, and a third of a second of patience recorded that as a permanent
+# failure while the world was busy agreeing with us (run 8d89a987, 2026-08-12).
+VERIFY_BACKOFF_BASE_SECONDS = 3.0
+VERIFY_BACKOFF_CAP_SECONDS = 30.0
+
+
 def _verify_backoff_seconds(attempt: int) -> float:
-    return min(2**attempt * 0.01, 1.0)
+    return min(VERIFY_BACKOFF_BASE_SECONDS**attempt, VERIFY_BACKOFF_CAP_SECONDS)
 
 
 def _declared_cost(adapter: Adapter) -> Decimal | None:
@@ -116,9 +129,22 @@ async def request(
         ).scalar_one()
         if existing.state in TERMINAL_STATES:
             return _result(existing)
+        if existing.state == "awaiting_approval":
+            # Parked exactly where a fresh request would park it, so the caller parks too —
+            # a re-run of a stage waiting on a human is waiting, not failing. Raising
+            # `ActionInProgress` here instead lands the task `failed` while the operator is
+            # still looking at the approval, and their click then resumes an action whose
+            # stage has already given up (run 8d89a987, 2026-08-12).
+            raise ApprovalRequired(
+                metadata={
+                    "action_id": str(existing.id),
+                    "idempotency_key": idempotency_key,
+                }
+            )
         # In-flight under someone else's ownership. Nothing executes here — a stuck row is
-        # unstuck through `resume()`, not by a second request() racing the first.
-        return {"action_id": existing.id, "state": existing.state, "in_progress": True}
+        # unstuck through `resume()`, not by a second request() racing the first. Raised, so
+        # that a caller expecting evidence fails naming the action instead of on a KeyError.
+        raise ActionInProgress(existing.id, existing.state)
 
     action = await session.get(Action, action_id)
 

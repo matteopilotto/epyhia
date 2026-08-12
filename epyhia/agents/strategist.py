@@ -9,6 +9,7 @@ from pydantic_ai import Agent, RunContext
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from epyhia.agents.retry import call_with_retry
 from epyhia.cost.ledger import record_call
 from epyhia.cost.limits import limits_for_run
 from epyhia.models.brand_docs import BrandDoc
@@ -157,10 +158,14 @@ async def run_strategist(
     """
     deps = StrategistDeps(session=session, run_id=run_id, brief_id=brief_id)
     started = time.perf_counter()
-    result = await agent.run(
-        json.dumps(brief_payload, ensure_ascii=False, sort_keys=True),
-        deps=deps,
-        usage_limits=await limits_for_run(session, run_id),
+    limits = await limits_for_run(session, run_id)
+    result = await call_with_retry(
+        lambda: agent.run(
+            json.dumps(brief_payload, ensure_ascii=False, sort_keys=True),
+            deps=deps,
+            usage_limits=limits,
+        ),
+        agent=AGENT,
     )
     latency_ms = int((time.perf_counter() - started) * 1000)
 

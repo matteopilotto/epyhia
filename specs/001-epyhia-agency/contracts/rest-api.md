@@ -10,6 +10,29 @@ marked below.
 
 ---
 
+## Namespacing
+
+**Every operator route below is served under `/api`** — `GET /runs` is `GET /api/runs` on the
+wire. The headings are written bare because the prefix is uniform and belongs to the mounting,
+not to the route.
+
+The console is a single-page app served from this same origin, and it routes on the client
+using the same strings the operator surface uses: `/runs`, `/runs/:id/cost`, `/approvals`.
+Sharing one namespace means the API claims every collision and a console **reload** answers
+with JSON instead of the page, while a non-colliding console route 404s against the static
+mount. One origin is still the rule (§11) and there is still no CORS between the two; what
+the prefix separates is the path namespace, not the origin.
+
+The three unauthenticated routes keep **bare** paths — `POST /checkout`,
+`POST /webhooks/stripe` and the recording sink. Their addresses are held outside this
+repository: in Stripe's dashboard, in `SINK_BASE_URL`, and in the bytes of every site already
+deployed. Moving them would break addresses this application does not own.
+
+Anything under `/api` that matches no route is a `404` in the error shape below. Anything else
+is the console's shell, so that a deep link survives a refresh.
+
+---
+
 ## Operator routes
 
 ### `POST /briefs`
@@ -29,7 +52,10 @@ extract the grounding set, open the run, enqueue the `plan` task (§3.5, FR-004,
 
 ### `GET /runs` · `GET /runs/{id}`
 
-The run record: status, brand doc version, prompt version, spend against budget, alias.
+The run record: status, brand doc version, prompt version, spend against budget, alias, and
+the brief's `content_sha256`. That hash is how `eval.py` resolves a run from a brief it was
+handed — run identity is brief identity (§7.1), so no run id is written into the repository
+and no "most recent run" rule can grade the wrong thing (FR-061).
 
 ### `GET /runs/{id}/events` — SSE
 
@@ -57,6 +83,32 @@ The approval decision. Writes `approval_decision`, `approved_by` (the Auth0 `sub
 Idempotent by construction: the decision is a transition on a keyed row, so a double-click,
 a reload, or a click after a redeploy all resolve to the same single execution (FR-038).
 
+### `POST /tasks/{id}/retry`
+
+Puts a **failed** stage back on the queue: `state = 'pending'`, `error` cleared,
+`lease_expires_at` cleared, `attempts` reset to 0.
+
+| Response | Meaning |
+|---|---|
+| `200 {state: "pending"}` | Re-queued |
+| `404 {error: "not_found"}` | No such task |
+| `409 {error: "not_failed", state}` | Only a `failed` task is re-queueable |
+| `409 {error: "run_halted"}` | The run is at `halted_budget`, and the claim would fail immediately |
+
+`failed` is terminal by design — the lease sweep reclaims lapsed leases and deliberately does
+not touch it, because auto-retrying a handler exception is the loop the attempts cap exists to
+prevent. This is the operator's route out of the one state nothing else can leave, and the
+human clicking it is the circuit breaker that cap stands in for, which is why `attempts` resets.
+A `running` task belongs to the lease sweep and an `awaiting_approval` one to the approve
+button, so neither is reachable here.
+
+Repeating no effect is what makes it safe: every gate key derives from the brief hash (§7.2),
+so a re-queued stage's `gate.request` short-circuits onto the rows that already succeeded and
+returns their stored evidence — a re-queued `site` whose deploy already succeeded republishes
+nothing (FR-044). Dependents need no handling: the claim statement already refuses a task whose
+`depends_on` are not all `done`. The audit trail is the `task` event the SSE timeline emits on
+every state transition.
+
 ### `GET /runs/{id}/brand-doc` · `PUT /runs/{id}/brand-doc` · `GET /briefs/{id}/brand-docs/diff?from=&to=`
 
 Read, edit, and diff. `PUT` **inserts a new version**; it never updates in place (FR-012, §5.3).
@@ -68,6 +120,13 @@ publication — the case that is supposed to fire (§7.2, US4 scenario 3).
 Includes `grounding_status` and itemised `violations`. **Flagged artifacts are listed and
 readable** — surfacing them is the remedy path, not hiding them (FR-024). Read-only: the fix is
 to correct the brief or the brand doc and re-run.
+
+### `GET /runs/{id}/orders`
+
+The orders the run's checkouts persisted, with the amount and currency the processor
+reported. Read-only. "A test purchase persisted a real order" is asserted from this row
+rather than from a success screen (FR-061), and `eval.py` reads it through this same
+authenticated path — there is no second way in (FR-058).
 
 ### `GET /runs/{id}/cost`
 

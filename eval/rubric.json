@@ -1,0 +1,229 @@
+{
+  "checks": [
+    {
+      "id": "deliverables-site-published",
+      "area": "deliverables-real",
+      "points": 8,
+      "title": "The site is published and was proved live",
+      "kind": "automated",
+      "assertion": "Each run's deploy action reached `succeeded` carrying stored evidence: a 200, this run's own brand doc name read from its row, and this run's build marker — so the alias serves this build and nothing self-reported it.",
+      "evidence": "action:deploy#evidence",
+      "required": true
+    },
+    {
+      "id": "deliverables-pack-grounded",
+      "area": "deliverables-real",
+      "points": 7,
+      "title": "The marketing pack exists and is grounded",
+      "kind": "automated",
+      "assertion": "Each run produced the pack artifacts, and every artifact carrying words or props came out of the grounding check clean rather than flagged.",
+      "evidence": "artifacts:grounding_status",
+      "required": true
+    },
+    {
+      "id": "deliverables-order-persists",
+      "area": "deliverables-real",
+      "points": 9,
+      "title": "The test purchase persisted a real order",
+      "kind": "automated",
+      "assertion": "Each run has an order row whose product slug is one of that run's own resolved catalogue entries, and whose amount and currency are the ones the processor reported — not a success screen.",
+      "evidence": "order:any",
+      "required": true
+    },
+    {
+      "id": "deliverables-video-rendered",
+      "area": "deliverables-real",
+      "points": 6,
+      "title": "The launch video rendered, including the vertical cut",
+      "kind": "automated",
+      "assertion": "Each run stored both cuts of the launch video — the launch cut and the vertical one — rendered from that run's one grounding-checked props artifact.",
+      "evidence": "artifact:video",
+      "required": true
+    },
+
+    {
+      "id": "not-slop-site-reads-as-a-brand",
+      "area": "not-slop",
+      "points": 7,
+      "title": "The site reads like a real brand's, not an AI template",
+      "kind": "evidence",
+      "assertion": "Open each published site and judge whether it reads as work a studio was paid for: a committed palette, a chosen type pairing, sections that say something.",
+      "evidence": "action:deploy#evidence.url",
+      "required": false
+    },
+    {
+      "id": "not-slop-two-briefs-look-unrelated",
+      "area": "not-slop",
+      "points": 5,
+      "title": "Two unrelated briefs do not look like the same template",
+      "kind": "evidence",
+      "assertion": "Compare the visual identity each run was given. Two businesses with nothing in common should not have arrived at the same look.",
+      "evidence": "brand-doc:palette",
+      "required": false
+    },
+    {
+      "id": "not-slop-pack-has-a-voice",
+      "area": "not-slop",
+      "points": 3,
+      "title": "The pack sounds like the business, not like a content mill",
+      "kind": "evidence",
+      "assertion": "Read the posts against the brand doc's voice: adjectives honoured, the do-not list obeyed, no claim the brief never made.",
+      "evidence": "artifact:posts",
+      "required": false
+    },
+
+    {
+      "id": "crew-strategist-delegates-only",
+      "area": "crew-orchestration",
+      "points": 5,
+      "title": "The orchestrator delegates and never acts",
+      "kind": "automated",
+      "assertion": "Zero action rows anywhere in either run are attributed to the strategist — the mechanical form of a planner constructed with no gate handles in its toolset.",
+      "evidence": "actions:requested_by",
+      "required": true
+    },
+    {
+      "id": "crew-tiers-are-scoped",
+      "area": "crew-orchestration",
+      "points": 4,
+      "title": "Every call carries a tier, and the top tier is the orchestrator's",
+      "kind": "automated",
+      "assertion": "Every model call carries a model id and a tier, and every top-tier call in the run belongs to the strategist — no drafting, reviewing or wiring agent ever makes one.",
+      "evidence": "agent-calls:tier",
+      "required": true
+    },
+    {
+      "id": "crew-cost-logged",
+      "area": "crew-orchestration",
+      "points": 3,
+      "title": "Cost is logged for every call and every action",
+      "kind": "automated",
+      "assertion": "Every model call carries a cost, every action carries one too, and both roll up into a single run total against a single budget.",
+      "evidence": "cost:total",
+      "required": true
+    },
+    {
+      "id": "crew-second-brief-shares-nothing",
+      "area": "crew-orchestration",
+      "points": 3,
+      "title": "An unrelated brief produced an unrelated run",
+      "kind": "automated",
+      "assertion": "The two runs differ in brand doc palette and in published alias, share no artifact content hash, and each run's deploy probe asserted the name it read from its own brand doc row — the mechanical form of the brand doc, not the prompt, being what changes behaviour.",
+      "evidence": "brand-doc:palette",
+      "required": true
+    },
+
+    {
+      "id": "gate-approval-before-irreversible",
+      "area": "action-gate",
+      "points": 5,
+      "title": "Irreversible actions waited for a human",
+      "kind": "automated",
+      "assertion": "Every approval-gated action carries an approval decision, an approver and a decision time, and no such action executed without one.",
+      "evidence": "actions:approval_decision",
+      "required": true
+    },
+    {
+      "id": "gate-rerun-is-idempotent",
+      "area": "action-gate",
+      "points": 6,
+      "title": "A re-run produces no second site and no second charge",
+      "kind": "automated",
+      "assertion": "Resubmitting the same brief byte-identically returns the existing run as deduplicated, and afterwards the run still has exactly one succeeded publication and exactly one order.",
+      "evidence": "action:deploy#idempotency_key",
+      "required": true
+    },
+    {
+      "id": "gate-no-approval-by-the-eval",
+      "area": "action-gate",
+      "points": 3,
+      "title": "The evaluation approved nothing",
+      "kind": "automated",
+      "assertion": "No approval decision anywhere in either run's record is attributed to the evaluation's own machine identity — its client carries no approval call path at all.",
+      "evidence": "actions:approved_by",
+      "required": true
+    },
+    {
+      "id": "gate-audit-and-cost",
+      "area": "action-gate",
+      "points": 3,
+      "title": "Every action left an auditable row",
+      "kind": "automated",
+      "assertion": "Every action row carries its state, its idempotency key, a cost, and — where it succeeded — the evidence a verification step stored.",
+      "evidence": "actions:cost_usd",
+      "required": true
+    },
+    {
+      "id": "gate-refuses-flagged-and-unarmed",
+      "area": "action-gate",
+      "points": 3,
+      "title": "The gate refused what it was built to refuse",
+      "kind": "automated",
+      "assertion": "No flagged artifact reached publication, and no checkout session or order exists for a run whose charge path was never armed.",
+      "evidence": "artifacts:grounding_status",
+      "required": true
+    },
+
+    {
+      "id": "design-choices-are-argued",
+      "area": "design-failure-catalogue",
+      "points": 6,
+      "title": "The design document argues its choices",
+      "kind": "evidence",
+      "assertion": "Read the architecture of record and judge whether each significant choice is argued against the alternative it beat, rather than asserted.",
+      "evidence": "path:DESIGN.md",
+      "required": false
+    },
+    {
+      "id": "design-failure-modes-have-controls",
+      "area": "design-failure-catalogue",
+      "points": 4,
+      "title": "Five real failure modes, each with a control",
+      "kind": "evidence",
+      "assertion": "Read the failure catalogue and judge whether each mode is one this system could actually suffer and whether the named control is in the code.",
+      "evidence": "path:DESIGN.md",
+      "required": false
+    },
+
+    {
+      "id": "ships-deployed-agency",
+      "area": "ships-clean-clone",
+      "points": 3,
+      "title": "The agency itself is deployed and reachable",
+      "kind": "evidence",
+      "assertion": "The deployed agency this evaluation authenticated against and read every record from — open it and sign in.",
+      "evidence": "system:base-url",
+      "required": false
+    },
+    {
+      "id": "ships-env-example",
+      "area": "ships-clean-clone",
+      "points": 2,
+      "title": "Every credential the system takes is declared",
+      "kind": "evidence",
+      "assertion": "Read the example environment file and judge whether a clean clone can be configured from it, and whether the system starts without the credentials it leaves blank.",
+      "evidence": "path:.env.example",
+      "required": false
+    },
+    {
+      "id": "ships-one-command-up",
+      "area": "ships-clean-clone",
+      "points": 2,
+      "title": "A clean clone comes up with one command",
+      "kind": "evidence",
+      "assertion": "Read the compose file and judge whether one command brings up the database, the mail catcher, the API and the worker with no account signup.",
+      "evidence": "path:docker-compose.yml",
+      "required": false
+    },
+    {
+      "id": "ships-demo-recording",
+      "area": "ships-clean-clone",
+      "points": 3,
+      "title": "The demo recording",
+      "kind": "evidence",
+      "assertion": "Watch the recording of a brief going in and the three deliverables coming out.",
+      "evidence": "url-in:DEMO.md",
+      "required": false
+    }
+  ]
+}

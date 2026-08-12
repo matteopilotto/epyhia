@@ -4,13 +4,14 @@ from sqlalchemy import select, text
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
 import epyhia.queue.handlers  # noqa: F401  — registers every task handler
+from epyhia.agents import ops
 from epyhia.api.app import create_app
 from epyhia.api.auth import require_operator
 from epyhia.api.db import get_session
 from epyhia.config import settings
 from epyhia.models.actions import Action
 from epyhia.models.tasks import Task
-from epyhia.queue.sweeper import sweep_expired_leases
+from epyhia.queue.sweeper import resume_orphaned_actions, sweep_expired_leases
 from epyhia.queue.worker import run_once
 
 # Aliased: an un-aliased `test_*` name imported into a test module is collected as a test.
@@ -20,6 +21,14 @@ from tests.integration.test_us1_brief_to_site import (
     _drive_to_approval,
     load_brief,
 )
+from tests.integration.test_us3_checkout import (
+    WEBHOOK_SECRET,
+    _ops_model,
+    arm,
+    open_run,
+    register_stripe,
+)
+from tests.stripe_stub import FakeStripe
 
 pytestmark = pytest.mark.asyncio
 
@@ -36,7 +45,7 @@ def client_for(session: AsyncSession) -> httpx.AsyncClient:
     app.dependency_overrides[get_session] = lambda: session
     app.dependency_overrides[require_operator] = lambda: {"sub": OPERATOR}
     return httpx.AsyncClient(
-        transport=httpx.ASGITransport(app=app), base_url="http://api.test"
+        transport=httpx.ASGITransport(app=app), base_url="http://api.test/api"
     )
 
 
@@ -155,3 +164,81 @@ async def test_a_click_on_an_already_denied_action_is_not_a_second_action(
     # the stage that parked, or it waits for an approval that will never come.
     assert len(resumes) == 1
     assert resumes[0].payload == {"action_id": str(action.id)}
+
+
+@pytest.fixture
+def _stripe_configured(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Requested rather than autouse: the deploy tests above have no business being handed
+    processor keys."""
+    monkeypatch.setattr(settings, "stripe_secret_key", "sk_test_stub")
+    monkeypatch.setattr(settings, "stripe_webhook_secret", WEBHOOK_SECRET)
+
+
+async def test_a_crash_mid_verify_recovers_without_a_duplicate_charge_path(
+    integration_session: AsyncSession, _stripe_configured: None
+) -> None:
+    """The other crash: not at the pause, but mid-`verifying` on an ungated action.
+
+    Observed on run `8d89a987` — a killed worker left `stripe_product` past `pending` and
+    short of terminal, with no evidence and no error. `resume()` was the documented remedy
+    and nothing called it for a row no operator and no webhook would ever come back for, so
+    the stage's next `request()` was refused and the run stalled for good.
+
+    Recovery must prove the effect rather than repeat it: the processor object already
+    exists, and a second one is a parallel catalogue nobody agreed to sell (FR-044, §7.2).
+    """
+    api = FakeStripe()
+    register_stripe(api)
+    run = await open_run(integration_session, load_brief())
+    assert (await arm(integration_session, run)).state == "succeeded"
+
+    products = dict(api.products.rows)
+    prices = dict(api.prices.rows)
+    assert products and prices
+
+    # Rewind one product action to exactly what a SIGKILL leaves behind, and lapse the lease
+    # its owning task was holding when the process died.
+    stranded = (
+        await integration_session.execute(
+            select(Action).where(
+                Action.run_id == run.id, Action.action_type == "stripe_product"
+            )
+        )
+    ).scalars().first()
+    stranded.state = "verifying"
+    stranded.evidence = None
+    stranded.verify_attempts = 0
+    await integration_session.execute(
+        text(
+            "UPDATE tasks SET state = 'running', "
+            "lease_expires_at = now() - interval '1 hour' WHERE id = :id"
+        ),
+        {"id": stranded.task_id},
+    )
+    await integration_session.commit()
+
+    # Recovery in the order the worker loop runs it: the action reaches terminal first, so
+    # the re-claimed stage reads evidence instead of being refused a second time.
+    await resume_orphaned_actions(integration_session)
+    await sweep_expired_leases(integration_session)
+    await integration_session.commit()
+
+    await integration_session.refresh(stranded)
+    assert stranded.state == "succeeded"
+    assert stranded.evidence is not None
+
+    # The stage now runs to the end rather than stalling.
+    with ops.agent.override(model=_ops_model()):
+        assert await run_once(integration_session, kind="money")
+
+    # Proved, not repeated: not one extra object in the processor, and no second approval.
+    assert api.products.rows == products
+    assert api.prices.rows == prices
+    arm_actions = (
+        await integration_session.execute(
+            select(Action).where(
+                Action.run_id == run.id, Action.action_type == "arm_charge_path"
+            )
+        )
+    ).scalars().all()
+    assert len(arm_actions) == 1

@@ -8,6 +8,7 @@ from pydantic_ai.settings import ModelSettings
 from sqlalchemy.ext.asyncio import AsyncSession
 
 import epyhia.gate.adapters  # noqa: F401  — registers the Stripe pairs
+from epyhia.agents.retry import call_with_retry
 from epyhia.cost.ledger import record_call
 from epyhia.cost.limits import limits_for_run
 from epyhia.gate import gate
@@ -80,10 +81,14 @@ async def describe_catalogue(
     request = {"brand_doc": brand_doc, "catalogue": described}
 
     started = time.perf_counter()
-    result = await agent.run(
-        json.dumps(request, ensure_ascii=False, sort_keys=True),
-        output_type=PromptedOutput(CatalogueLines),
-        usage_limits=await limits_for_run(session, run_id),
+    limits = await limits_for_run(session, run_id)
+    result = await call_with_retry(
+        lambda: agent.run(
+            json.dumps(request, ensure_ascii=False, sort_keys=True),
+            output_type=PromptedOutput(CatalogueLines),
+            usage_limits=limits,
+        ),
+        agent=AGENT,
     )
     latency_ms = int((time.perf_counter() - started) * 1000)
 

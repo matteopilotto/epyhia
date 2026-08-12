@@ -2,6 +2,14 @@
 
 FROM node:22-slim AS console-build
 WORKDIR /build/console
+# Vite inlines these at BUILD time, so they cannot come from `fly secrets`. They are public
+# by design — a SPA client id and a tenant domain ship to every browser anyway (FR-057).
+ARG VITE_AUTH0_DOMAIN
+ARG VITE_AUTH0_CLIENT_ID
+ARG VITE_AUTH0_AUDIENCE
+ENV VITE_AUTH0_DOMAIN=$VITE_AUTH0_DOMAIN \
+    VITE_AUTH0_CLIENT_ID=$VITE_AUTH0_CLIENT_ID \
+    VITE_AUTH0_AUDIENCE=$VITE_AUTH0_AUDIENCE
 COPY console/ ./
 RUN if [ -f package.json ]; then npm ci && npm run build; fi
 

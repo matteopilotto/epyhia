@@ -1,0 +1,68 @@
+{
+  "business_name": "Hollowfield Cycle Workshop",
+  "tagline": "Bikes that get ridden, not admired.",
+  "one_liner": "A two-bench railway-arch workshop that services, rebuilds and wheel-builds the bikes people commute on year-round.",
+  "positioning": {
+    "who_its_for": "Year-round commuters and audax riders who put real mileage on one bike.",
+    "what_problem": "Chain shops book three weeks out and hand the bike back with the same worn drivetrain still on it.",
+    "why_them": "Two mechanics, one bench each, and every job quoted in writing before a spanner touches anything."
+  },
+  "products": [
+    {
+      "name": "Winter Service Plan",
+      "description": "A quarterly strip-down through the salt season: drivetrain cleaned and measured, cables replaced, brakes bled, bearings checked.",
+      "price_minor": 6500,
+      "currency_display": "GBP",
+      "currency_charge": "GBP",
+      "billing": "subscription",
+      "billing_interval": "month",
+      "billing_interval_count": 3,
+      "features": [
+        "Quarterly strip-down and rebuild",
+        "Chain wear measured and reported each visit",
+        "Cables and brake fluid included",
+        "Same-week booking through the season"
+      ],
+      "not_covered": [
+        "Replacement drivetrain parts",
+        "Frame respray"
+      ]
+    },
+    {
+      "name": "Hand-Built Wheelset",
+      "description": "A pair of wheels laced and tensioned by hand on our own bench, built to the rider's weight and the roads they ride.",
+      "price_minor": 27500,
+      "currency_display": "GBP",
+      "currency_charge": "GBP",
+      "billing": "one_time",
+      "features": [
+        "Hand-laced, tensioned and stress-relieved",
+        "Rim and hub chosen with the rider",
+        "Tension chart supplied with the build",
+        "One free re-true after the first month"
+      ],
+      "not_covered": [
+        "Tyres and tubes",
+        "Electronic hub dynamos"
+      ]
+    }
+  ],
+  "voice": {
+    "adjectives": ["meticulous", "unhurried", "plainspoken"],
+    "do": [
+      "Name the part and the measurement",
+      "Say what a job will not fix"
+    ],
+    "dont": [
+      "Talk about lifestyle or the ride of your life",
+      "Quote a price before seeing the bike"
+    ]
+  },
+  "locale": "en-GB",
+  "established": 2011,
+  "contact": {
+    "email": "bench@hollowfieldcycleworkshop.example",
+    "phone": "+44-114-496-0231",
+    "address": "Arch 14, Bellhouse Yard, Sheffield"
+  }
+}

@@ -1,0 +1,26 @@
+# The mail catcher the `send_email` adapter verifies against (DESIGN.md §4.5, R4).
+#
+# A separate app rather than a process in `fly.toml`: the image is Mailpit's, not this
+# repository's, and the two have nothing to share but a private network.
+#
+# Deliberately no `[http_service]` and no public IP. This holds real message bodies and an
+# open SMTP port is an abuse magnet — the only things that may reach it are `web` and
+# `worker` over Fly's private IPv6 network.
+app = "epyhia-mailpit"
+primary_region = "iad"
+
+[build]
+  image = "axllent/mailpit:latest"
+
+[env]
+  # Both listeners MUST bind IPv6. Fly's private network (`.internal`) is IPv6-only, and
+  # Mailpit's own defaults are IPv4 — left alone, every connection from the worker fails
+  # with a connection refused that looks exactly like the app being down.
+  MP_SMTP_BIND_ADDR = "[::]:1025"
+  MP_UI_BIND_ADDR = "[::]:8025"
+  # The catcher holds one demo's traffic; the evidence that outlives it is on the action row.
+  MP_MAX_MESSAGES = "5000"
+
+[[vm]]
+  memory = "512mb"
+  cpus = 1

@@ -12,6 +12,7 @@ from epyhia.api.auth import require_operator
 from epyhia.api.db import get_session
 from epyhia.api.sse import SSEEvent, sse_response
 from epyhia.models.brand_docs import BrandDoc
+from epyhia.models.briefs import Brief
 from epyhia.models.runs import Run
 
 router = APIRouter(dependencies=[Depends(require_operator)])
@@ -53,9 +54,15 @@ async def _serialize(session: AsyncSession, run: Run) -> dict:
     if run.brand_doc_id is not None:
         brand_doc = await session.get(BrandDoc, run.brand_doc_id)
         brand_doc_version = brand_doc.version if brand_doc else None
+    brief = await session.get(Brief, run.brief_id)
     return {
         "id": run.id,
         "brief_id": run.brief_id,
+        # Run identity is brief identity (§7.1), so the hash belongs on the row. It is how
+        # the eval finds a run: it hashes the brief it was handed with ingest's own
+        # canonicalisation and looks for the run carrying that hash — never a run id written
+        # into the repository, and never an implicit "most recent run" rule (FR-061).
+        "brief_sha256": brief.content_sha256 if brief else None,
         "status": run.status,
         "brand_doc_version": brand_doc_version,
         "prompt_version": run.prompt_version,

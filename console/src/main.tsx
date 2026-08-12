@@ -36,6 +36,13 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
       domain={import.meta.env.VITE_AUTH0_DOMAIN}
       clientId={import.meta.env.VITE_AUTH0_CLIENT_ID}
       authorizationParams={{ redirect_uri: window.location.origin, audience }}
+      // The SDK caches in memory by default and re-authenticates on reload through a hidden
+      // iframe, which needs third-party cookies — blocked by default in current browsers, so
+      // every refresh lands back on the sign-in button. Persisting the session and refreshing
+      // it with a rotating refresh token is what survives a reload without that iframe.
+      // Requires "Allow Offline Access" on the Auth0 API, or no refresh token is issued.
+      cacheLocation="localstorage"
+      useRefreshTokens
     >
       <QueryClientProvider client={queryClient}>
         <Gate />
