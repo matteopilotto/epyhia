@@ -33,7 +33,7 @@ export function VideoPlayer({ cut }: { cut: Cut }) {
   };
 
   return (
-    <figure className={vertical ? "w-80 max-w-full" : "w-full"}>
+    <figure className={vertical ? "mx-auto w-80 max-w-full" : "w-full"}>
       <figcaption className="mb-1 flex items-center gap-2 font-mono text-xs text-ink-muted">
         {cut.path}
         {url && document.fullscreenEnabled && (
