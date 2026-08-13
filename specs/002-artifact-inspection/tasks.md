@@ -172,7 +172,7 @@ revision's content, grounding status, and violations — not the group's latest
 
 ### Implementation for User Story 5
 
-- [ ] T030 [US5] Implement `DeliverableGroup` grouping in `console/src/routes/artifacts.tsx` per data-model.md: group the existing list response by `kind`, order each group's `revisions` by `revision`, default `selected` to max revision with an operator control to select earlier ones; the selected revision's `grounding_status` and `violations` are what drive the badge, itemised list, and inline marking — never another member's (depends on T009; touches the same file as T016/T025 — run after them if those stories have landed)
+- [x] T030 [US5] Implement `DeliverableGroup` grouping in `console/src/routes/artifacts.tsx` per data-model.md: group the existing list response by `kind`, order each group's `revisions` by `revision`, default `selected` to max revision with an operator control to select earlier ones; the selected revision's `grounding_status` and `violations` are what drive the badge, itemised list, and inline marking — never another member's (depends on T009; touches the same file as T016/T025 — run after them if those stories have landed)
 - [ ] T031 [US5] Verify US5: console builds; walk quickstart § US5 (one entry, latest default, earlier revision shows its own content and grounding state)
 
 **Checkpoint**: All five stories functional.
