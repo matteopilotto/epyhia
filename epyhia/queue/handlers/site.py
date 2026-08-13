@@ -8,6 +8,7 @@ from epyhia.agents.web_builder import build_site
 from epyhia.artifacts.store import PostgresArtifactStore
 from epyhia.config import settings
 from epyhia.design.fonts import embed_fonts, library
+from epyhia.design.lint import DesignFinding, lint
 from epyhia.gate import gate
 from epyhia.gate.keys import deploy_key
 from epyhia.ingest.extractors import extract_site_text
@@ -44,6 +45,28 @@ def check_grounding(html: str, grounding_set: dict, locale: str) -> list[dict]:
         {"value": str(v.value), "currency": v.currency}
         for v in set_difference(extracted, grounding_set)
     ]
+
+
+def design_report(findings: list[DesignFinding]) -> dict:
+    """What the built page carries, shaped by `contracts/design-report.schema.json`.
+
+    Written on every path a build reaches, a clean page included: a report that only appears
+    when something is wrong is one an operator has to interpret by its absence (FR-008).
+
+    The critique and revision fields are the loop US3 builds. They are recorded here as the
+    skip and the not-needed they honestly are, rather than left out of a document whose shape
+    would then change under the console the moment the loop lands.
+    """
+    return {
+        "lint": [finding.model_dump() for finding in findings],
+        "critique": {
+            "status": "skipped",
+            "findings": [],
+            "skip_reason": "the review loop is not built at this prompt version",
+        },
+        "revision": {"outcome": "not_needed", "findings_before": len(findings)},
+        "screenshots": {"captured": False, "widths": []},
+    }
 
 
 def checkout_context(run: Run) -> dict:
@@ -114,7 +137,7 @@ async def handle_site(session: AsyncSession, task: Task) -> None:
     page = embed_fonts(html, pairing)
 
     violations = check_grounding(page, run.grounding_set, brief.payload["locale"])
-    await _store.write(
+    site = await _store.write(
         session,
         run_id=run.id,
         kind="site",
@@ -123,6 +146,23 @@ async def handle_site(session: AsyncSession, task: Task) -> None:
         content=page.encode("utf-8"),
         grounding_status="clean" if not violations else "flagged",
         violations=violations or None,
+    )
+
+    # The stored bytes are what gets linted, so the report describes the page of record. It
+    # never refuses anything: the tells are counted and made visible, and grounding remains
+    # the only mechanical bar between a page and the world (FR-010). The report itself is
+    # internal telemetry — never deployed, sent or published — which is why its grounding
+    # status is asserted by construction rather than scanned (research R7).
+    report = design_report(lint(page, brand_doc=brand_doc.doc, pairing=pairing))
+    await _store.write(
+        session,
+        run_id=run.id,
+        kind="design_report",
+        path="design-report.json",
+        content_type="application/json",
+        content=json.dumps(report, indent=2).encode("utf-8"),
+        grounding_status="clean",
+        revision=site.revision,
     )
 
     # The gate re-reads that status as a precondition and refuses a flagged run's deploy

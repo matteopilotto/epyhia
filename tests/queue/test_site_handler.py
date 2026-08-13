@@ -2,7 +2,9 @@ import json
 import uuid
 from collections.abc import Iterator
 from decimal import Decimal
+from pathlib import Path
 
+import jsonschema
 import pytest
 from pydantic_ai.exceptions import ApprovalRequired
 from pydantic_ai.messages import ModelMessage
@@ -12,11 +14,19 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from epyhia.agents import web_builder
 from epyhia.design.fonts import PAGE_BUDGET_BYTES, PageOverBudget, PairingError, library
+from epyhia.design.lint import lint
 from epyhia.gate import registry
 from epyhia.models.tasks import Task
 from epyhia.queue.handlers import site as site_handler
 from epyhia.queue.handlers.site import UpstreamNotClean, handle_site
 from tests.queue.conftest import make_run
+
+REPO_ROOT = Path(__file__).resolve().parents[2]
+DESIGN_REPORT_SCHEMA = json.loads(
+    (
+        REPO_ROOT / "specs" / "003-distinctive-sites" / "contracts" / "design-report.schema.json"
+    ).read_text()
+)
 
 # No model is reachable from here: the refusal happens before `build_site` is called, so a
 # test that never overrides a model is itself the evidence that no model call was made.
@@ -25,6 +35,14 @@ from tests.queue.conftest import make_run
 # which faces were curated.
 DISPLAY_ID = next(face for face in library.faces if face.role in ("display", "both")).id
 BODY_ID = next(face for face in library.faces if face.role in ("body", "both")).id
+
+# The brand doc the site stage reads for itself: the two ids it resolves, and the accent the
+# design lint counts against. Invented values, structural to the last field.
+PALETTE = {"bg": "#101010", "fg": "#f4f1ec", "accent": "#b4552d", "muted": "#8b857c"}
+
+
+def _doc(display: str = DISPLAY_ID, body: str = BODY_ID) -> dict:
+    return {"palette": PALETTE, "type": {"display": display, "body": body}}
 
 
 async def _seed_brand_doc(
@@ -221,9 +239,7 @@ async def test_an_unknown_pairing_id_fails_before_any_model_call(
     """FR-005. The brand doc names a face nobody curated — the shape a doc written before
     ids existed has, carrying free text — and the stage stops there: no generation is paid
     for, no page is stored, and nothing is set in whatever the visitor's device had."""
-    run_id = await _make_buildable_run(
-        queue_session, {"type": {"display": "Helvetica Neue", "body": BODY_ID}}
-    )
+    run_id = await _make_buildable_run(queue_session, _doc(display="Helvetica Neue"))
 
     with (
         web_builder.agent.override(model=_never_called()),
@@ -240,9 +256,7 @@ async def test_the_fonts_are_embedded_before_the_grounding_check_runs(
 ) -> None:
     """The artifact of record has to be the exact bytes that were checked and deployed, so
     the injection happens upstream of the check rather than on the way out (research R3)."""
-    run_id = await _make_buildable_run(
-        queue_session, {"type": {"display": DISPLAY_ID, "body": BODY_ID}}
-    )
+    run_id = await _make_buildable_run(queue_session, _doc())
 
     checked: list[str] = []
     original = site_handler.check_grounding
@@ -279,9 +293,7 @@ async def test_an_over_budget_page_fails_the_task_visibly(
 ) -> None:
     """FR-006. A runaway generation is caught on the finished bytes: the task fails, so an
     operator sees it, and no page nobody sized reaches the deploy request."""
-    run_id = await _make_buildable_run(
-        queue_session, {"type": {"display": DISPLAY_ID, "body": BODY_ID}}
-    )
+    run_id = await _make_buildable_run(queue_session, _doc())
     runaway = PAGE.replace("<h1>Specimen</h1>", "<p>x</p>" * (PAGE_BUDGET_BYTES // 8))
 
     task = await _persisted_site_task(queue_session, run_id)
@@ -292,3 +304,97 @@ async def test_an_over_budget_page_fails_the_task_visibly(
         await handle_site(queue_session, task)
 
     assert await _counts(queue_session, run_id) == (0, 0)
+
+
+async def _report(session: AsyncSession, run_id: uuid.UUID):
+    return (
+        await session.execute(
+            text(
+                "SELECT bytes, grounding_status, revision FROM artifacts "
+                "WHERE run_id = :run_id AND kind = 'design_report'"
+            ),
+            {"run_id": run_id},
+        )
+    ).one()
+
+
+async def test_every_build_writes_a_design_report_an_operator_can_read(
+    queue_session: AsyncSession, deploy_adapter: None
+) -> None:
+    """FR-008. Written on the way past rather than on a failure: a report that only appears
+    when something is wrong is one an operator has to read by its absence."""
+    run_id = await _make_buildable_run(queue_session, _doc())
+
+    task = await _persisted_site_task(queue_session, run_id)
+    with web_builder.agent.override(model=_builder(PAGE)), pytest.raises(ApprovalRequired):
+        await handle_site(queue_session, task)
+
+    row = await _report(queue_session, run_id)
+    report = json.loads(row.bytes)
+    jsonschema.Draft202012Validator(DESIGN_REPORT_SCHEMA).validate(report)
+
+    stored = (
+        await queue_session.execute(
+            text(
+                "SELECT bytes FROM artifacts WHERE run_id = :run_id AND kind = 'site'"
+            ),
+            {"run_id": run_id},
+        )
+    ).scalar_one()
+    # The report describes the artifact of record — the same bytes that were grounded and
+    # handed to the deploy request — so the two cannot drift apart.
+    assert report["lint"] == [
+        finding.model_dump()
+        for finding in lint(
+            stored.decode("utf-8"),
+            brand_doc=_doc(),
+            pairing=library.resolve_pairing(DISPLAY_ID, BODY_ID),
+        )
+    ]
+    assert report["revision"] == {
+        "outcome": "not_needed",
+        "findings_before": len(report["lint"]),
+    }
+    assert row.revision == 0
+    # Internal telemetry: never deployed, sent or published, so its status is asserted by
+    # construction rather than scanned (research R7).
+    assert row.grounding_status == "clean"
+
+
+# A page with two of the six tells in it: a gradient behind the first section, and a
+# `font-family` that is not the pairing's.
+TELL_LADEN_PAGE = (
+    "<!doctype html><html lang='en'><head><title>Specimen</title>"
+    "<style>body{font-family:-apple-system,sans-serif;font-size:16px}"
+    ".hero{background:linear-gradient(160deg,#101010,#b4552d)}</style></head>"
+    "<body><main><section class='hero'><h1>Specimen</h1></section></main></body></html>"
+)
+
+
+async def test_a_page_the_lint_flagged_still_has_its_deploy_requested(
+    queue_session: AsyncSession, deploy_adapter: None
+) -> None:
+    """FR-010. The tells are counted and recorded, and then the page goes on to the operator
+    exactly as a clean one would: grounding remains the only mechanical refusal."""
+    run_id = await _make_buildable_run(queue_session, _doc())
+
+    task = await _persisted_site_task(queue_session, run_id)
+    with (
+        web_builder.agent.override(model=_builder(TELL_LADEN_PAGE)),
+        pytest.raises(ApprovalRequired),
+    ):
+        await handle_site(queue_session, task)
+
+    report = json.loads((await _report(queue_session, run_id)).bytes)
+    assert {"gradient_hero", "ignored_pairing"} <= {
+        finding["rule"] for finding in report["lint"]
+    }
+
+    action = (
+        await queue_session.execute(
+            text("SELECT action_type, state FROM actions WHERE run_id = :run_id"),
+            {"run_id": run_id},
+        )
+    ).one()
+    assert (action.action_type, action.state) == ("deploy", "awaiting_approval")
+    assert await _counts(queue_session, run_id) == (1, 1)
