@@ -81,9 +81,16 @@ it.
 
 ## The libraries
 
-Page composition archetypes:
+Page composition archetypes. Each is a specification, not a mood: selecting one commits the
+Web Builder to its grid, its rhythm, its alternation, its hero constraint and its signature
+move. Select the one whose specification this business actually wants.
 {% for item in lib.page_archetypes %}
 - `{{ item.id }}` — {{ item.for }}
+  - grid: {{ item.grid }}
+  - rhythm: {{ item.rhythm }}
+  - alternation: {{ item.alternation }}
+  - the hero: {{ item.hero_must_not }}
+  - signature: {{ item.signature }}
 {%- endfor %}
 
 Section layouts:

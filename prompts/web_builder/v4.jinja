@@ -136,10 +136,19 @@ image. It is served as a static file exactly as you write it.
 {% for item in lib.section_layouts -%}
 - `{{ item.id }}` — {{ item.for }}
 {% endfor %}
-The page archetype in the brand document sets the overall register:
+## The page archetype library
+
+The brand document names one of these, and it is a specification rather than a register.
+Build the one you were given to its own grid, rhythm, alternation, hero constraint and
+signature move — those five lines are the difference between this archetype and the next.
 
 {% for item in lib.page_archetypes -%}
 - `{{ item.id }}` — {{ item.for }}
+  - grid: {{ item.grid }}
+  - rhythm: {{ item.rhythm }}
+  - alternation: {{ item.alternation }}
+  - the hero: {{ item.hero_must_not }}
+  - signature: {{ item.signature }}
 {% endfor %}
 ## The bar
 
