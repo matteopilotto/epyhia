@@ -7,14 +7,15 @@ from pathlib import Path
 import jsonschema
 import pytest
 from pydantic_ai.exceptions import ApprovalRequired
-from pydantic_ai.messages import ModelMessage
+from pydantic_ai.messages import ModelMessage, ModelResponse, TextPart
 from pydantic_ai.models.function import AgentInfo, FunctionModel
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from epyhia.agents import web_builder
+from epyhia.agents import site_critic, web_builder
 from epyhia.design.fonts import PAGE_BUDGET_BYTES, PageOverBudget, PairingError, library
 from epyhia.design.lint import lint
+from epyhia.design.screenshot import Screenshots
 from epyhia.gate import registry
 from epyhia.models.tasks import Task
 from epyhia.queue.handlers import site as site_handler
@@ -35,6 +36,7 @@ DESIGN_REPORT_SCHEMA = json.loads(
 # which faces were curated.
 DISPLAY_ID = next(face for face in library.faces if face.role in ("display", "both")).id
 BODY_ID = next(face for face in library.faces if face.role in ("body", "both")).id
+PAIRING = library.resolve_pairing(DISPLAY_ID, BODY_ID)
 
 # The brand doc the site stage reads for itself: the two ids it resolves, and the accent the
 # design lint counts against. Invented values, structural to the last field.
@@ -126,6 +128,18 @@ def _builder(page: str) -> FunctionModel:
     return FunctionModel(stream_function=stream)
 
 
+def _reviser(page: str) -> tuple[FunctionModel, list[dict]]:
+    """The revision pass, plus the punch list each call was handed — the loop is bounded at
+    one pass, and a count is the only way to see that."""
+    calls: list[dict] = []
+
+    async def stream(messages: list[ModelMessage], info: AgentInfo):
+        calls.append(json.loads(messages[-1].parts[-1].content))
+        yield page
+
+    return FunctionModel(stream_function=stream), calls
+
+
 def _never_called() -> FunctionModel:
     async def stream(messages: list[ModelMessage], info: AgentInfo):
         raise AssertionError("the model was called")
@@ -134,10 +148,46 @@ def _never_called() -> FunctionModel:
     return FunctionModel(stream_function=stream)
 
 
-PAGE = (
-    "<!doctype html><html lang='en'><head><title>Specimen</title></head>"
-    "<body><h1>Specimen</h1></body></html>"
-)
+def _critic(findings: list[dict]) -> FunctionModel:
+    def respond(messages: list[ModelMessage], info: AgentInfo) -> ModelResponse:
+        return ModelResponse(parts=[TextPart(json.dumps({"findings": findings}))])
+
+    return FunctionModel(respond)
+
+
+PNG = b"\x89PNG\r\n\x1a\n fake"
+
+
+@pytest.fixture
+def screenshots(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Opt in to a successful capture. The root conftest reports no browser to every test, so
+    a test that does not ask for this one is exercising the degraded path."""
+
+    async def captured(html: str) -> Screenshots:
+        return Screenshots(images=(PNG, PNG), widths=(390, 1440))
+
+    monkeypatch.setattr(site_handler, "capture", captured)
+
+
+@pytest.fixture
+def revision_pass(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Opt in to the real revision call — which the tests below then point at a
+    `FunctionModel` of their own, so nothing here reaches a provider either."""
+    monkeypatch.setattr(site_handler, "revise_site", web_builder.revise_site)
+
+
+def _page(*, style: str = "", body: str = "") -> str:
+    """A page shaped like the output contract, set in the pairing's own faces so the lint has
+    nothing to say about it unless a test puts something there deliberately."""
+    return (
+        "<!doctype html><html lang='en'><head><title>Specimen</title>"
+        f"<style>body{{font-family:{PAIRING.body.stack};font-size:16px}}"
+        f"h1{{font-family:{PAIRING.display.stack};font-size:64px}}{style}</style></head>"
+        f"<body><h1>Specimen</h1>{body}</body></html>"
+    )
+
+
+PAGE = _page()
 
 
 class _FakeDeployAdapter:
@@ -355,14 +405,20 @@ async def test_every_build_writes_a_design_report_an_operator_can_read(
         "outcome": "not_needed",
         "findings_before": len(report["lint"]),
     }
+    # No browser in this environment, so the visual half of the review is a recorded skip
+    # rather than a silence — an operator can tell "the critic approved" from "the critic
+    # never ran" (FR-015, research R5).
+    assert report["screenshots"] == {"captured": False, "widths": []}
+    assert report["critique"]["status"] == "skipped"
+    assert report["critique"]["skip_reason"]
     assert row.revision == 0
     # Internal telemetry: never deployed, sent or published, so its status is asserted by
     # construction rather than scanned (research R7).
     assert row.grounding_status == "clean"
 
 
-# A page with two of the six tells in it: a gradient behind the first section, and a
-# `font-family` that is not the pairing's.
+# A page with three of the six tells in it: a gradient behind the first section, a
+# `font-family` that is not the pairing's, and a type scale that never leaves body size.
 TELL_LADEN_PAGE = (
     "<!doctype html><html lang='en'><head><title>Specimen</title>"
     "<style>body{font-family:-apple-system,sans-serif;font-size:16px}"
@@ -370,17 +426,25 @@ TELL_LADEN_PAGE = (
     "<body><main><section class='hero'><h1>Specimen</h1></section></main></body></html>"
 )
 
+# The same page again, having also lost its type scale to a second wrong family: strictly
+# more tells than the page it was revising.
+WORSE_PAGE = TELL_LADEN_PAGE.replace(
+    "</style>", "h1{font-family:Verdana,sans-serif;font-size:18px}</style>"
+)
+
 
 async def test_a_page_the_lint_flagged_still_has_its_deploy_requested(
-    queue_session: AsyncSession, deploy_adapter: None
+    queue_session: AsyncSession, deploy_adapter: None, revision_pass: None
 ) -> None:
     """FR-010. The tells are counted and recorded, and then the page goes on to the operator
     exactly as a clean one would: grounding remains the only mechanical refusal."""
     run_id = await _make_buildable_run(queue_session, _doc())
+    reviser, _ = _reviser(PAGE)
 
     task = await _persisted_site_task(queue_session, run_id)
     with (
         web_builder.agent.override(model=_builder(TELL_LADEN_PAGE)),
+        web_builder.revise_agent.override(model=reviser),
         pytest.raises(ApprovalRequired),
     ):
         await handle_site(queue_session, task)
@@ -397,4 +461,205 @@ async def test_a_page_the_lint_flagged_still_has_its_deploy_requested(
         )
     ).one()
     assert (action.action_type, action.state) == ("deploy", "awaiting_approval")
+    # Two site artifacts: the original and the revision the findings bought, one deploy.
+    assert await _counts(queue_session, run_id) == (2, 1)
+
+
+async def _sites(session: AsyncSession, run_id: uuid.UUID) -> list[tuple[int, str]]:
+    rows = (
+        await session.execute(
+            text(
+                "SELECT revision, bytes FROM artifacts WHERE run_id = :run_id "
+                "AND kind = 'site' ORDER BY revision"
+            ),
+            {"run_id": run_id},
+        )
+    ).all()
+    return [(row.revision, row.bytes.decode("utf-8")) for row in rows]
+
+
+async def _ledger(session: AsyncSession, run_id: uuid.UUID) -> list[str]:
+    """Which agents this run paid for, by name. Alphabetical rather than chronological: the
+    rows land in one transaction and share a timestamp, and the question here is which calls
+    were made, not in what order."""
+    return list(
+        (
+            await session.execute(
+                text("SELECT agent FROM agent_calls WHERE run_id = :run_id ORDER BY agent"),
+                {"run_id": run_id},
+            )
+        ).scalars()
+    )
+
+
+async def test_findings_buy_exactly_one_revision_checked_before_it_replaces_the_original(
+    queue_session: AsyncSession, deploy_adapter: None, screenshots: None, revision_pass: None
+) -> None:
+    """FR-014. The revision is not trusted because a model produced it: it goes through the
+    same embedding, the same size budget, the same grounding check and the same lint as the
+    page it replaces, and only then becomes the artifact of record."""
+    run_id = await _make_buildable_run(queue_session, _doc())
+    reviser, revisions = _reviser(PAGE)
+
+    task = await _persisted_site_task(queue_session, run_id)
+    with (
+        web_builder.agent.override(model=_builder(TELL_LADEN_PAGE)),
+        web_builder.revise_agent.override(model=reviser),
+        site_critic.agent.override(
+            model=_critic(
+                [{"kind": "rhythm_uniform", "where": "the page", "what": "one rhythm"}]
+            )
+        ),
+        pytest.raises(ApprovalRequired),
+    ):
+        await handle_site(queue_session, task)
+
+    # One pass, never two — the bound is in the code, not in the model's judgement.
+    assert len(revisions) == 1
+    # Both checks reach the builder, each saying which of them found it.
+    sources = {finding["source"] for finding in revisions[0]["findings"]}
+    assert sources == {"lint", "critic"}
+
+    sites = await _sites(queue_session, run_id)
+    assert [revision for revision, _ in sites] == [0, 1]
+    kept = sites[1][1]
+    assert '<style id="epyhia-fonts">' in kept
+    assert lint(kept, brand_doc=_doc(), pairing=PAIRING) == []
+
+    report = json.loads((await _report(queue_session, run_id)).bytes)
+    jsonschema.Draft202012Validator(DESIGN_REPORT_SCHEMA).validate(report)
+    assert report["revision"]["outcome"] == "kept"
+    assert report["revision"]["findings_before"] == len(report["lint"])
+    assert report["revision"]["findings_after"] == 0
+    assert report["screenshots"] == {"captured": True, "widths": [390, 1440]}
+    assert report["critique"]["status"] == "findings"
+
+    # The kept page is what the operator is asked to approve.
+    deployed = (
+        await queue_session.execute(
+            text("SELECT request FROM actions WHERE run_id = :run_id"), {"run_id": run_id}
+        )
+    ).scalar_one()
+    assert deployed["files"][0]["data"] == kept
+
+    # Every model call the loop made lands in the run's one budget, under its own name.
+    assert await _ledger(queue_session, run_id) == [
+        "site_critic",
+        "web_builder",
+        "web_builder_revise",
+    ]
+
+
+async def test_a_page_nothing_was_found_wrong_with_buys_no_revision(
+    queue_session: AsyncSession, deploy_adapter: None, screenshots: None
+) -> None:
+    """US3 scenario 2. A clean lint and an empty punch list are the same answer, and neither
+    spends a revision: the loop costs a Haiku call on a page that did not need one."""
+    run_id = await _make_buildable_run(queue_session, _doc())
+
+    task = await _persisted_site_task(queue_session, run_id)
+    with (
+        web_builder.agent.override(model=_builder(PAGE)),
+        site_critic.agent.override(model=_critic([])),
+        pytest.raises(ApprovalRequired),
+    ):
+        await handle_site(queue_session, task)
+
+    report = json.loads((await _report(queue_session, run_id)).bytes)
+    assert report["lint"] == []
+    assert report["critique"] == {"status": "clean", "findings": []}
+    assert report["revision"] == {"outcome": "not_needed", "findings_before": 0}
+    assert await _ledger(queue_session, run_id) == ["site_critic", "web_builder"]
+    assert await _counts(queue_session, run_id) == (1, 1)
+
+
+async def test_a_revision_that_fails_grounding_leaves_the_original_in_place(
+    queue_session: AsyncSession, deploy_adapter: None, revision_pass: None
+) -> None:
+    """The revision may not smuggle in a numeral the brief never stated. The answer is not to
+    flag the run — the original page passed this same check and is still here."""
+    run_id = await _make_buildable_run(queue_session, _doc())
+    reviser, _ = _reviser(_page(body="<p>499</p>"))
+
+    task = await _persisted_site_task(queue_session, run_id)
+    with (
+        web_builder.agent.override(model=_builder(TELL_LADEN_PAGE)),
+        web_builder.revise_agent.override(model=reviser),
+        pytest.raises(ApprovalRequired),
+    ):
+        await handle_site(queue_session, task)
+
+    assert [revision for revision, _ in await _sites(queue_session, run_id)] == [0]
+    report = json.loads((await _report(queue_session, run_id)).bytes)
+    jsonschema.Draft202012Validator(DESIGN_REPORT_SCHEMA).validate(report)
+    assert report["revision"]["outcome"] == "discarded_grounding"
+    assert report["revision"]["findings_before"] == len(report["lint"])
+
+
+async def test_a_revision_that_lints_worse_is_discarded_with_both_counts(
+    queue_session: AsyncSession, deploy_adapter: None, revision_pass: None
+) -> None:
+    """SC-003. "Not worse" is the whole bar the revision has to clear, and it is counted
+    rather than judged — so a pass that made the page worse costs one call and nothing else."""
+    run_id = await _make_buildable_run(queue_session, _doc())
+    reviser, _ = _reviser(WORSE_PAGE)
+
+    task = await _persisted_site_task(queue_session, run_id)
+    with (
+        web_builder.agent.override(model=_builder(TELL_LADEN_PAGE)),
+        web_builder.revise_agent.override(model=reviser),
+        pytest.raises(ApprovalRequired),
+    ):
+        await handle_site(queue_session, task)
+
+    assert [revision for revision, _ in await _sites(queue_session, run_id)] == [0]
+    report = json.loads((await _report(queue_session, run_id)).bytes)
+    assert report["revision"]["outcome"] == "discarded_worse"
+    assert report["revision"]["findings_after"] > report["revision"]["findings_before"]
+
+
+async def test_a_critic_that_returns_nothing_usable_is_a_skip_not_a_failed_run(
+    queue_session: AsyncSession, deploy_adapter: None, screenshots: None
+) -> None:
+    """FR-015. The visual review makes a page better; a run that failed because a review of
+    it failed would be strictly worse than one that ships the page it already checked."""
+    run_id = await _make_buildable_run(queue_session, _doc())
+
+    task = await _persisted_site_task(queue_session, run_id)
+    with (
+        web_builder.agent.override(model=_builder(PAGE)),
+        site_critic.agent.override(model=_critic({"notes": "looks fine"})),
+        pytest.raises(ApprovalRequired),
+    ):
+        await handle_site(queue_session, task)
+
+    report = json.loads((await _report(queue_session, run_id)).bytes)
+    jsonschema.Draft202012Validator(DESIGN_REPORT_SCHEMA).validate(report)
+    assert report["critique"]["status"] == "skipped"
+    assert report["critique"]["skip_reason"]
+    # The renders happened; it is the review of them that did not.
+    assert report["screenshots"] == {"captured": True, "widths": [390, 1440]}
+    assert report["revision"]["outcome"] == "not_needed"
+    assert await _counts(queue_session, run_id) == (1, 1)
+
+
+async def test_no_browser_completes_the_stage_with_the_page_it_already_checked(
+    queue_session: AsyncSession, deploy_adapter: None
+) -> None:
+    """A bare runner has no Chromium. The stage records the skip, never calls the critic, and
+    goes on to request the deploy exactly as it would have."""
+    run_id = await _make_buildable_run(queue_session, _doc())
+
+    task = await _persisted_site_task(queue_session, run_id)
+    with (
+        web_builder.agent.override(model=_builder(PAGE)),
+        site_critic.agent.override(model=_critic([])),
+        pytest.raises(ApprovalRequired),
+    ):
+        await handle_site(queue_session, task)
+
+    report = json.loads((await _report(queue_session, run_id)).bytes)
+    assert report["screenshots"] == {"captured": False, "widths": []}
+    assert report["critique"]["status"] == "skipped"
+    assert await _ledger(queue_session, run_id) == ["web_builder"]
     assert await _counts(queue_session, run_id) == (1, 1)

@@ -44,6 +44,34 @@ def _collapse_verify_backoff(request: pytest.FixtureRequest, monkeypatch) -> Non
     monkeypatch.setattr(gate, "VERIFY_BACKOFF_CAP_SECONDS", 0.001)
 
 
+@pytest.fixture(autouse=True)
+def _site_review_loop_offline(monkeypatch) -> None:
+    """The site stage's review loop reaches neither a browser nor a provider by default.
+
+    Two things in that loop are not covered by a test overriding `web_builder.agent`. The
+    screenshot step resolves a Chromium binary and would find the developer's own Chrome, then
+    render every page the suite builds, twice, at real wall clock. The revision pass is a
+    second agent instance, so a page with lint findings would reach the real model — and
+    `load_dotenv()` means the key in `.env` is present while the suite runs. CI must need
+    neither a browser nor a key.
+
+    Both are patched to the failure they already have to survive: unavailable renders and a
+    revision that did not produce a page are recorded skips, never a failed run (FR-015). The
+    tests that exercise a successful capture or a real revision opt back in.
+    """
+    from epyhia.design.screenshot import Screenshots
+    from epyhia.queue.handlers import site
+
+    async def unavailable(html: str) -> Screenshots:
+        return Screenshots.missing("no chromium binary in the test environment")
+
+    async def unreachable(*args, **kwargs) -> str:
+        raise AssertionError("the revision pass is not overridden in this test")
+
+    monkeypatch.setattr(site, "capture", unavailable)
+    monkeypatch.setattr(site, "revise_site", unreachable)
+
+
 @pytest.fixture(scope="session", autouse=True)
 def test_schema() -> None:
     """Bring the test database up to head once per session.
