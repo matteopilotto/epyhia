@@ -11,6 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from epyhia.agents import retry, web_builder
 from epyhia.agents.memo import memo_key
 from epyhia.agents.memo import write as memo_write
+from epyhia.design.fonts import library
 from epyhia.models.agent_calls import AgentCall
 
 pytestmark = pytest.mark.asyncio
@@ -21,6 +22,19 @@ BRAND_DOC = {"name": "N"}
 BRAND_DOC_VERSION = 1
 COPY = {"sections": []}
 CHECKOUT = {"run_id": "r", "endpoint": "/checkout", "products": []}
+PAIRING = library.resolve_pairing(
+    next(face for face in library.faces if face.role in ("display", "both")).id,
+    next(face for face in library.faces if face.role in ("body", "both")).id,
+)
+SCOPED_INPUTS = {
+    "brand_doc": BRAND_DOC,
+    "copy": COPY,
+    "checkout": CHECKOUT,
+    "fonts": {
+        slot: {"family": face.family, "stack": face.stack}
+        for slot, face in (("display", PAIRING.display), ("body", PAIRING.body))
+    },
+}
 
 PAGE = "<!doctype html><html><body><h1>generated</h1></body></html>"
 
@@ -93,6 +107,7 @@ async def _build(session: AsyncSession, run_id: uuid.UUID, model: FunctionModel)
             brand_doc_version=BRAND_DOC_VERSION,
             copy=COPY,
             checkout=CHECKOUT,
+            pairing=PAIRING,
         )
 
 
@@ -178,7 +193,7 @@ async def test_a_memo_hit_makes_no_call_and_no_sleep(
         model_id=web_builder.MODEL_ID,
         prompt_version=web_builder.PROMPT_VERSION,
         brand_doc_version=BRAND_DOC_VERSION,
-        scoped_inputs={"brand_doc": BRAND_DOC, "copy": COPY, "checkout": CHECKOUT},
+        scoped_inputs=SCOPED_INPUTS,
     )
     await memo_write(db_session, key, {"html": PAGE})
 

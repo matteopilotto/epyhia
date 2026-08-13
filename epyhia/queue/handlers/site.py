@@ -7,6 +7,7 @@ import epyhia.gate.adapters  # noqa: F401  — registers the deploy pair
 from epyhia.agents.web_builder import build_site
 from epyhia.artifacts.store import PostgresArtifactStore
 from epyhia.config import settings
+from epyhia.design.fonts import embed_fonts, library
 from epyhia.gate import gate
 from epyhia.gate.keys import deploy_key
 from epyhia.ingest.extractors import extract_site_text
@@ -88,6 +89,13 @@ async def handle_site(session: AsyncSession, task: Task) -> None:
 
     copy = json.loads(copy_artifact.bytes)
 
+    # Before the model call, deliberately: an id nobody curated — including a free-text face
+    # name from a brand doc written before ids existed — fails the stage here rather than
+    # producing a page set in whatever the visitor's device happened to have (FR-005).
+    pairing = library.resolve_pairing(
+        brand_doc.doc["type"]["display"], brand_doc.doc["type"]["body"]
+    )
+
     html = await build_site(
         session,
         run_id=run.id,
@@ -95,17 +103,24 @@ async def handle_site(session: AsyncSession, task: Task) -> None:
         brand_doc_version=brand_doc.version,
         copy=copy,
         checkout=checkout_context(run),
+        pairing=pairing,
         task_id=task.id,
     )
 
-    violations = check_grounding(html, run.grounding_set, brief.payload["locale"])
+    # Embedding runs before the grounding check and before the store, so the artifact of
+    # record is the exact bytes that were checked and are deployed — not a page the fonts
+    # were added to somewhere further downstream. Over the size budget, the stage fails
+    # visibly and nothing is stored (FR-006).
+    page = embed_fonts(html, pairing)
+
+    violations = check_grounding(page, run.grounding_set, brief.payload["locale"])
     await _store.write(
         session,
         run_id=run.id,
         kind="site",
         path="index.html",
         content_type="text/html",
-        content=html.encode("utf-8"),
+        content=page.encode("utf-8"),
         grounding_status="clean" if not violations else "flagged",
         violations=violations or None,
     )
@@ -121,7 +136,7 @@ async def handle_site(session: AsyncSession, task: Task) -> None:
         requested_by=AGENT,
         action_type="deploy",
         action_request={
-            "files": [{"file": "index.html", "data": html}],
+            "files": [{"file": "index.html", "data": page}],
             "brief_hash": brief.content_sha256,
             "brand_doc_version": brand_doc.version,
             "prompt_version": run.prompt_version,

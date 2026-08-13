@@ -14,6 +14,7 @@ from epyhia.agents.memo import write as memo_write
 from epyhia.agents.retry import call_with_retry
 from epyhia.cost.ledger import record_call
 from epyhia.cost.limits import limits_for_run
+from epyhia.design.fonts import ResolvedPairing
 from epyhia.prompts_service import prompt_service
 
 AGENT = "web_builder"
@@ -54,6 +55,7 @@ async def build_site(
     brand_doc_version: int,
     copy: dict,
     checkout: dict,
+    pairing: ResolvedPairing,
     task_id: uuid.UUID | None = None,
 ) -> str:
     """Compose one self-contained HTML document from the brand doc and the reviewed copy.
@@ -65,8 +67,20 @@ async def build_site(
     no key and nothing else from the payment processor. That is the whole reason the site and
     money stages can run in parallel, and the reason the deployed bytes stay credential-free
     by construction (FR-030, DESIGN.md §6.2).
+
+    `pairing` reaches the model as family names and nothing else: it writes `font-family`
+    against them, and the faces themselves are injected into the finished page afterwards
+    (FR-003). Font bytes are never in this prompt.
     """
-    scoped_inputs = {"brand_doc": brand_doc, "copy": copy, "checkout": checkout}
+    scoped_inputs = {
+        "brand_doc": brand_doc,
+        "copy": copy,
+        "checkout": checkout,
+        "fonts": {
+            slot: {"family": face.family, "stack": face.stack}
+            for slot, face in (("display", pairing.display), ("body", pairing.body))
+        },
+    }
     prompt = json.dumps(scoped_inputs, ensure_ascii=False, sort_keys=True)
 
     # Idempotency at the gate protects the world; it does not protect the bill. A resumed
