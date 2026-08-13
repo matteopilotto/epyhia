@@ -438,6 +438,11 @@ WORSE_PAGE = TELL_LADEN_PAGE.replace(
     "</style>", "h1{font-family:Verdana,sans-serif;font-size:18px}</style>"
 )
 
+# What a generation that spent its output ceiling before reaching any content leaves behind,
+# taken verbatim from run 31b3e4ac. It has a `<head>` for the injector to find and nothing
+# else: no section, no heading, no script, no closing tag.
+STUB_PAGE = '<!DOCTYPE html>\n<html lang="en">\n<head>\n'
+
 
 async def test_a_page_the_lint_flagged_still_has_its_deploy_requested(
     queue_session: AsyncSession, deploy_adapter: None, revision_pass: None
@@ -653,6 +658,45 @@ async def test_the_revision_pass_is_never_handed_a_byte_of_font_data(
     # And the kept revision is still embedded exactly once, by the injector.
     kept = (await _sites(queue_session, run_id))[1][1]
     assert kept.count(f'<style id="{STYLE_ID}">') == 1
+
+
+async def test_a_revision_with_no_page_in_it_is_discarded_before_it_can_be_deployed(
+    queue_session: AsyncSession, deploy_adapter: None, revision_pass: None
+) -> None:
+    """A lint count measures tells, not existence. A truncated generation grounds clean —
+    there is no text to find a numeral in — sizes small, since the fonts are not the page,
+    and counts no tells at all, so every keep condition is satisfied *because* the document
+    is empty and the operator is asked to approve a white page. The existence check runs
+    ahead of the others, so the report names the real reason."""
+    run_id = await _make_buildable_run(queue_session, _doc())
+    reviser, _ = _reviser(STUB_PAGE)
+
+    task = await _persisted_site_task(queue_session, run_id)
+    with (
+        web_builder.agent.override(model=_builder(TELL_LADEN_PAGE)),
+        web_builder.revise_agent.override(model=reviser),
+        pytest.raises(ApprovalRequired),
+    ):
+        await handle_site(queue_session, task)
+
+    # No revision 1: the stub is a record in the report, never an artifact.
+    sites = await _sites(queue_session, run_id)
+    assert [revision for revision, _ in sites] == [0]
+
+    report = json.loads((await _report(queue_session, run_id)).bytes)
+    jsonschema.Draft202012Validator(DESIGN_REPORT_SCHEMA).validate(report)
+    assert report["revision"]["outcome"] == "discarded_empty"
+    # Both counts, and the trap they set: the stub trips fewer tells than the page it was
+    # revising, so "not worse" on its own would have kept it.
+    assert report["revision"]["findings_after"] <= report["revision"]["findings_before"]
+
+    # The operator is asked to approve revision 0 — the page that renders.
+    deployed = (
+        await queue_session.execute(
+            text("SELECT request FROM actions WHERE run_id = :run_id"), {"run_id": run_id}
+        )
+    ).scalar_one()
+    assert deployed["files"][0]["data"] == sites[0][1]
 
 
 async def test_a_critic_that_returns_nothing_usable_is_a_skip_not_a_failed_run(

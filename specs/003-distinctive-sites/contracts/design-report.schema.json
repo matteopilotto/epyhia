@@ -31,11 +31,18 @@
       "type": "object",
       "additionalProperties": false,
       "required": ["outcome", "findings_before"],
-      "description": "The fact and outcome of the at-most-one revision pass (FR-014). 'kept' requires: grounding clean, within size budget, lint count not greater than the original's. Both results are recorded — the kept page is the site artifact, the discarded one is this record.",
+      "description": "The fact and outcome of the at-most-one revision pass (FR-014). 'kept' requires: still a page (it retains a share of the original's text blocks), grounding clean, within size budget, lint count not greater than the original's. The existence condition is checked first and reported as 'discarded_empty', because a truncated generation satisfies each of the others rather than failing one — nothing is ungrounded, nothing is oversized, and no tell is counted, precisely because there is no page. Both results are recorded — the kept page is the site artifact, the discarded one is this record.",
       "properties": {
         "outcome": {
           "type": "string",
-          "enum": ["not_needed", "kept", "discarded_grounding", "discarded_worse", "skipped"]
+          "enum": [
+            "not_needed",
+            "kept",
+            "discarded_grounding",
+            "discarded_worse",
+            "discarded_empty",
+            "skipped"
+          ]
         },
         "findings_before": {
           "type": "integer",
@@ -45,7 +52,7 @@
         "findings_after": {
           "type": "integer",
           "minimum": 0,
-          "description": "Lint finding count on the revised page. Present whenever a revision was produced and linted (kept, discarded_grounding, discarded_worse)."
+          "description": "Lint finding count on the revised page. Present whenever a revision was produced and linted (kept, discarded_grounding, discarded_worse, discarded_empty)."
         },
         "skip_reason": { "type": "string", "minLength": 1 }
       }

@@ -31,6 +31,14 @@ _store = PostgresArtifactStore()
 
 AGENT = "web_builder"
 
+# The share of the original's text blocks a revision has to come back with to count as a
+# revision at all. A lint count measures tells, not existence: a truncated generation leaves
+# a document with no text in it, which grounds clean (nothing to flag), sizes small (the
+# fonts are not the page) and ties on tells — every keep condition satisfied *because* there
+# is nothing there. Deliberately generous, since a revision may legitimately merge or rewrite
+# copy blocks; what it may not do is come back with almost none of them.
+MIN_TEXT_RETENTION = 0.5
+
 
 class UpstreamNotClean(Exception):
     """The copy this page would be built from is not fit to be rendered. The task fails and
@@ -185,9 +193,10 @@ async def revise_page(
     put back here, exactly as the build path does it (FR-003).
 
     The revision earns its place or it is discarded: it is embedded, sized, grounded and
-    linted exactly as the original was, and it replaces the original only if grounding is
-    clean and it counts no more tells than the page it was revising. A revision that fails
-    any of those is a record in the design report, never an artifact (FR-014, SC-003).
+    linted exactly as the original was, and it replaces the original only if it is still a
+    page, grounding is clean, and it counts no more tells than the page it was revising. A
+    revision that fails any of those is a record in the design report, never an artifact
+    (FR-014, SC-003).
 
     There is no second pass. The failure of this call is a recorded skip like the critic's.
     """
@@ -223,6 +232,15 @@ async def revise_page(
     after = len(lint(revised, brand_doc=brand_doc.doc, pairing=pairing))
     record = {"outcome": "kept", "findings_before": before, "findings_after": after}
 
+    # First, so the report names the real reason: a document with nothing in it satisfies
+    # every condition below rather than failing one, and "kept" would be the honest-looking
+    # record of a blank page one operator click from deploy. Counted with the extractor the
+    # grounding check already runs, against the document this pass was revising.
+    if len(extract_site_text(revised)) < MIN_TEXT_RETENTION * len(
+        extract_site_text(markup)
+    ):
+        record["outcome"] = "discarded_empty"
+        return record, None
     if violations:
         # A revision may not smuggle in a numeral the brief never stated, and the answer is
         # not to flag the run: the original page passed this same check and is still here.
