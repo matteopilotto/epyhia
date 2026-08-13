@@ -1,33 +1,18 @@
 <!--
 Sync Impact Report
 ==================
-Version change: 1.0.0 → 1.1.1 (MINOR then PATCH — Principle III gains the intake guardrail;
-  Principle I's cross-reference to it restated to match)
+Version change: 1.1.1 → 1.2.0 (MINOR — Principle III's agent table gains the Site Critic row)
 Modified principles: III. Fixed Pipeline, Tiered Agents with Hard Boundaries — the agent table
-  gains the intake guardrail row, and the raw-brief exception is restated as "sole agent in the
-  pipeline" plus a named, bounded pre-pipeline reader. No prior guarantee is reversed: every
-  boundary the five pipeline agents had, they still have.
-  I. Client Data Never in Code — "with one exception (Principle III)" became "with only the
-  exceptions named in Principle III", which is a count correction, not a widening. Principle
-  III remains the sole place where a raw-brief reader may be named.
-Added sections:
-
-  - I. Client Data Never in Code
-  - II. Design-First, Sequenced Build Order
-  - III. Fixed Pipeline, Tiered Agents with Hard Boundaries
-  - IV. Action Gate Governs All Consequential Egress
-  - V. Idempotency by Brief Hash
-  - VI. Grounding Before Opinion
-  - VII. Simplicity, Surgical Changes, Goal-Driven Verification
-  - Stack & Provider Constraints (Section 2)
-  - Git Workflow (Section 3)
-  - Governance
-
-Removed sections: none (first fill of the template)
-Deferred / TODO placeholders: none — all fields resolved from CLAUDE.md and repo history.
-Templates requiring follow-up: none checked in this run (out of scope per Scope Guard);
-  verify on next planning cycle that .specify/templates/plan-template.md,
-  spec-template.md, and tasks-template.md do not assume code already exists.
+  gains the Site Critic row (`claude-haiku-4-5`; may never edit the page, approve silently,
+  hold a gate handle, read the raw brief, or fail the run), and the closing prose names it as
+  the second non-pipeline model caller. No prior guarantee is reversed: every boundary the five
+  pipeline agents and the intake guardrail had, they still have, and the raw-brief reader count
+  is unchanged — the Site Critic reads the brand doc, the lint findings, and the rendered page.
+Added sections: none
+Removed sections: none
+Deferred / TODO placeholders: none.
+Templates requiring follow-up: none — this amendment adds a table row and its prose; no
+  template asserts the agent roster.
 -->
 
 # EPYHIA Constitution
@@ -77,6 +62,7 @@ hard, enforced boundary on what it may never do:
 | Marketer | `claude-sonnet-5` | Invent a fact not in the brief; deploy |
 | Reviewer (Marketer's self-review) | `claude-haiku-4-5` | Approve silently; rewrite the draft itself |
 | Ops | `claude-haiku-4-5` | Deploy; publish; touch markup |
+| Site Critic (site stage's visual review) | `claude-haiku-4-5` | Edit the page or propose replacement markup; approve silently; hold a gate handle; read the raw brief; fail the run |
 | Intake guardrail | `claude-haiku-4-5` | Run after a run is open; write an artifact; hold a gate handle; influence anything downstream. Its only output is a verdict that stops work or does not |
 
 Two model callers read the raw brief. The Reviewer is the sole agent *in the pipeline*
@@ -87,11 +73,22 @@ it, because the paraphrase is exactly where an injected sentence would be launde
 guardrail is not a pipeline stage: it writes no artifact, holds no gate handle, and its verdict
 is logged on the brief whichever way it falls (FR-007).
 
+The Site Critic is the other non-pipeline model caller: a checking-tier reviewer inside the
+site stage that examines the rendered page against the run's own brand doc and reports. Each of
+its boundaries is structural rather than instructional — its output shape carries no field for
+markup, approval is derived from an empty findings list rather than asserted, it is constructed
+with no toolset, and its call site takes no brief. Because it is a quality check and not a
+correctness one, every failure of the render, the call, or the parse is caught by the site
+stage and recorded as a skip; its findings gate a single bounded revision pass and never refuse
+a deploy, which stays the exclusive province of grounding (Principle VI).
+
 **Rationale**: A fixed pipeline with per-agent capability boundaries makes the system's
 behavior provable independent of any one model's judgment call, and keeps the blast radius of
 a compromised or confused agent bounded to what its tier is supposed to do.
 The intake guardrail is outside that pipeline by construction rather than by convention, which
-is why its raw-brief access does not widen anyone else's.
+is why its raw-brief access does not widen anyone else's. The Site Critic is bounded the same
+way: a caller that can only report cannot become a second author of the page, and one whose
+every failure is a recorded skip cannot make site quality a reason a run dies.
 
 ### IV. Action Gate Governs All Consequential Egress
 
@@ -279,4 +276,4 @@ are real (Principle VII). Once code exists, compliance additionally requires
 `uv run ruff check` and `uv run pytest` to pass, and gate/ingest/idempotency changes to be
 exercised against their real path rather than asserted.
 
-**Version**: 1.1.1 | **Ratified**: 2026-08-02 | **Last Amended**: 2026-08-10
+**Version**: 1.2.0 | **Ratified**: 2026-08-02 | **Last Amended**: 2026-08-13
