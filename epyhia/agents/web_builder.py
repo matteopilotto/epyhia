@@ -211,6 +211,9 @@ async def revise_site(
     bound by every rule the build was, and is re-embedded, re-sized, re-grounded and re-linted
     by the handler before it is allowed to replace anything (FR-014).
 
+    `page` is markup as the builder wrote it, never the stored page: the faces are injected
+    after generation on both passes, so no font byte is in either prompt (FR-003).
+
     Its memo key carries the page and the findings as well as the inputs, so the revision of a
     different page is a different call. Like the build's, it is a cache and not a ledger: a
     miss costs a model call and nothing else, because no gate key derives from these bytes.

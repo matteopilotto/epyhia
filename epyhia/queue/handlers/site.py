@@ -171,12 +171,18 @@ async def revise_page(
     brand_doc: BrandDoc,
     copy: dict,
     pairing: ResolvedPairing,
-    page: str,
+    markup: str,
     findings: list[DesignFinding],
     critique_findings: list[CritiqueFinding],
     task_id: uuid.UUID,
 ) -> tuple[dict, str | None]:
     """Exactly one revision pass, and the decision about whether to keep what it produced.
+
+    `markup` is the page as the builder wrote it, *before* the faces were injected — the
+    same document the build pass produced. Handing the model the embedded page would spend
+    its output ceiling reproducing ~114 KB of base64 woff2 before it reached any content,
+    and would have it copy a font block the injector then adds a second time. The faces are
+    put back here, exactly as the build path does it (FR-003).
 
     The revision earns its place or it is discarded: it is embedded, sized, grounded and
     linted exactly as the original was, and it replaces the original only if grounding is
@@ -196,7 +202,7 @@ async def revise_page(
                 copy=copy,
                 checkout=checkout_context(run),
                 pairing=pairing,
-                page=page,
+                page=markup,
                 findings=punch_list(findings, critique_findings),
                 task_id=task_id,
             ),
@@ -346,7 +352,9 @@ async def handle_site(session: AsyncSession, task: Task) -> None:
                 brand_doc=brand_doc,
                 copy=copy,
                 pairing=pairing,
-                page=page,
+                # The builder's own markup, not the stored page: `html` is the pre-embedding
+                # document and the fonts go back on inside (FR-003).
+                markup=html,
                 findings=findings,
                 critique_findings=critique_findings,
                 task_id=task.id,

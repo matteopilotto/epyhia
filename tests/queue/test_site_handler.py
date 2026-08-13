@@ -13,7 +13,13 @@ from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from epyhia.agents import site_critic, web_builder
-from epyhia.design.fonts import PAGE_BUDGET_BYTES, PageOverBudget, PairingError, library
+from epyhia.design.fonts import (
+    PAGE_BUDGET_BYTES,
+    STYLE_ID,
+    PageOverBudget,
+    PairingError,
+    library,
+)
 from epyhia.design.lint import lint
 from epyhia.design.screenshot import Screenshots
 from epyhia.gate import registry
@@ -616,6 +622,37 @@ async def test_a_revision_that_lints_worse_is_discarded_with_both_counts(
     report = json.loads((await _report(queue_session, run_id)).bytes)
     assert report["revision"]["outcome"] == "discarded_worse"
     assert report["revision"]["findings_after"] > report["revision"]["findings_before"]
+
+
+async def test_the_revision_pass_is_never_handed_a_byte_of_font_data(
+    queue_session: AsyncSession, deploy_adapter: None, revision_pass: None
+) -> None:
+    """FR-003, on the pass that lost it. The faces are injected after generation on both
+    passes, so the reviser reads the builder's own markup and not the stored page — handing
+    it the stored page spends the output ceiling reproducing base64 woff2 before the model
+    reaches any content, and has it copy a font block the injector then adds a second time.
+
+    Asserted as a property of the prompt rather than as a byte count, so it survives a change
+    to the library or to how a face is encoded."""
+    run_id = await _make_buildable_run(queue_session, _doc())
+    reviser, revisions = _reviser(PAGE)
+
+    task = await _persisted_site_task(queue_session, run_id)
+    with (
+        web_builder.agent.override(model=_builder(TELL_LADEN_PAGE)),
+        web_builder.revise_agent.override(model=reviser),
+        pytest.raises(ApprovalRequired),
+    ):
+        await handle_site(queue_session, task)
+
+    prompt = json.dumps(revisions[0])
+    assert "data:font/woff2" not in prompt
+    assert STYLE_ID not in prompt
+    assert revisions[0]["page"] == TELL_LADEN_PAGE
+
+    # And the kept revision is still embedded exactly once, by the injector.
+    kept = (await _sites(queue_session, run_id))[1][1]
+    assert kept.count(f'<style id="{STYLE_ID}">') == 1
 
 
 async def test_a_critic_that_returns_nothing_usable_is_a_skip_not_a_failed_run(
