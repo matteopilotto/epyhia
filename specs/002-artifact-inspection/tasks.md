@@ -173,7 +173,7 @@ revision's content, grounding status, and violations — not the group's latest
 ### Implementation for User Story 5
 
 - [x] T030 [US5] Implement `DeliverableGroup` grouping in `console/src/routes/artifacts.tsx` per data-model.md: group the existing list response by `kind`, order each group's `revisions` by `revision`, default `selected` to max revision with an operator control to select earlier ones; the selected revision's `grounding_status` and `violations` are what drive the badge, itemised list, and inline marking — never another member's (depends on T009; touches the same file as T016/T025 — run after them if those stories have landed)
-- [ ] T031 [US5] Verify US5: console builds; walk quickstart § US5 (one entry, latest default, earlier revision shows its own content and grounding state)
+- [x] T031 [US5] Verify US5: console builds; walk quickstart § US5 (one entry, latest default, earlier revision shows its own content and grounding state)
 
 **Checkpoint**: All five stories functional.
 
@@ -183,8 +183,8 @@ revision's content, grounding status, and violations — not the group's latest
 
 **Purpose**: Whole-feature verification and the genericity claim.
 
-- [ ] T032 Full verification sweep: `uv run ruff check`, `uv run pytest` (tests/export/, tests/integration/test_us_artifact_views.py, and tests/genericity all green, no API key and no Stripe/Vercel credentials in the environment), `cd console && npx tsc -b && npm run build`
-- [ ] T033 Genericity spot-check (SC-006, quickstart § final): run or seed the second brief fixture's outputs and repeat the US1–US3 walkthroughs — every displayed value (currencies, prices, names) traces to that run's own artifacts with zero code change
+- [x] T032 Full verification sweep: `uv run ruff check`, `uv run pytest` (tests/export/, tests/integration/test_us_artifact_views.py, and tests/genericity all green, no API key and no Stripe/Vercel credentials in the environment), `cd console && npx tsc -b && npm run build`
+- [x] T033 Genericity spot-check (SC-006, quickstart § final): run or seed the second brief fixture's outputs and repeat the US1–US3 walkthroughs — every displayed value (currencies, prices, names) traces to that run's own artifacts with zero code change
 
 ---
 
