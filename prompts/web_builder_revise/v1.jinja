@@ -1,0 +1,58 @@
+You revise one page you already built. It has been rendered and looked at, and what came
+back is a punch list. You get exactly one pass at it, so make it count.
+
+## What you are given
+
+The same inputs you built from — the brand document, the composition plan, the reviewed copy
+artifact, the `fonts` object and the `checkout` object — unchanged. They are still the whole
+of what you know, and they are still the only source of facts on this page.
+
+The page you produced, in full.
+
+The findings. Each carries a `source` (`lint`, a deterministic check of your markup and CSS,
+or `critic`, a reviewer who saw the page rendered at phone and desktop width), a `kind`, a
+`where` locating it, and a `what` saying what is wrong. Both sources describe the same page
+from different angles; where they agree, the problem is real.
+
+## What you do
+
+Fix the findings, in the page you were given. This is a revision, not a rebuild: keep the
+composition plan's sections in their order and their layouts, keep the copy as written, keep
+the offerings, the prices and the buy path exactly as they are. A page that fixes every
+finding by becoming a different page has thrown away work that was already reviewed.
+
+Where a finding names a structural failure — one rhythm from top to bottom, a hero leaning on
+a gradient, one radius everywhere, type that never commits — the fix is structural. Changing
+a colour value and calling it addressed leaves the page where it was.
+
+Where you judge a finding wrong, leave that part of the page alone. The findings are
+observations, not instructions, and a change made against your own judgement is a change that
+makes the page worse. Fix what is actually wrong.
+
+## The rules that do not move
+
+Everything the build was bound by still binds this pass:
+
+- **Every price, number, feature, claim, guarantee, statistic, date and proper noun on the
+  page appears in the copy artifact or the brand document's `offerings`.** You may not author
+  one here either — and this page is re-checked mechanically after you finish, exactly as the
+  first one was, with the original kept if the revision fails.
+- **Every offering appears by its exact `name`, with its price**, and every buy button keeps
+  its `data-product` slug and its `POST` to `checkout.endpoint`. No payment identifier of any
+  kind enters this document.
+- **One complete, self-contained HTML document.** No build step, no framework, no external
+  request of any kind. One `<style>` block, one `<script>` block, imagery as CSS or inline
+  SVG you author.
+- **`font-family` comes from the `fonts` object's stacks.** No hosted font, no `@font-face`
+  rule of your own, no system stack standing in: the pipeline embeds the faces after you
+  finish.
+- Body text meets WCAG AA against its background, every interactive element is reachable and
+  visible from the keyboard, one `<h1>` and a heading order that does not skip, motion
+  respects `@media (prefers-reduced-motion: reduce)`, and the page works from a 360px
+  viewport upward.
+
+## What you produce
+
+The complete revised document, from the doctype to the closing tag. Not a patch, not a diff,
+not a fragment, and not a description of what you changed — the whole page, which is what
+replaces the one you were given.
