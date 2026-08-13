@@ -5,6 +5,7 @@
       "family": "Playfair Display",
       "role": "display",
       "character": "high-contrast transitional serif; hairline thins, editorial and formal at large sizes",
+      "fallback": "serif",
       "weights": [
         {"weight": 400, "style": "normal", "file": "files/playfair-display-400.woff2"},
         {"weight": 700, "style": "normal", "file": "files/playfair-display-700.woff2"}
@@ -16,6 +17,7 @@
       "family": "Bebas Neue",
       "role": "display",
       "character": "condensed all-caps grotesque; tall, narrow, poster-loud, no lowercase",
+      "fallback": "sans-serif",
       "weights": [
         {"weight": 400, "style": "normal", "file": "files/bebas-neue-400.woff2"}
       ],
@@ -26,6 +28,7 @@
       "family": "Archivo Black",
       "role": "display",
       "character": "wide industrial grotesque at a single heavy weight; flat, blunt, signage-like",
+      "fallback": "sans-serif",
       "weights": [
         {"weight": 400, "style": "normal", "file": "files/archivo-black-400.woff2"}
       ],
@@ -36,6 +39,7 @@
       "family": "Space Grotesk",
       "role": "both",
       "character": "geometric grotesque with clipped terminals; technical, slightly odd, contemporary",
+      "fallback": "sans-serif",
       "weights": [
         {"weight": 400, "style": "normal", "file": "files/space-grotesk-400.woff2"},
         {"weight": 700, "style": "normal", "file": "files/space-grotesk-700.woff2"}
@@ -47,6 +51,7 @@
       "family": "Work Sans",
       "role": "body",
       "character": "humanist grotesque tuned for screen text; open apertures, plain and unfussy",
+      "fallback": "sans-serif",
       "weights": [
         {"weight": 400, "style": "normal", "file": "files/work-sans-400.woff2"},
         {"weight": 700, "style": "normal", "file": "files/work-sans-700.woff2"}
@@ -58,6 +63,7 @@
       "family": "IBM Plex Sans",
       "role": "body",
       "character": "humanist sans with engineered joints; neutral, warm, long-read steady",
+      "fallback": "sans-serif",
       "weights": [
         {"weight": 400, "style": "normal", "file": "files/ibm-plex-sans-400.woff2"},
         {"weight": 700, "style": "normal", "file": "files/ibm-plex-sans-700.woff2"}
@@ -69,6 +75,7 @@
       "family": "Source Serif 4",
       "role": "body",
       "character": "low-contrast humanist text serif; crisp, modern, quiet at paragraph sizes",
+      "fallback": "serif",
       "weights": [
         {"weight": 400, "style": "normal", "file": "files/source-serif-4-400.woff2"},
         {"weight": 700, "style": "normal", "file": "files/source-serif-4-700.woff2"}
@@ -80,6 +87,7 @@
       "family": "Libre Baskerville",
       "role": "body",
       "character": "wide transitional book serif with a large x-height; bookish, traditional, generous",
+      "fallback": "serif",
       "weights": [
         {"weight": 400, "style": "normal", "file": "files/libre-baskerville-400.woff2"},
         {"weight": 700, "style": "normal", "file": "files/libre-baskerville-700.woff2"}
@@ -91,6 +99,7 @@
       "family": "Zilla Slab",
       "role": "both",
       "character": "slab serif with squared-off wedge serifs; sturdy, mechanical, mid-century weight",
+      "fallback": "serif",
       "weights": [
         {"weight": 400, "style": "normal", "file": "files/zilla-slab-400.woff2"},
         {"weight": 700, "style": "normal", "file": "files/zilla-slab-700.woff2"}
@@ -102,6 +111,7 @@
       "family": "JetBrains Mono",
       "role": "both",
       "character": "fixed-pitch monospace with tall lowercase; utilitarian, terminal-flavoured",
+      "fallback": "monospace",
       "weights": [
         {"weight": 400, "style": "normal", "file": "files/jetbrains-mono-400.woff2"},
         {"weight": 700, "style": "normal", "file": "files/jetbrains-mono-700.woff2"}

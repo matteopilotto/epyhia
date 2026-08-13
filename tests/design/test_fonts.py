@@ -16,6 +16,7 @@ _ENTRY = {
     "family": "Specimen Display",
     "role": "display",
     "character": "a curation line about width and warmth",
+    "fallback": "serif",
     "weights": [{"weight": 400, "style": "normal", "file": "files/specimen-display-400.woff2"}],
     "license": {"name": "SIL OFL 1.1", "file": "licenses/specimen-display.txt"},
 }

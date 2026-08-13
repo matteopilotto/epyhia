@@ -23,6 +23,7 @@ fonts/
   "family": "Example Display",
   "role": "display",
   "character": "high-contrast transitional serif; editorial, warm",
+  "fallback": "serif",
   "weights": [
     {"weight": 400, "style": "normal", "file": "files/example-display-400.woff2"},
     {"weight": 700, "style": "normal", "file": "files/example-display-700.woff2"}
@@ -41,6 +42,10 @@ Rules (enforced by the loader in `epyhia/design/fonts.py` at import time):
   No license, no entry.
 - `character` is one line of infrastructure prose (shown beside the id in the
   Strategist's prompt) and, like every field here, names no client.
+- `fallback` ∈ `serif` | `sans-serif` | `monospace` — the generic keyword the family
+  name is handed to the Web Builder with. Unreachable in a finished page (the face
+  travels inside it as a data URI), and stated here so the stack is single-sourced
+  rather than guessed per consumer.
 
 ## Consumers
 
