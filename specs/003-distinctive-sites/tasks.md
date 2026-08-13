@@ -134,10 +134,10 @@ silent.
 
 ### Implementation for User Story 4
 
-- [ ] T033 [US4] Grow each existing page archetype in `prompts/_archetypes.jinja` from `{id, for}` to the full spec — `grid`, `rhythm`, `alternation`, `hero_must_not`, `signature` — keeping ids stable and video archetypes untouched (FR-017, data-model "Archetype specification")
-- [ ] T034 [US4] Add three new page archetypes and four new section layouts to `prompts/_archetypes.jinja` at the same spec depth, infrastructure-named and client-free (research R8 working set: `asymmetric_editorial`, `dense_index`, `full_bleed_poster` pages; `stat_band`, `numbered_process`, `split_manifesto`, `sticky_rail` sections; final names at implementation) (FR-018)
-- [ ] T035 [US4] Ensure `prompts/strategist/v3.jinja` and `prompts/web_builder/v4.jinja` both render the full spec sheets from the single `_archetypes.jinja` source (US4 acceptance scenario 1)
-- [ ] T036 [P] [US4] Archetype render test in `tests/agents/test_archetype_specs.py`: both rendered prompts present the identical archetype set, each entry carrying all five spec fields; the library counts ≥ 3 new page archetypes and ≥ 4 new section layouts over the pre-feature set (US4 acceptance scenarios 1–2; scenario 3 is the existing genericity scan)
+- [x] T033 [US4] Grow each existing page archetype in `prompts/_archetypes.jinja` from `{id, for}` to the full spec — `grid`, `rhythm`, `alternation`, `hero_must_not`, `signature` — keeping ids stable and video archetypes untouched (FR-017, data-model "Archetype specification")
+- [x] T034 [US4] Add three new page archetypes and four new section layouts to `prompts/_archetypes.jinja` at the same spec depth, infrastructure-named and client-free (research R8 working set: `asymmetric_editorial`, `dense_index`, `full_bleed_poster` pages; `stat_band`, `numbered_process`, `split_manifesto`, `sticky_rail` sections; final names at implementation) (FR-018)
+- [x] T035 [US4] Ensure `prompts/strategist/v3.jinja` and `prompts/web_builder/v4.jinja` both render the full spec sheets from the single `_archetypes.jinja` source (US4 acceptance scenario 1)
+- [x] T036 [P] [US4] Archetype render test in `tests/agents/test_archetype_specs.py`: both rendered prompts present the identical archetype set, each entry carrying all five spec fields; the library counts ≥ 3 new page archetypes and ≥ 4 new section layouts over the pre-feature set (US4 acceptance scenarios 1–2; scenario 3 is the existing genericity scan)
 
 **Checkpoint**: Two briefs no longer map onto the same four skeletons.
 
@@ -155,9 +155,9 @@ evidence pass, not CI.)
 
 ### Implementation for User Story 5
 
-- [ ] T037 [US5] Add the divergence step to `prompts/strategist/v3.jinja`: draft at least three genuinely distinct directions — palette, pairing from the library, one-line rationale each — then commit to exactly one; the drafts live in extended thinking and only the chosen direction reaches the brand doc (FR-019, research R9)
-- [ ] T038 [US5] Add explicit anti-slop language to `prompts/web_builder/v4.jinja`: name the generic tells outright — default font stacks, the gradient-on-dark hero, cookie-cutter card rows — naming no client data while doing so (FR-020)
-- [ ] T039 [P] [US5] Tests in `tests/agents/test_strategist.py` (extend) and `tests/design/test_prompts_antislop.py`: the `BrandDocument` model's shape is unchanged — no field exists for discarded alternatives to leak into (FR-019); the rendered v4 builder prompt contains the named tells; genericity scans still pass over both updated templates (US5 acceptance scenarios 2–3, FR-021)
+- [x] T037 [US5] Add the divergence step to `prompts/strategist/v3.jinja`: draft at least three genuinely distinct directions — palette, pairing from the library, one-line rationale each — then commit to exactly one; the drafts live in extended thinking and only the chosen direction reaches the brand doc (FR-019, research R9)
+- [x] T038 [US5] Add explicit anti-slop language to `prompts/web_builder/v4.jinja`: name the generic tells outright — default font stacks, the gradient-on-dark hero, cookie-cutter card rows — naming no client data while doing so (FR-020)
+- [x] T039 [P] [US5] Tests in `tests/agents/test_strategist.py` (extend) and `tests/design/test_prompts_antislop.py`: the `BrandDocument` model's shape is unchanged — no field exists for discarded alternatives to leak into (FR-019); the rendered v4 builder prompt contains the named tells; genericity scans still pass over both updated templates (US5 acceptance scenarios 2–3, FR-021)
 
 **Checkpoint**: All five stories functional; sameness attacked at its source.
 
@@ -165,9 +165,9 @@ evidence pass, not CI.)
 
 ## Phase 8: Polish & Cross-Cutting Concerns
 
-- [ ] T040 Run the full offline gate from quickstart §1: `uv run ruff check` and `uv run pytest` green, and confirm `uv run alembic upgrade head` is a no-op (this feature ships no migration)
+- [x] T040 Run the full offline gate from quickstart §1: `uv run ruff check` and `uv run pytest` green, and confirm `uv run alembic upgrade head` is a no-op (this feature ships no migration)
 - [ ] T041 Run the live evidence pass from quickstart §2–§4 (needs `ANTHROPIC_API_KEY` + the docker-compose stack): one fixture brief end-to-end — `site` and schema-valid `design_report` artifacts visible in the console, the two faces render offline with zero network requests, `site_critic` (and any `web_builder_revise`) rows in the cost view; both fixtures for the divergence check (SC-001: no shared palette, pairing, or archetype); the pre/post regression guard (SC-007: strictly fewer lint tells on the post-feature page); record outcomes in the feature's evidence notes
-- [ ] T042 [P] Provoke the quickstart failure modes table and confirm each recorded behaviour: free-text face names fail fast naming the id; Chromium absent → `screenshots.captured=false`, run completes; unusable critic output → `critique.status="skipped"`; worse revision → `discarded_worse` with both counts (covered by the offline suite — verify each has an explicit test and none regressed)
+- [x] T042 [P] Provoke the quickstart failure modes table and confirm each recorded behaviour: free-text face names fail fast naming the id; Chromium absent → `screenshots.captured=false`, run completes; unusable critic output → `critique.status="skipped"`; worse revision → `discarded_worse` with both counts (covered by the offline suite — verify each has an explicit test and none regressed)
 
 ---
 
