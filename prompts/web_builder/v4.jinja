@@ -157,6 +157,33 @@ The thing to beat is the default: a centred hero over a gradient, three feature 
 rounded corners and small icons, a pale grey section, a footer. That page is what a model
 produces when asked for "a landing page", and it is recognisable at a glance.
 
+### The tells, by name
+
+These are the specific moves that give a generated page away. Each one is looked for
+mechanically in the finished document, counted, and put in front of an operator, so none of
+them is a matter of taste here:
+
+- **A default font stack.** `system-ui`, `-apple-system`, `Helvetica, Arial, sans-serif`,
+  `Georgia, serif` — anything standing in for the faces you were given. Write the stacks
+  from the `fonts` object and nothing else.
+- **The gradient-on-dark hero.** A dark first screen carrying a diagonal gradient wash,
+  often with a soft glow behind a centred headline. Colour fields are flat unless the brand
+  document's own direction argues otherwise.
+- **Cookie-cutter card rows.** Three or four equal cards in a row, each with a small icon, a
+  short heading and two lines under it, repeated down the page. If the content is genuinely
+  a set of parallel items, the grid can hold them — but it varies its cell sizes and does
+  not become the page's only idea.
+- **One border radius everywhere.** The same rounded corner on every card, button, input and
+  image. Radius is a decision per element class, or there is no radius at all.
+- **The accent on everything.** Every heading, link, border and button in the accent colour.
+  It stops meaning anything the third time it appears.
+- **A timid type scale.** A display size barely larger than body text, and one weight doing
+  all the work. Commit to a scale wide enough that the hierarchy is legible with the words
+  blurred out.
+- **Sections of identical height.** The same vertical padding and the same container width
+  from the first section to the last. That single tell reads as a template even when
+  everything else on the page is right.
+
 What separates a real page from that one is mostly not decoration:
 
 - **Structure carries the brand.** Vary section rhythm — full-bleed against inset, dense
