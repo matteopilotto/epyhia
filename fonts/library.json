@@ -1,0 +1,112 @@
+{
+  "faces": [
+    {
+      "id": "playfair-display",
+      "family": "Playfair Display",
+      "role": "display",
+      "character": "high-contrast transitional serif; hairline thins, editorial and formal at large sizes",
+      "weights": [
+        {"weight": 400, "style": "normal", "file": "files/playfair-display-400.woff2"},
+        {"weight": 700, "style": "normal", "file": "files/playfair-display-700.woff2"}
+      ],
+      "license": {"name": "SIL OFL 1.1", "file": "licenses/playfair-display.txt"}
+    },
+    {
+      "id": "bebas-neue",
+      "family": "Bebas Neue",
+      "role": "display",
+      "character": "condensed all-caps grotesque; tall, narrow, poster-loud, no lowercase",
+      "weights": [
+        {"weight": 400, "style": "normal", "file": "files/bebas-neue-400.woff2"}
+      ],
+      "license": {"name": "SIL OFL 1.1", "file": "licenses/bebas-neue.txt"}
+    },
+    {
+      "id": "archivo-black",
+      "family": "Archivo Black",
+      "role": "display",
+      "character": "wide industrial grotesque at a single heavy weight; flat, blunt, signage-like",
+      "weights": [
+        {"weight": 400, "style": "normal", "file": "files/archivo-black-400.woff2"}
+      ],
+      "license": {"name": "SIL OFL 1.1", "file": "licenses/archivo-black.txt"}
+    },
+    {
+      "id": "space-grotesk",
+      "family": "Space Grotesk",
+      "role": "both",
+      "character": "geometric grotesque with clipped terminals; technical, slightly odd, contemporary",
+      "weights": [
+        {"weight": 400, "style": "normal", "file": "files/space-grotesk-400.woff2"},
+        {"weight": 700, "style": "normal", "file": "files/space-grotesk-700.woff2"}
+      ],
+      "license": {"name": "SIL OFL 1.1", "file": "licenses/space-grotesk.txt"}
+    },
+    {
+      "id": "work-sans",
+      "family": "Work Sans",
+      "role": "body",
+      "character": "humanist grotesque tuned for screen text; open apertures, plain and unfussy",
+      "weights": [
+        {"weight": 400, "style": "normal", "file": "files/work-sans-400.woff2"},
+        {"weight": 700, "style": "normal", "file": "files/work-sans-700.woff2"}
+      ],
+      "license": {"name": "SIL OFL 1.1", "file": "licenses/work-sans.txt"}
+    },
+    {
+      "id": "ibm-plex-sans",
+      "family": "IBM Plex Sans",
+      "role": "body",
+      "character": "humanist sans with engineered joints; neutral, warm, long-read steady",
+      "weights": [
+        {"weight": 400, "style": "normal", "file": "files/ibm-plex-sans-400.woff2"},
+        {"weight": 700, "style": "normal", "file": "files/ibm-plex-sans-700.woff2"}
+      ],
+      "license": {"name": "SIL OFL 1.1", "file": "licenses/ibm-plex-sans.txt"}
+    },
+    {
+      "id": "source-serif-4",
+      "family": "Source Serif 4",
+      "role": "body",
+      "character": "low-contrast humanist text serif; crisp, modern, quiet at paragraph sizes",
+      "weights": [
+        {"weight": 400, "style": "normal", "file": "files/source-serif-4-400.woff2"},
+        {"weight": 700, "style": "normal", "file": "files/source-serif-4-700.woff2"}
+      ],
+      "license": {"name": "SIL OFL 1.1", "file": "licenses/source-serif-4.txt"}
+    },
+    {
+      "id": "libre-baskerville",
+      "family": "Libre Baskerville",
+      "role": "body",
+      "character": "wide transitional book serif with a large x-height; bookish, traditional, generous",
+      "weights": [
+        {"weight": 400, "style": "normal", "file": "files/libre-baskerville-400.woff2"},
+        {"weight": 700, "style": "normal", "file": "files/libre-baskerville-700.woff2"}
+      ],
+      "license": {"name": "SIL OFL 1.1", "file": "licenses/libre-baskerville.txt"}
+    },
+    {
+      "id": "zilla-slab",
+      "family": "Zilla Slab",
+      "role": "both",
+      "character": "slab serif with squared-off wedge serifs; sturdy, mechanical, mid-century weight",
+      "weights": [
+        {"weight": 400, "style": "normal", "file": "files/zilla-slab-400.woff2"},
+        {"weight": 700, "style": "normal", "file": "files/zilla-slab-700.woff2"}
+      ],
+      "license": {"name": "SIL OFL 1.1", "file": "licenses/zilla-slab.txt"}
+    },
+    {
+      "id": "jetbrains-mono",
+      "family": "JetBrains Mono",
+      "role": "both",
+      "character": "fixed-pitch monospace with tall lowercase; utilitarian, terminal-flavoured",
+      "weights": [
+        {"weight": 400, "style": "normal", "file": "files/jetbrains-mono-400.woff2"},
+        {"weight": 700, "style": "normal", "file": "files/jetbrains-mono-700.woff2"}
+      ],
+      "license": {"name": "SIL OFL 1.1", "file": "licenses/jetbrains-mono.txt"}
+    }
+  ]
+}
