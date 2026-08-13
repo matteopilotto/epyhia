@@ -1,0 +1,16 @@
+{
+  "name": "Specimen Works",
+  "descriptor": "a synthetic brand document",
+  "positioning": "Invented outright, so the two fixture pages can be judged against a brand doc without any client's decisions standing in.",
+  "palette": {
+    "bg": "#faf7f2",
+    "fg": "#1b1a17",
+    "accent": "#c2410c",
+    "muted": "#6f6a61"
+  },
+  "type": {
+    "display": "playfair-display",
+    "body": "work-sans"
+  },
+  "motion_language": "quiet"
+}
