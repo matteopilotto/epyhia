@@ -30,6 +30,28 @@ type Artifact = {
 
 type ArtifactDetail = Artifact & { content: string | null };
 
+/** One entry per deliverable kind, its revisions oldest → newest (FR-013). The last member
+ * is the latest revision — what the entry shows until an operator asks for an earlier one. */
+type DeliverableGroup = { kind: string; revisions: Artifact[] };
+
+/**
+ * Grouping is a presentation concern over the list response the API already returns in
+ * full — no second call, no grouped API shape (research R9). Entry order follows each
+ * kind's first appearance, so the page keeps the server's ordering.
+ */
+function groupByKind(artifacts: Artifact[]): DeliverableGroup[] {
+  const groups = new Map<string, Artifact[]>();
+  for (const artifact of artifacts) {
+    const revisions = groups.get(artifact.kind);
+    if (revisions) revisions.push(artifact);
+    else groups.set(artifact.kind, [artifact]);
+  }
+  return [...groups].map(([kind, revisions]) => ({
+    kind,
+    revisions: [...revisions].sort((a, b) => a.revision - b.revision),
+  }));
+}
+
 /**
  * A flagged artifact is rendered *with* what is wrong with it, never hidden and never
  * quietly dropped (FR-024). The remedy is to correct the brief or the brand doc and re-run,
@@ -204,8 +226,20 @@ function PackDownloadButton({ runId, empty }: { runId: string; empty: boolean })
  * rather than read as text out of the JSON detail route. */
 const MEDIA_KINDS = new Set(["site", "video", "video_vertical"]);
 
-function ArtifactCard({ artifact }: { artifact: Artifact }) {
+/**
+ * One deliverable, at one revision. Everything below the selector — badge, violations,
+ * inline marks, contents, download — reads the *selected* revision's own row, never
+ * another member of the group's (FR-013).
+ */
+function DeliverableCard({ group }: { group: DeliverableGroup }) {
   const [open, setOpen] = useState(false);
+  // Null means "whatever is latest", so a revision arriving under the polling refetch is
+  // shown by default; picking one explicitly pins it (and un-pins if it is superseded away).
+  const [pinned, setPinned] = useState<string | null>(null);
+
+  const latest = group.revisions[group.revisions.length - 1];
+  const artifact = group.revisions.find((revision) => revision.id === pinned) ?? latest;
+
   const flagged = artifact.grounding_status !== "clean";
   const media = MEDIA_KINDS.has(artifact.kind);
 
@@ -223,7 +257,23 @@ function ArtifactCard({ artifact }: { artifact: Artifact }) {
         <Badge variant={flagged ? "bad" : "good"}>{artifact.grounding_status}</Badge>
         <span className="text-sm font-medium">{artifact.kind}</span>
         <span className="font-mono text-xs text-ink-muted">{artifact.path}</span>
-        <span className="text-xs text-ink-muted">rev {artifact.revision}</span>
+        {group.revisions.length > 1 ? (
+          <div className="flex items-center gap-1">
+            {group.revisions.map((revision) => (
+              <Button
+                key={revision.id}
+                variant={revision.id === artifact.id ? "default" : "ghost"}
+                size="sm"
+                className="h-6 px-2 text-xs"
+                onClick={() => setPinned(revision.id)}
+              >
+                rev {revision.revision}
+              </Button>
+            ))}
+          </div>
+        ) : (
+          <span className="text-xs text-ink-muted">rev {artifact.revision}</span>
+        )}
         <span className="ml-auto text-xs text-ink-muted">
           {artifact.content_type} · {artifact.size_bytes} bytes
         </span>
@@ -273,7 +323,12 @@ export function ArtifactsRoute() {
     refetchInterval: 5000,
   });
 
-  const flagged = (artifacts.data ?? []).filter((a) => a.grounding_status !== "clean").length;
+  const groups = groupByKind(artifacts.data ?? []);
+  // Counted over deliverables, not rows: a revision that was flagged and has since been
+  // superseded is not something still being held.
+  const flagged = groups.filter(
+    (group) => group.revisions[group.revisions.length - 1].grounding_status !== "clean",
+  ).length;
 
   return (
     <div className="mx-auto max-w-4xl">
@@ -291,8 +346,8 @@ export function ArtifactsRoute() {
       {artifacts.isLoading && <p className="text-sm text-ink-muted">Loading…</p>}
 
       <ul className="space-y-3">
-        {artifacts.data?.map((artifact) => (
-          <ArtifactCard key={artifact.id} artifact={artifact} />
+        {groups.map((group) => (
+          <DeliverableCard key={group.kind} group={group} />
         ))}
         {artifacts.data?.length === 0 && (
           <li className="text-sm text-ink-muted">This run has produced nothing yet.</li>
