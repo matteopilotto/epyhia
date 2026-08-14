@@ -218,6 +218,138 @@ The two smaller results, for the record:
   it assertable means a `record_directions` tool call or a brand-doc field, and the second
   reopens exactly what that test was written to close — a spec decision, not a wiring one.
 
+### The measurement, replaced — 2026-08-14
+
+The section above ends by saying the measurement needs fixing before any of this can be
+judged. It is fixed. `epyhia/design/colour.py` converts sRGB to CIELAB and returns CIE76
+distance, and `same_direction` calls two palettes one direction iff `ΔE(accent) < 20` **and**
+`ΔE(bg) < 10`. CIEDE2000 was rejected: its accuracy is at hue boundaries, and this is a
+same-or-different question at coarse thresholds.
+
+The thresholds were calibrated against the four palettes this document records in full,
+treated as a known-same set. Every pair of them, measured:
+
+| | bg | fg | accent | muted |
+|---|---|---|---|---|
+| fixture one × fixture two run 1 | 1.49 | 4.56 | 9.83 | 2.59 |
+| fixture one × fixture two dir B | 3.66 | 4.35 | 7.38 | 4.49 |
+| fixture one × fixture two truncated | 1.98 | 4.81 | 6.82 | 5.21 |
+| two run 1 × two dir B | 2.40 | 0.51 | 9.85 | 2.12 |
+| two run 1 × two truncated | 1.06 | 0.66 | 8.90 | 4.04 |
+| two dir B × two truncated | 1.81 | 0.55 | 9.27 | 3.99 |
+
+Grounds ΔE 1.06–3.66, accents ΔE 6.82–9.85 — every pair inside both bars, so the bar agrees
+with the reading those runs already got. The rejected directions from the same drafting stay
+out of it: the dark one is ΔE 87 from every sampled ground, the teal one 68.
+
+**This strengthens the SC-001 finding rather than softening it.** "No shared palette value"
+passed because no hex string repeated; under a perceptual bar the five sampled runs are one
+palette, across both fixtures, every time. The criterion was not narrowly missed — it was
+measured with the wrong instrument.
+
+One calibration detail worth stating, because it decided the shape of `same_direction`: the
+accent bar alone does not separate the *rejected dark* direction, whose orange comes within
+ΔE 17 of a sampled accent. A ground is the decision an accent is chosen against, so both
+have to hold.
+
+### The sampling harness
+
+`scripts/sample_directions.py` draws the plan stage N times per fixture through the real
+`handle_plan`, so what is sampled is the production path, prompt version and all. It writes
+each brand doc to disk and prints a report: pairing, archetype and section-layout
+distributions within each fixture; the full cross-fixture ΔE matrix per palette slot; and the
+verdict under the thresholds above. Ties are reported as ties — `most_common(1)` over an
+all-distinct sample returns whatever the dict held first, and a verdict decided by insertion
+order is worse than none.
+
+Two facts make the sampling cheap and honest, both verified in source: the Strategist does
+not memoise, so repeated plan stages against one brief are fresh draws; and the harness never
+truncates, so each draw is its own run row. One brief row per fixture, N runs against it —
+`briefs.content_sha256` is unique, and N brief rows would mean perturbing the payload, which
+changes the thing being sampled.
+
+### The draw — 4 × 2, 2026-08-14, $2.91
+
+Eight plan stages, scratch database, `--real`. Every one succeeded: 8 `done` tasks, 8
+`agent_calls` rows at $0.199–$0.538 and 67–99 s each, 346,136 input and 47,234 output tokens,
+**$2.912** total. (Two earlier attempts the same day stopped on the first sample with
+`invalid_request_error`, "credit balance is too low", spending nothing. The 400 was not
+retried and the harness refused to count a failed stage as a draw — both as designed.)
+
+| | pairing | page archetype | bg | accent |
+|---|---|---|---|---|
+| one 0 | `archivo-black` / `libre-baskerville` | `editorial_stack` | `#F3EAD8` | `#C0442A` |
+| one 1 | `zilla-slab` / `ibm-plex-sans` | `editorial_stack` | `#F4EDE1` | `#BF4A1C` |
+| one 2 | `archivo-black` / `libre-baskerville` | `editorial_stack` | `#F4EDE2` | `#D2521C` |
+| one 3 | `jetbrains-mono` / `libre-baskerville` | `dense_index` | `#F4EFE6` | `#1B6F5B` |
+| two 0 | `archivo-black` / `source-serif-4` | `split_technical` | `#f2efe6` | `#a63d16` |
+| two 1 | `zilla-slab` / `ibm-plex-sans` | `split_technical` | `#EFEAE0` | `#A63B12` |
+| two 2 | `zilla-slab` / `ibm-plex-sans` | `split_technical` | `#F2EDE3` | `#B5451B` |
+| two 3 | `archivo-black` / `source-serif-4` | `split_technical` | `#14171a` | `#ffb000` |
+
+**The verdict, under the restated criterion below: still NOT MET, and now failing on exactly
+one dimension of three.**
+
+| check | result | measured |
+|---|---|---|
+| modal pairings differ | **PASS** | `{archivo-black/libre-baskerville}` vs `{archivo-black/source-serif-4, zilla-slab/ibm-plex-sans}` — disjoint |
+| modal archetypes differ | **PASS** | `editorial_stack` (3/4) vs `split_technical` (4/4) |
+| modal palettes are different directions | **FAIL** | medoids ΔE accent 8.2 (bar 20), bg 1.7 (bar 10) |
+
+#### Two readings this retracts
+
+1. **"The body face has been `ibm-plex-sans` three times out of three."** Across these eight
+   it is `libre-baskerville` ×3, `ibm-plex-sans` ×3, `source-serif-4` ×2. There is no
+   body-face convergence; n=3 was reading a coincidence.
+2. **"The display roster has one moderate face among five extremes"**, offered as the cause of
+   pairing convergence. Four distinct pairings in eight draws, and the only pairing shared
+   across fixtures (`zilla-slab/ibm-plex-sans`) is modal in neither fixture on its own. **The
+   T004 follow-up — curating more moderate display faces — is not indicated by these numbers**
+   and should not be done on this evidence.
+
+#### What it confirms, and sharpens
+
+The palette is the convergent thing, as three samples suggested, and it is now quantified:
+**7 of 8 grounds are the same cream** (`#EFEAE0`–`#F4EFE6`) and **6 of 8 accents the same
+burnt orange** (`#A63B12`–`#D2521C`). The two fixtures' typical palettes sit ΔE 8.2 apart on
+the accent and 1.7 on the ground, against bars calibrated on palettes a reader had already
+called identical.
+
+But it is not that the model *cannot* leave the family. It leaves twice in eight, and
+coherently both times: `one 3` is a cream ground with a **teal** accent under `dense_index`
+and a monospace display face; `two 3` is a **dark** ground with an amber accent. So the shape
+of the finding is not "one direction is reachable" but "the paper-and-ink direction is
+returned to about three times in four".
+
+Archetype is the strongest separator in the sample and needs no fix: `editorial_stack` 3/4
+against `split_technical` 4/4, with the video archetype tracking it (`editorial_warm` 3/4 vs
+`technical_spec_sheet` 4/4). Section layouts spread across nine and eight distinct ids
+respectively, so the grown library (FR-018) is being used, not decorated with.
+
+### What the numbers decided
+
+| the samples showed | the indicated fix |
+|---|---|
+| palettes cluster cream across fixtures at n=4 each | **fires** — rewrite the palette instruction from "one banned default" to traceability: every hex forced by something this brief says |
+| one pairing dominates within *and* across fixtures | **does not fire** — four pairings in eight draws, modal sets disjoint |
+| distributions overlap but draws differ | **fires for type and archetype** — SC-001 as written over-claims on those two, which the restatement below fixes |
+
+So the one branch of work these numbers justify is the palette instruction, and it is its own
+branch with this report as its justification. T043's second half — varying the prompt's
+illustrative triple in a `v4` and re-sampling — is the experiment that would test whether the
+triple is what pulls the commitment back to paper-and-ink; this harness is what makes the
+re-sample cost $2.91 and half an hour rather than a judgement call.
+
+The restatement, written before these numbers existed and unchanged by them, **applied only on
+sign-off** since it is a spec change:
+
+> Across N ≥ 4 sampled runs per fixture, the two fixtures' modal directions differ: no shared
+> pairing mode, modal palettes not same-direction under the calibrated thresholds, and no
+> shared archetype mode — verified by the sampling report, not by one pair of runs.
+
+One pair of runs cannot verify a distributional property; three samples already proved that
+twice in this document.
+
 ## SC-007, the pre/post regression guard — **NOT MET, for lack of headroom**
 
 Fixture one built off `main` in a worktree against a second scratch database ($0.755), linted
