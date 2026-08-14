@@ -1,0 +1,121 @@
+{
+  "name": "Meridian Coffee Roasters",
+  "type": {
+    "body": "ibm-plex-sans",
+    "display": "zilla-slab"
+  },
+  "voice": {
+    "do": [
+      "Talk about the farmers and the roast, not just the flavour notes",
+      "Keep sentences short",
+      "Name origins, roast timing and bag sizes plainly, as facts",
+      "Write in the first person plural, as the people who did the roasting",
+      "Say what something does not include when it does not include it"
+    ],
+    "dont": [
+      "Never use wine-tasting jargon: no 'notes of', 'mouthfeel', 'terroir', 'bright acidity', 'finish'",
+      "Never claim a health benefit of any kind",
+      "No exclamation marks",
+      "Never call the coffee artisanal, craft, premium, curated or hand-crafted",
+      "Never call anything revolutionary, game-changing or best-in-class",
+      "Never use the word 'journey' about coffee, farmers or customers",
+      "Never name or insult a competitor",
+      "Never promise anything the offering does not include"
+    ],
+    "adjectives": [
+      "warm",
+      "direct",
+      "unpretentious",
+      "plainspoken",
+      "specific"
+    ]
+  },
+  "palette": {
+    "bg": "#f4ede3",
+    "fg": "#241a14",
+    "muted": "#6f5f52",
+    "accent": "#c2410c"
+  },
+  "offerings": [
+    {
+      "name": "Roaster's Choice Subscription",
+      "billing": "subscription",
+      "features": [
+        "Fresh 340g bag every 4 weeks",
+        "Rotating single-origin selection",
+        "Roasted within 48 hours of shipping",
+        "Skip or cancel anytime"
+      ],
+      "description": "A rotating 340g bag of our current favourite single-origin, roasted fresh and delivered every four weeks.",
+      "not_covered": [
+        "Espresso machine rental",
+        "Same-week delivery"
+      ],
+      "price_minor": 1800,
+      "currency_display": "EUR"
+    },
+    {
+      "name": "Origins Gift Box",
+      "billing": "one_time",
+      "features": [
+        "Three 200g bags, three origins",
+        "Printed tasting notes card",
+        "Gift-ready packaging"
+      ],
+      "description": "A one-time gift box with three 200g bags from three different origins, plus a tasting card.",
+      "not_covered": [
+        "Brewing equipment",
+        "International shipping"
+      ],
+      "price_minor": 4200,
+      "currency_display": "EUR"
+    }
+  ],
+  "descriptor": "Neighbourhood roastery shipping single-origin coffee",
+  "positioning": "For people who actually drink their coffee before it dies, Meridian roasts single-origin beans to order in small batches and ships within 48 hours — because the bag on the supermarket shelf was fine once too, several months ago.",
+  "motion_language": "slow settle, hard cut",
+  "video_archetype": "technical_spec_sheet",
+  "composition_plan": [
+    {
+      "intent": "First row of the split: the label column names what this business is, the wide column carries the freshness promise and one action, beside a single flat visual field. Not centred, not a full-width band.",
+      "layout": "hero_split",
+      "section": "hero"
+    },
+    {
+      "intent": "The staleness problem set large against a narrow column of detail on how roasting to order answers it. The page's argument, placed before anything is sold.",
+      "layout": "split_manifesto",
+      "section": "the problem"
+    },
+    {
+      "intent": "Order to doorstep as sequential steps, one line of explanation each, so the promise reads as a process someone runs rather than a slogan. The list supplies the numbering.",
+      "layout": "numbered_process",
+      "section": "how it works"
+    },
+    {
+      "intent": "A ruled band of the given figures, each under a short label, so the freshness claim is legible as data at a glance.",
+      "layout": "stat_band",
+      "section": "by the numbers"
+    },
+    {
+      "intent": "The catalogue side by side, one column per offering, each showing what is included and what is not, so a visitor can choose without reading prose.",
+      "layout": "offer_table",
+      "section": "what we sell"
+    },
+    {
+      "intent": "One full-width row per point of difference — sourcing, batch size, roast-to-ship discipline — one idea to a row, no cards.",
+      "layout": "feature_rows",
+      "section": "why us"
+    },
+    {
+      "intent": "Absorb the practical friction — skipping, cancelling, what falls outside each offering — so the catalogue section stays clean.",
+      "layout": "faq_accordion",
+      "section": "questions"
+    },
+    {
+      "intent": "Ground the roastery in a real street, phone and inbox. Nothing else in this section.",
+      "layout": "contact_block",
+      "section": "find us"
+    }
+  ],
+  "composition_archetype": "split_technical"
+}

@@ -1,0 +1,122 @@
+{
+  "name": "Hollowfield Cycle Workshop",
+  "type": {
+    "body": "ibm-plex-sans",
+    "display": "archivo-black"
+  },
+  "voice": {
+    "do": [
+      "Name the part and the measurement",
+      "Say what a job will not fix",
+      "Use the trade name for a component rather than a friendlier substitute",
+      "Keep sentences short",
+      "Write as the bench, about work already done"
+    ],
+    "dont": [
+      "Never use the words lifestyle, journey, adventure or passion",
+      "Never write the phrase ride of your life or any variant of it",
+      "Never state or imply a price for a repair before the bike has been seen",
+      "Never praise how a bike looks",
+      "Never call the workshop boutique, artisan or bespoke",
+      "Never call the work revolutionary, game-changing or the best",
+      "No exclamation marks",
+      "Never promise a turnaround or booking time that is not stated in the offerings",
+      "Never claim a service fixes something listed as not covered"
+    ],
+    "adjectives": [
+      "meticulous",
+      "unhurried",
+      "plainspoken",
+      "specific"
+    ]
+  },
+  "palette": {
+    "bg": "#E7E3D9",
+    "fg": "#1B1D1A",
+    "muted": "#6B6459",
+    "accent": "#B4451F"
+  },
+  "offerings": [
+    {
+      "name": "Winter Service Plan",
+      "billing": "subscription",
+      "features": [
+        "Quarterly strip-down and rebuild",
+        "Chain wear measured and reported each visit",
+        "Cables and brake fluid included",
+        "Same-week booking through the season"
+      ],
+      "description": "A quarterly strip-down through the salt season: drivetrain cleaned and measured, cables replaced, brakes bled, bearings checked.",
+      "not_covered": [
+        "Replacement drivetrain parts",
+        "Frame respray"
+      ],
+      "price_minor": 6500,
+      "currency_display": "GBP"
+    },
+    {
+      "name": "Hand-Built Wheelset",
+      "billing": "one_time",
+      "features": [
+        "Hand-laced, tensioned and stress-relieved",
+        "Rim and hub chosen with the rider",
+        "Tension chart supplied with the build",
+        "One free re-true after the first month"
+      ],
+      "description": "A pair of wheels laced and tensioned by hand on our own bench, built to the rider's weight and the roads they ride.",
+      "not_covered": [
+        "Tyres and tubes",
+        "Electronic hub dynamos"
+      ],
+      "price_minor": 27500,
+      "currency_display": "GBP"
+    }
+  ],
+  "descriptor": "Two-bench railway-arch bicycle workshop",
+  "positioning": "For year-round commuters and audax riders who put real mileage on one bike, Hollowfield is two mechanics with one bench each who measure the wear a chain shop hands back untouched and quote every job in writing before a spanner moves.",
+  "motion_language": "indexed, damped, unhurried",
+  "video_archetype": "technical_spec_sheet",
+  "composition_plan": [
+    {
+      "intent": "Open on the first row of the spec split: name the workshop and where it is, with one action beside a single visual field. Off-axis, no centred stack, no pitch language.",
+      "layout": "hero_split",
+      "section": "opening_row"
+    },
+    {
+      "intent": "State the operating principle large beside a narrow column of detail explaining how one bench per mechanic changes what the customer gets back.",
+      "layout": "split_manifesto",
+      "section": "why_two_benches"
+    },
+    {
+      "intent": "One row per failure of the alternative, each stated as a condition the reader recognises from their own bike.",
+      "layout": "feature_rows",
+      "section": "the_problem"
+    },
+    {
+      "intent": "A band of figures the brief already supplies about the workshop's age and size, under short labels, read as evidence rather than decoration.",
+      "layout": "stat_band",
+      "section": "workshop_facts"
+    },
+    {
+      "intent": "The sequence from drop-off to written quote to handover, one line per step, so the customer sees where the decision point sits. Numbering comes from the list itself.",
+      "layout": "numbered_process",
+      "section": "how_a_job_runs"
+    },
+    {
+      "intent": "The catalogue side by side, one column per offering, each carrying its price, its billing, what it includes and what it does not, so scope is settled on the page.",
+      "layout": "offer_table",
+      "section": "what_we_sell"
+    },
+    {
+      "intent": "Answer the boundary questions the offerings raise: what falls outside a plan, what is charged separately, what happens mid-season.",
+      "layout": "faq_accordion",
+      "section": "scope_questions"
+    },
+    {
+      "intent": "Address, phone and email for reaching the bench, and nothing else.",
+      "layout": "contact_block",
+      "section": "find_the_arch"
+    }
+  ],
+  "composition_archetype": "split_technical"
+}

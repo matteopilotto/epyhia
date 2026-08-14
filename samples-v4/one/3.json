@@ -1,0 +1,127 @@
+{
+  "name": "Meridian Coffee Roasters",
+  "type": {
+    "body": "libre-baskerville",
+    "display": "jetbrains-mono"
+  },
+  "voice": {
+    "do": [
+      "Talk about the farmers and the roast, not just the flavour notes",
+      "Keep sentences short",
+      "State dates, timings and weights as plain facts",
+      "Name the region and the grower when describing a coffee",
+      "Say plainly what a product does not include",
+      "Use everyday words for taste, like chocolate, citrus or nutty"
+    ],
+    "dont": [
+      "Never use wine-tasting vocabulary such as terroir, bouquet, mouthfeel or finish",
+      "Never claim a health benefit for coffee",
+      "Never use exclamation marks",
+      "Never call the coffee artisanal, craft, curated or hand-crafted",
+      "Never call anything revolutionary, game-changing or disruptive",
+      "Never address the reader as a coffee lover, connoisseur or aficionado",
+      "Never imply a coffee is rare, exclusive or running out in order to hurry the reader",
+      "Never use the words journey, passion or obsession about the roastery"
+    ],
+    "adjectives": [
+      "warm",
+      "direct",
+      "unpretentious",
+      "plain-spoken",
+      "matter-of-fact"
+    ]
+  },
+  "palette": {
+    "bg": "#F4EFE6",
+    "fg": "#241C17",
+    "muted": "#6E6155",
+    "accent": "#C1440E"
+  },
+  "offerings": [
+    {
+      "name": "Roaster's Choice Subscription",
+      "billing": "subscription",
+      "features": [
+        "Fresh 340g bag every 4 weeks",
+        "Rotating single-origin selection",
+        "Roasted within 48 hours of shipping",
+        "Skip or cancel anytime"
+      ],
+      "description": "A rotating 340g bag of our current favourite single-origin, roasted fresh and delivered every four weeks.",
+      "not_covered": [
+        "Espresso machine rental",
+        "Same-week delivery"
+      ],
+      "price_minor": 1800,
+      "currency_display": "EUR"
+    },
+    {
+      "name": "Origins Gift Box",
+      "billing": "one_time",
+      "features": [
+        "Three 200g bags, three origins",
+        "Printed tasting notes card",
+        "Gift-ready packaging"
+      ],
+      "description": "A one-time gift box with three 200g bags from three different origins, plus a tasting card.",
+      "not_covered": [
+        "Brewing equipment",
+        "International shipping"
+      ],
+      "price_minor": 4200,
+      "currency_display": "EUR"
+    }
+  ],
+  "descriptor": "Neighbourhood roastery shipping single-origin coffee",
+  "positioning": "For people who check the roast date before the flavour notes, Meridian roasts to order in small batches and ships inside 48 hours — because coffee is perishable, and a supermarket shelf is where it goes to die.",
+  "motion_language": "ticking, unhurried, ruled",
+  "video_archetype": "technical_spec_sheet",
+  "composition_plan": [
+    {
+      "intent": "Open on the first row of the spec split: the business name and its plainest promise held in the wide column, a single flat visual field beside it, label in the narrow column. Establishes immediately that this page is a document, not a pitch.",
+      "layout": "hero_split",
+      "section": "Roastery masthead and freshness commitment"
+    },
+    {
+      "intent": "State the problem the business exists to solve at large size, with the narrow column carrying the sober detail behind it. This is where the reader recognises their own cupboard.",
+      "layout": "split_manifesto",
+      "section": "The stale-bag problem"
+    },
+    {
+      "intent": "Show the sequence from order placed to bag delivered as an ordered list, one line per step, so the timing claim reads as a procedure that can be checked rather than a boast.",
+      "layout": "numbered_process",
+      "section": "Order to doorstep"
+    },
+    {
+      "intent": "Put the offerings side by side, one column each, with matching rows so weight, cadence, price and what is excluded line up and can be compared without reading prose.",
+      "layout": "offer_table",
+      "section": "What we ship"
+    },
+    {
+      "intent": "A band of the given figures under short labels — founding year, batch and timing facts — flipping the narrow column to the other side so the rule moves down the page.",
+      "layout": "stat_band",
+      "section": "Roastery facts"
+    },
+    {
+      "intent": "One full-width row per idea about growers, origins and how the roast is decided, so the human part of the story gets air after the dense comparison rows.",
+      "layout": "feature_rows",
+      "section": "Sourcing and roasting"
+    },
+    {
+      "intent": "A single quiet band of short attributions that anchors the roastery in a real street and a real trade, without a testimonial carousel.",
+      "layout": "proof_strip",
+      "section": "Stockists and neighbourhood credentials"
+    },
+    {
+      "intent": "Answer the shipping, skipping, cancelling and not-included questions where a buyer actually hesitates, so nothing has to be softened elsewhere on the page.",
+      "layout": "faq_accordion",
+      "section": "Practical questions"
+    },
+    {
+      "intent": "Close with the address, email and phone and nothing else, ending the specification sheet on a physical location.",
+      "layout": "contact_block",
+      "section": "Visit or write to us"
+    }
+  ],
+  "composition_archetype": "split_technical"
+}

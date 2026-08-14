@@ -1,0 +1,23 @@
+## Three directions considered
+
+**A — Paper editorial.** Bone ground `#FAF6EF`, espresso ink, burnt-orange accent, Playfair Display over Libre Baskerville. Bet: the page is a food magazine spread; warmth carried by high-contrast serif type. Rejected — the brief bans wine-tasting jargon and asks for unpretentious; Playfair *is* wine-tasting jargon set in type.
+
+**B — Dark roast poster.** `#191310` ground, cream text, hot amber accent, Bebas Neue over Work Sans, `full_bleed_poster`. Bet: invert the ground and shout; roast-darkness as the whole visual idea. Rejected — "no burnt beans" and "neighbourhood roastery" argue against a loud dark poster deck; the ground would contradict the product claim.
+
+**C — Roast ledger (committed).** Warm unbleached-paper ground, roast-brown ink, verdigris/teal stamp accent, JetBrains Mono over Source Serif 4, `dense_index`. Bet: freshness is a record, not a mood — the page is the roast log itself, rows of origins and dates, with the type doing the utility and the paper doing the warmth. Three hues, no shouting, nothing centred. This is the one the brief argues for: roast-to-order, ship within 48 hours, honest sourcing, short sentences.
+
+I dropped two required fields. Resubmitting complete.
+
+Brand document recorded and all four stages queued.
+
+**The committed direction — "roast ledger":**
+
+- **Ground:** `#f7f2e8`, unbleached paper rather than white — warmth from the material, not from decoration.
+- **Ink:** `#2a211c`, a roast brown standing in for black, so the darkest thing on the page is still coffee-coloured.
+- **Accent:** `#0d7c8a`, a verdigris teal that reads like a stamped date. It sits on the blue–yellow axis, well away from the warm brown ink, so it stays separable for anyone who cannot split red from green.
+- **Muted:** `#6b5d52`, a warm grey-brown for labels — holds legibility on the cream without introducing a fourth family of hue.
+- **Pairing:** `jetbrains-mono` display against `source-serif-4` body — utilitarian terminal type for origins, dates and batch labels, humanist print serif for the growers and the roast. Contrast of era and of purpose; neither face is doing the other's job.
+- **Archetype:** `dense_index` — the page is the roast log read top to bottom, no marketing hero, no cards. Paired with `technical_spec_sheet` video so the 48-hour claim is carried by rules and figures rather than steam-rising b-roll.
+- **Motion:** *measured settle, hard cuts.*
+
+Two notes for the record: the offerings are carried across verbatim, including the `EUR` display currency against the US locale and address — that discrepancy is the brief's, and I have not resolved it on the crew's behalf. `currency_charge` was withheld from the document as instructed. The `dont` list is entirely word-level, so the Reviewer can check any entry against a single sentence without counting anything; the brief's "keep sentences short" stays a `do` in the brief's own register.

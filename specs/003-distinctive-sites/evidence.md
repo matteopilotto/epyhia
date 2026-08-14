@@ -340,15 +340,118 @@ illustrative triple in a `v4` and re-sampling — is the experiment that would t
 triple is what pulls the commitment back to paper-and-ink; this harness is what makes the
 re-sample cost $2.91 and half an hour rather than a judgement call.
 
-The restatement, written before these numbers existed and unchanged by them, **applied only on
-sign-off** since it is a spec change:
+The restatement was written before these numbers existed and is unchanged by them. **Signed off
+and applied to `spec.md` on 2026-08-14:**
 
 > Across N ≥ 4 sampled runs per fixture, the two fixtures' modal directions differ: no shared
 > pairing mode, modal palettes not same-direction under the calibrated thresholds, and no
 > shared archetype mode — verified by the sampling report, not by one pair of runs.
 
 One pair of runs cannot verify a distributional property; three samples already proved that
-twice in this document.
+twice in this document. Note what the restatement does **not** do: it does not lower the bar
+into reach. The draw above was already judged under it and still fails, on the palette. What it
+changes is that the failure is now a number that a re-sample can move, rather than a reading of
+two artifacts that the next pair of runs might reverse.
+
+## The v4 experiment — the illustrative triple is **not** the cause (T043)
+
+The suspect was specific and, on the evidence then available, well supported: `v3.jinja`
+illustrates "distinct" with three named directions — *"a dark, high-contrast direction against
+a paper-and-ink one against a single saturated hue"* — the one traced plan stage drafted those
+three in that order and committed to the middle one, and 6 of 8 sampled palettes were that
+middle example's family.
+
+`prompts/strategist/v4.jinja` (branch `exp/strategist-v4-triple`, **not merged**) keeps the
+requirement, the anti-averaging argument and the swap test verbatim and replaces the worked
+example with the property it was illustrating: name what each direction bets the page on, and
+make no two bets the same. One paragraph, four lines; nothing else in the file differs. Sampled
+4 × 2 against a fresh scratch database, $2.71.
+
+| | pairing | page archetype | bg | accent |
+|---|---|---|---|---|
+| one 0 | `zilla-slab` / `ibm-plex-sans` | `split_technical` | `#f4ece1` | `#c2551f` |
+| one 1 | `jetbrains-mono` / `source-serif-4` | `dense_index` | `#f7f2e8` | `#0d7c8a` |
+| one 2 | `zilla-slab` / `ibm-plex-sans` | `split_technical` | `#f4ede3` | `#c2410c` |
+| one 3 | `jetbrains-mono` / `libre-baskerville` | `split_technical` | `#F4EFE6` | `#C1440E` |
+| two 0 | `zilla-slab` / `ibm-plex-sans` | `split_technical` | `#f2ece1` | `#c2540f` |
+| two 1 | `archivo-black` / `ibm-plex-sans` | `split_technical` | `#E7E3D9` | `#B4451F` |
+| two 2 | `zilla-slab` / `ibm-plex-sans` | `split_technical` | `#EDE9E1` | `#B4491A` |
+| two 3 | `archivo-black` / `ibm-plex-sans` | `split_technical` | `#EDE7DC` | `#A33B14` |
+
+**v4 is worse or equal on every axis, and the axis it was aimed at did not move.**
+
+| | v3 (control) | v4 |
+|---|---|---|
+| modal pairings differ | **PASS** | **FAIL** — `zilla-slab/ibm-plex-sans` modal in both |
+| modal archetypes differ | **PASS** — `editorial_stack` vs `split_technical` | **FAIL** — `split_technical` modal in both |
+| modal palettes are different directions | FAIL — ΔE accent 8.2, bg 1.7 | FAIL — ΔE accent 9.4, bg 2.2 |
+| cream grounds | 7/8 | 8/8 |
+| burnt-orange accents | 6/8 | 7/8 |
+
+So **v4 is not adopted**, and the hypothesis is refuted rather than merely unsupported:
+removing the example did not loosen the palette, which is the only thing it was removed to
+loosen. Two caveats, because this document has over-read small samples twice. n=4 per fixture
+is one comparison, not a trend; and the archetype collapse — fixture one moving wholesale from
+`editorial_stack` to `split_technical` — is the change least plausibly caused by a paragraph
+that never mentions archetypes. What that pair of results does establish is that there is no
+case for shipping v4, which is the decision that was open.
+
+### What the narrations actually show — and it relocates the cause again
+
+All 8 draws narrated their drafting (capture added in PR #39), and all 8 worked through three
+named directions — seven lettered A/B/C, one numbered. The drafting **diverges every time**,
+under v4 as under v3, so the example triple was never what produced three directions and
+removing it did not reduce the range considered. The trio is not always the same three: a dark
+high-contrast direction appears in nearly every draw, but the third slot varies — a poster in
+some, a colourless monospace page in another, a three-hue ledger in the draw that committed to
+teal.
+
+The convergence is entirely in the *commitment*, and every rejection says why in the brief's own
+words:
+
+> Rejected — a monospace dark page reads like a devtool, and the brief's voice is "warm,
+> unpretentious," not instrumented.
+
+> Rejected: poster-loud collides with "no burnt beans, honest sourcing" — the brief's
+> differentiator is verifiable detail, and detail is what a poster has no room for.
+
+> Rejected — a dark ground makes rules and measurements decorative, and this business argues
+> with figures, not atmosphere.
+
+> Rejected: it reads like a tooling company, not two people in an arch in Sheffield.
+
+Twelve rejections across the eight draws, every one citing a voice adjective, a
+differentiator, or a fact from the brief it was given. The committed palettes are argued the
+same way — one draw defends its accent as *"the colour of a roast at the edge of too far, held
+back, which is the tagline's whole point"*.
+
+**Which means the palette instruction rewrite that the first report indicated is also not the
+fix.** Traceability — every hex forced by something this brief says — is what the model is
+already doing, in writing, unprompted. Asking for it again cannot change an output that is
+already produced that way.
+
+The remaining explanation is the one the fixtures make hard to see: **both briefs argue against
+the same two directions.** One is a neighbourhood roastery whose voice words are *warm,
+direct, unpretentious*; the other a two-person workshop that is *meticulous, unhurried,
+plainspoken*. A dark poster contradicts both. A loud saturated page contradicts both. Paper-and-
+ink is what is left, and the Strategist reaches it by reading the brief correctly — which is
+what it is for.
+
+So SC-001's palette clause, applied to *these two fixtures*, may be asking the Strategist to
+ignore the brief in order to satisfy a cross-run property no single run can see. That is a
+question about the criterion and the fixture set, not about the prompt. Two candidate
+resolutions, neither cheap enough to guess at:
+
+1. **A third fixture whose voice genuinely differs** — loud, or nocturnal, or luxury — and the
+   palette clause tested across fixtures that disagree. If the palette follows the voice, the
+   Strategist is behaving correctly and SC-001's palette clause needs to say "different briefs"
+   rather than "different runs".
+2. **Narrow the palette clause** to what is defensible over two similar briefs: that no default
+   is being reached for, evidenced by the drafting range, rather than that the commitments
+   differ.
+
+Filed rather than done: choosing between them is a spec decision, and this document's record is
+that spending on the next sample before the criterion is settled buys another retraction.
 
 ## SC-007, the pre/post regression guard — **NOT MET, for lack of headroom**
 

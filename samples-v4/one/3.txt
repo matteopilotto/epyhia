@@ -1,0 +1,21 @@
+Three directions considered before committing:
+
+**A — "Roast log."** Warm unbleached paper ground `#F4EFE6`, brown-black ink, ember orange accent; `jetbrains-mono` display against `libre-baskerville` body. Bet: the page is a dated ledger, not a mood board — freshness is a *number on a ticket*, and the type carries the proof while the colour stays as plain as a paper bag.
+
+**B — "Dark roast interior."** Near-black roasted ground `#1C1512`, cream text, terracotta accent; `playfair-display` + `work-sans`. Bet: inverted ground and high-contrast serif do the work — atmosphere, candlelit café. Rejected: it is the safe coffee page, it flatters the drink rather than the roast schedule, and a high-contrast display serif edges toward exactly the wine-tasting register the brief bans.
+
+**C — "Market poster."** Four hues in play — oat, ink, kiln red, leaf green; `archivo-black` + `ibm-plex-sans`, full-bleed poster fields. Bet: loudness and hue count. Rejected: a two-product roastery whose argument is timing has nothing to fill four poster screens with, and blunt signage type reads as a chain, not a neighbourhood.
+
+Committing to **A**: the brief's own sharp edge is "within 48 hours of roasting, every time" — a spec-sheet claim from an unpretentious shop. The mono does the ledger; the Baskerville keeps the farmers human. Nothing warm is lost, because the ground and ink are both brown, never grey.
+
+Brand document recorded and all four stages queued.
+
+**The locked direction — "roast log":**
+
+- **Palette.** `bg #F4EFE6` is unbleached paper, the colour of the bag itself, not a white page. `fg #241C17` is a brown-black — dark roast ink, never neutral grey, so warmth survives even in the rules and labels. `accent #C1440E` is kiln ember, reserved for the timing figures and the single action; it separates from `fg` by lightness as well as hue, so it survives red–green colour blindness. `muted #6E6155` is chaff brown, dark enough to read on the paper ground for labels and exclusions.
+- **Type.** `jetbrains-mono` for display against `libre-baskerville` for body — a contrast of warmth and purpose, not two grotesques. The mono sets the roast dates, weights and spec labels like a ticket taped to the bag; the wide book serif carries the farmer-and-roast paragraphs so the human half never sounds like a terminal readout.
+- **Archetype.** `split_technical`, because the sharpest thing in the brief is a specification: 340g, four weeks, 48 hours, every time. The narrow label column makes the page readable as a document, and the hero is simply the first row of it — no centred headline over a coffee-bean photograph.
+- **Motion.** `ticking, unhurried, ruled` — increments and rules drawing themselves, nothing bouncing.
+- **Do-not list.** Aimed at the two named risks in the brief and the drift the copywriter would otherwise reach for: wine vocabulary, health claims, "artisanal", scarcity pressure, and "journey/passion/obsession". Each is checkable by reading one sentence, and none turns on a count.
+
+`offerings` carried across verbatim — both products, in brief order, prices unrounded and unconverted at 1800 and 4200, `currency_display` left as `EUR` exactly as stated, `not_covered` lines intact, and `currency_charge` omitted.

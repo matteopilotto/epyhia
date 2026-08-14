@@ -60,10 +60,24 @@ Expected:
 
 ## 3. The two-fixture divergence check (US4/US5, SC-001)
 
-Run both brief fixtures; compare the two runs' artifacts side by side (console or
-`eval/`): the two brand docs share no palette, no pairing ids, and no page archetype,
-and the two pages differ structurally. This is a live-model property — it belongs to
-the evidence pass, not CI.
+Sample the plan stage, do not eyeball two runs — SC-001 is a property of a
+distribution, and reading it off a single pair produced two conclusions that later
+samples retracted.
+
+```sh
+docker exec epyhia-postgres-1 psql -U epyhia -d postgres -c "CREATE DATABASE epyhia_sample OWNER epyhia"
+DATABASE_URL=…/epyhia_sample uv run alembic upgrade head
+DATABASE_URL=…/epyhia_sample uv run python scripts/sample_directions.py --real --samples 4
+```
+
+A scratch database because the harness never truncates: each draw is its own run row.
+Four draws per fixture costs about $2.90 and half an hour. The report — printed and
+written to `samples/report.md` — gives the within-fixture distributions, the
+cross-fixture ΔE matrix per palette slot, and the verdict: modal pairings disjoint,
+modal archetypes disjoint, and modal palettes not same-direction under
+`epyhia/design/colour.py`'s calibrated thresholds. This is a live-model property — it
+belongs to the evidence pass, not CI. The thresholds themselves are unit-tested and do
+run in CI.
 
 ## 4. Regression guard (SC-007)
 

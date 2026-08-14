@@ -163,14 +163,18 @@ what "generic" means.
 converges on similar brand docs across different briefs — but it refines the pipeline rather
 than adding a capability, so it lands last.
 
-**Independent Test**: Run the two existing brief fixtures through the Strategist and confirm
-the two brand docs differ in palette, pairing, and archetype; confirm the brand doc's shape
-is unchanged (no new fields leak the discarded alternatives).
+**Independent Test**: Sample the plan stage N ≥ 4 times per fixture through the real handler
+(`scripts/sample_directions.py`) and confirm the two fixtures' modal directions differ in
+palette, pairing, and archetype; confirm the brand doc's shape is unchanged (no new fields
+leak the discarded alternatives).
 
 **Acceptance Scenarios**:
 
-1. **Given** the two existing brief fixtures, **When** each runs through the Strategist,
-   **Then** the two brand docs share no palette, no type pairing, and no page archetype.
+1. **Given** the two existing brief fixtures, **When** each is sampled N ≥ 4 times through
+   the Strategist, **Then** the two fixtures' modal directions share no type pairing, no page
+   archetype, and no palette direction under the calibrated perceptual thresholds. A single
+   run of each cannot settle this — it is a property of the distribution, and reading it off
+   one pair produced two conclusions that later samples retracted.
 2. **Given** a produced brand doc, **When** its shape is validated, **Then** it is unchanged
    from today — the drafted alternatives do not appear in it.
 3. **Given** the Web Builder's rendered prompt, **When** it is read, **Then** it names the
@@ -306,9 +310,18 @@ is unchanged (no new fields leak the discarded alternatives).
 
 ### Measurable Outcomes
 
-- **SC-001**: The two existing brief fixtures produce pages that share no typeface pairing,
-  no palette, and no identical page skeleton — verifiable by inspecting the two runs'
-  artifacts side by side.
+- **SC-001**: Across N ≥ 4 sampled runs per fixture, the two existing brief fixtures' modal
+  directions differ: no shared pairing mode, modal palettes not same-direction under the
+  calibrated perceptual thresholds, and no shared page archetype mode — verified by the
+  sampling report (`scripts/sample_directions.py`), not by one pair of runs.
+
+  *Restated 2026-08-14, on the evidence in `evidence.md`.* The original wording asked for two
+  runs to share no pairing, palette or skeleton, "verifiable by inspecting the two runs'
+  artifacts side by side". Two problems, both observed rather than argued. It made a
+  distributional claim checkable only against a single draw, and two conclusions drawn that
+  way had to be retracted once a third sample existed. And "no shared palette" was read as
+  string inequality, which two palettes one hex digit apart satisfy — the criterion passed on
+  a technicality while both pages were a cream ground with a burnt-orange accent.
 - **SC-002**: A page built with deliberate default tells is detected: the lint reports every
   seeded tell, and after the single revision pass the finding count strictly decreases.
 - **SC-003**: A clean run's added cost is one visual review; a flagged run's added cost is

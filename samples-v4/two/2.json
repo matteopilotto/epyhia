@@ -1,0 +1,124 @@
+{
+  "name": "Hollowfield Cycle Workshop",
+  "type": {
+    "body": "ibm-plex-sans",
+    "display": "zilla-slab"
+  },
+  "voice": {
+    "do": [
+      "Name the part and the measurement",
+      "Say what a job will not fix",
+      "Keep sentences short",
+      "Use the rider's own vocabulary: commute, salt, mileage, drivetrain",
+      "Say who does the work and when it happens",
+      "State what is included and what is extra in the same breath"
+    ],
+    "dont": [
+      "Never describe riding as a lifestyle, an experience or a journey",
+      "Never use the phrase 'the ride of your life' or any variation of it",
+      "Never quote, estimate or hint at a price for a repair before the bike has been seen",
+      "Never call a job quick, easy, painless or hassle-free",
+      "Never use the words passion, passionate or love in describing the work",
+      "Never call anything revolutionary, game-changing or cutting-edge",
+      "Never use exclamation marks",
+      "Never claim to be the best, the finest or the only workshop of its kind",
+      "Never call a bike beautiful, stunning or a work of art",
+      "Never address the reader as a mate, a legend or a warrior"
+    ],
+    "adjectives": [
+      "meticulous",
+      "unhurried",
+      "plainspoken",
+      "specific"
+    ]
+  },
+  "palette": {
+    "bg": "#EDE9E1",
+    "fg": "#17181A",
+    "muted": "#6A665E",
+    "accent": "#B4491A"
+  },
+  "offerings": [
+    {
+      "name": "Winter Service Plan",
+      "billing": "subscription",
+      "features": [
+        "Quarterly strip-down and rebuild",
+        "Chain wear measured and reported each visit",
+        "Cables and brake fluid included",
+        "Same-week booking through the season"
+      ],
+      "description": "A quarterly strip-down through the salt season: drivetrain cleaned and measured, cables replaced, brakes bled, bearings checked.",
+      "not_covered": [
+        "Replacement drivetrain parts",
+        "Frame respray"
+      ],
+      "price_minor": 6500,
+      "currency_display": "GBP"
+    },
+    {
+      "name": "Hand-Built Wheelset",
+      "billing": "one_time",
+      "features": [
+        "Hand-laced, tensioned and stress-relieved",
+        "Rim and hub chosen with the rider",
+        "Tension chart supplied with the build",
+        "One free re-true after the first month"
+      ],
+      "description": "A pair of wheels laced and tensioned by hand on our own bench, built to the rider's weight and the roads they ride.",
+      "not_covered": [
+        "Tyres and tubes",
+        "Electronic hub dynamos"
+      ],
+      "price_minor": 27500,
+      "currency_display": "GBP"
+    }
+  ],
+  "descriptor": "Railway-arch bicycle servicing and wheelbuilding",
+  "positioning": "For riders who put real winter mileage on one bike, Hollowfield is two mechanics at two benches who measure the worn parts, put the quote in writing, and give the bike back actually fixed — the opposite of a three-week chain-shop queue that returns the same tired drivetrain.",
+  "motion_language": "ratchet-step, unhurried, no bounce",
+  "video_archetype": "technical_spec_sheet",
+  "composition_plan": [
+    {
+      "intent": "Open on the first row of the specification split, off-centre: the narrow column labels the workshop and its location, the wide column states plainly what the place is and who it is for. No centred stack, no decorative field — the first screen should already read like the top of a job sheet.",
+      "layout": "hero_split",
+      "section": "hero"
+    },
+    {
+      "intent": "Set the workshop's governing rule at display size against a narrow column of practical detail, so the single conviction that separates this bench from a chain shop lands before any offering is described.",
+      "layout": "split_manifesto",
+      "section": "principle"
+    },
+    {
+      "intent": "One row per idea, each row carrying a labelled narrow column against its explanation: how the benches are staffed, who touches the bike, how work is recorded. Density here is the argument that the job is done by hand and by people.",
+      "layout": "feature_rows",
+      "section": "how-the-bench-works"
+    },
+    {
+      "intent": "The things that can be bought, side by side, one column each, with what is included and what is not given equal visual weight — the exclusions are part of the honesty, not fine print.",
+      "layout": "offer_table",
+      "section": "catalogue"
+    },
+    {
+      "intent": "The path a bike takes from arriving at the arch to being ridden away, one line per step, ordered list supplying its own numbering. Purpose is to make the written-quote stage visible as a step rather than a promise.",
+      "layout": "numbered_process",
+      "section": "intake"
+    },
+    {
+      "intent": "A single full-width band holding only the plain given figures about the workshop, each under a short label, so credibility is stated as record rather than as claim.",
+      "layout": "stat_band",
+      "section": "record"
+    },
+    {
+      "intent": "The questions a year-round commuter asks before leaving their only bike with someone: turnaround, what happens if more work is needed, what is not done here. Answers in the same flat register as the rest of the page.",
+      "layout": "faq_accordion",
+      "section": "questions"
+    },
+    {
+      "intent": "How to reach the bench and where the arch is, and nothing else — the page ends on a location and a way to book, not on a pitch.",
+      "layout": "contact_block",
+      "section": "contact"
+    }
+  ],
+  "composition_archetype": "split_technical"
+}
