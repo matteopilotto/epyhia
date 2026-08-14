@@ -172,9 +172,13 @@ anti-slop bar) does not require a redeploy of Python.
 I verified both against the installed package rather than the docs, because both are load-
 bearing:
 
-- **`Agent.run(...)` takes `run_id` natively**, and it propagates into Logfire spans. The
-  "one run id ties the brief → each agent → each action" requirement is therefore an
-  argument, not a context-var hack I have to maintain.
+- **`Agent.run(...)` takes `run_id` natively**, and it propagates into Logfire spans — so
+  "one run id ties the brief → each agent → each action" needs no context-var hack of my
+  own. I do not use the parameter, though: PydanticAI's `run_id` names *one agent run*, and
+  a pipeline makes six to ten of them under one EPYHIA run. The tie is Logfire baggage set
+  once around the worker's handler dispatch, which reaches every span opened underneath —
+  HTTP and database spans as well as agent ones — rather than the six call sites the
+  argument would have to be threaded through.
 - **Approval is built in** — `ApprovalRequired`, `DeferredToolRequests`,
   `ToolApproved`/`ToolDenied`, `deferred_tool_results`. So the gate's approval pause uses
   the framework's mechanism rather than a bespoke one. With one important caveat, in §4.4:

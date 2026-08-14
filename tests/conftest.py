@@ -4,13 +4,23 @@ import sys
 from collections.abc import AsyncIterator
 from pathlib import Path
 
+import logfire
 import pytest
 import pytest_asyncio
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
+from epyhia import observability
 from epyhia.config import settings
 
 _REPO_ROOT = Path(__file__).resolve().parent.parent
+
+# The suite must never ship spans. `send_to_logfire="if-token-present"` protects CI, which
+# has no token; it does not protect a developer who has just put one in `.env`, because
+# `load_dotenv()` puts it in the environment and the suite runs `create_app()` and
+# `run_worker()` for real. Disabling the exporter and marking tracing already configured
+# means neither of them can turn it back on and post a test run to the live project.
+logfire.configure(send_to_logfire=False)
+observability._configured = True
 
 
 def test_database_url() -> str:
