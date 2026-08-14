@@ -1,7 +1,10 @@
 import asyncio
+import time
 import uuid
 from collections.abc import AsyncIterator, Callable
+from contextlib import asynccontextmanager
 
+import httpx
 import pytest
 from pydantic_ai.exceptions import ModelAPIError, ModelHTTPError
 from pydantic_ai.models.function import AgentInfo, FunctionModel
@@ -37,6 +40,10 @@ SCOPED_INPUTS = {
 }
 
 PAGE = "<!doctype html><html><body><h1>generated</h1></body></html>"
+
+# The `sleeps` fixture replaces `asyncio.sleep` wholesale, and the deadline tests below need
+# one real wait to spend real budget with. Captured before any test can patch it.
+_REAL_SLEEP = asyncio.sleep
 
 
 @pytest.fixture
@@ -145,6 +152,49 @@ async def test_a_429_is_retried(db_session: AsyncSession, sleeps: list[float]) -
     assert len(calls) == 2
 
 
+async def test_a_dropped_connection_mid_stream_is_retried(
+    db_session: AsyncSession, sleeps: list[float]
+) -> None:
+    """The second failure of run `31b3e4ac`: `peer closed connection without sending complete
+    message body`, on a tethered link, recorded as a failed task with no retry.
+
+    A drop during *stream iteration* is the one the longest calls live on, and it is not a
+    `ModelAPIError`: the body is read by httpx directly, and neither the Anthropic SDK nor
+    PydanticAI wraps what it raises there.
+    """
+    run_id = await _open_run(db_session)
+
+    def dropped(attempt: int) -> None:
+        if attempt == 1:
+            raise httpx.RemoteProtocolError(
+                "peer closed connection without sending complete message body"
+            )
+
+    model, calls = _streaming_model(dropped)
+    assert await _build(db_session, run_id, model) == PAGE
+    assert len(calls) == 2
+    assert len(sleeps) == 1
+
+
+async def test_a_misused_stream_is_not_retried(
+    db_session: AsyncSession, sleeps: list[float]
+) -> None:
+    """`httpx.StreamError` is a `RuntimeError`, not a transport failure: it means the stream
+    was read twice or after close, which is our bug and not the network's. Retrying it would
+    repeat it three times and change nothing."""
+    run_id = await _open_run(db_session)
+
+    def misused(attempt: int) -> None:
+        raise httpx.StreamError("attempted to read after the content was already streamed")
+
+    model, calls = _streaming_model(misused)
+    with pytest.raises(httpx.StreamError):
+        await _build(db_session, run_id, model)
+
+    assert len(calls) == 1
+    assert sleeps == []
+
+
 async def test_a_400_costs_exactly_one_call(
     db_session: AsyncSession, sleeps: list[float]
 ) -> None:
@@ -224,3 +274,94 @@ async def test_the_ledger_records_one_call_not_one_per_attempt(
         select(func.count()).select_from(AgentCall).where(AgentCall.run_id == run_id)
     )
     assert rows == 1
+
+
+# --- the wall-clock deadline -------------------------------------------------------------
+#
+# The first failure of run `31b3e4ac`: one ESTABLISHED socket delivering keepalives and no
+# tokens, the worker at 0% CPU for half an hour, the 15-minute lease lapsing with no effect
+# because the sweeper runs between polls and the call was already in flight. Nothing here
+# needs a model — the defect is that `await operation()` had no upper bound at all.
+
+STALL_BUDGET_SECONDS = 0.1
+
+
+async def test_a_call_that_never_returns_fails_within_its_budget(
+    sleeps: list[float],
+) -> None:
+    async def never_returns() -> str:
+        await asyncio.Event().wait()
+        raise AssertionError("unreachable")
+
+    started = time.monotonic()
+    with pytest.raises(retry.ModelCallStalled) as raised:
+        await retry.call_with_retry(
+            never_returns,
+            agent=web_builder.AGENT,
+            budget_seconds=STALL_BUDGET_SECONDS,
+        )
+
+    assert time.monotonic() - started < 1.0
+    assert web_builder.AGENT in str(raised.value)
+    assert f"{STALL_BUDGET_SECONDS:g}s" in str(raised.value)
+    assert raised.value.budget_seconds == STALL_BUDGET_SECONDS
+    # Not retried: the budget was sized to fit inside the lease, so a second multi-minute
+    # attempt after a hang cannot.
+    assert sleeps == []
+
+
+async def test_a_stalled_call_tears_its_stream_down(sleeps: list[float]) -> None:
+    """Cancellation, not the raise, is what stops the provider generating — and being
+    billed for it. `wait_for` cancels inside the `async with run_stream(...)` block, so the
+    context manager's exit has to run before the failure surfaces."""
+    exits: list[str] = []
+
+    @asynccontextmanager
+    async def open_stream() -> AsyncIterator[None]:
+        try:
+            yield
+        finally:
+            exits.append("closed")
+
+    async def silent_stream() -> str:
+        async with open_stream():
+            await asyncio.Event().wait()
+        raise AssertionError("unreachable")
+
+    with pytest.raises(retry.ModelCallStalled):
+        await retry.call_with_retry(
+            silent_stream, agent=web_builder.AGENT, budget_seconds=STALL_BUDGET_SECONDS
+        )
+
+    assert exits == ["closed"]
+
+
+async def test_a_retry_runs_under_the_remaining_budget_not_a_fresh_one(
+    sleeps: list[float],
+) -> None:
+    """One deadline for the whole call. A per-attempt timeout would let three of them add up
+    past the lease the budget exists to fit inside."""
+    budget, spent_on_the_first_attempt = 0.6, 0.4
+    attempts: list[int] = []
+    second_attempt_window: list[float] = []
+
+    async def slow_then_silent() -> str:
+        attempts.append(1)
+        if len(attempts) == 1:
+            await _REAL_SLEEP(spent_on_the_first_attempt)
+            raise httpx.RemoteProtocolError("peer closed connection")
+        started = time.monotonic()
+        try:
+            await asyncio.Event().wait()
+        finally:
+            second_attempt_window.append(time.monotonic() - started)
+        raise AssertionError("unreachable")
+
+    with pytest.raises(retry.ModelCallStalled):
+        await retry.call_with_retry(
+            slow_then_silent, agent=web_builder.AGENT, budget_seconds=budget
+        )
+
+    assert len(attempts) == 2
+    # The remainder is ~0.2s; a fresh per-attempt budget would have given it the full 0.6.
+    assert second_attempt_window[0] < budget - spent_on_the_first_attempt + 0.2

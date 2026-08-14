@@ -1,9 +1,13 @@
+import asyncio
+from collections.abc import AsyncIterator
+from contextlib import asynccontextmanager
 from datetime import UTC, datetime, timedelta
 
 import pytest
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from epyhia.agents.retry import call_with_retry
 from epyhia.artifacts.store import PostgresArtifactStore
 from epyhia.models.tasks import Task
 from epyhia.queue.claim import DEFAULT_LEASE_MINUTES, claim_task
@@ -118,6 +122,55 @@ async def test_a_failing_handler_leaves_neither_artifact_nor_done(
         )
     ).scalar_one()
     assert count == 0
+
+
+async def test_a_stalled_model_call_lands_the_task_failed_and_names_itself(
+    queue_session: AsyncSession,
+) -> None:
+    """A stage whose model call goes silent must end as a legible `failed` row, not as a
+    worker parked for the rest of the evening with every other run queued behind it (the
+    site stage of run `31b3e4ac`).
+
+    No model is reached here: what the call budget bounds is any awaitable that stops
+    producing, so a hanging stream stands in for one.
+    """
+    run_id = await make_run(queue_session)
+    task_id = await _insert_task(queue_session, run_id, kind="site")
+    exits: list[str] = []
+
+    @asynccontextmanager
+    async def open_stream() -> AsyncIterator[None]:
+        try:
+            yield
+        finally:
+            exits.append("closed")
+
+    async def stalling_handler(session: AsyncSession, task: Task) -> None:
+        async def silent_stream() -> str:
+            async with open_stream():
+                await asyncio.Event().wait()
+            raise AssertionError("unreachable")
+
+        await call_with_retry(silent_stream, agent="web_builder", budget_seconds=0.1)
+
+    register_handler("site", stalling_handler)
+
+    assert await run_once(queue_session) is True
+
+    row = (
+        await queue_session.execute(
+            text("SELECT state, error, lease_expires_at FROM tasks WHERE id = :id"),
+            {"id": task_id},
+        )
+    ).one()
+    assert row.state == "failed"
+    assert row.error == (
+        "ModelCallStalled: web_builder: no response within its 0.1s call budget"
+    )
+    assert row.lease_expires_at is None
+    # The stream was closed, not merely abandoned — that close is what stops the provider
+    # generating tokens the run would still be billed for.
+    assert exits == ["closed"]
 
 
 async def test_a_kind_with_no_handler_fails_the_task_rather_than_the_worker(

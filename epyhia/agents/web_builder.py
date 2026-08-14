@@ -33,6 +33,13 @@ REVISE_PROMPT_VERSION = prompt_service.active_version(REVISE_AGENT)
 # be deployed (§8.1, FR-014). Streaming is what makes the whole document arrive.
 MAX_TOKENS = 64_000
 
+# The wall-clock ceiling on one page generation, either pass. Healthy builds land in three to
+# five minutes, and the site lease is 15 — shared with two screenshots, the critic and the
+# other pass — so a call still running at six minutes is not slow, it is the stalled stream
+# that parked a worker for half an hour on 2026-08-13. Constant here rather than a setting:
+# it is a property of what this call does, and nothing asked for it to be tunable.
+CALL_BUDGET_SECONDS = 360.0
+
 _FENCE = re.compile(r"^\s*```(?:html)?\n(?P<body>.*?)\n```\s*$", re.DOTALL | re.IGNORECASE)
 
 agent = Agent(
@@ -127,7 +134,9 @@ async def _write_page(
         async with writer.run_stream(prompt, usage_limits=limits) as result:
             return await result.get_output(), result.usage
 
-    html, usage = await call_with_retry(generate, agent=agent_name)
+    html, usage = await call_with_retry(
+        generate, agent=agent_name, budget_seconds=CALL_BUDGET_SECONDS
+    )
     latency_ms = int((time.perf_counter() - started) * 1000)
 
     await record_call(

@@ -23,6 +23,12 @@ PROMPT_VERSION = prompt_service.active_version(AGENT)
 
 _HEX = r"^#[0-9a-fA-F]{6}$"
 
+# The wall-clock ceiling on the plan call, retries included. Observed healthy plans take 54
+# to 90 seconds; the `plan` lease is 10 minutes and this call is the only thing in it, so
+# eight minutes is generous by any reading and still fails inside the lease rather than
+# holding the worker past it.
+CALL_BUDGET_SECONDS = 480.0
+
 # The stages the Strategist may select from. A closed Literal rather than a free string is
 # the mechanical half of "the pipeline is fixed in code": the model chooses which stages
 # run, never what a stage is or what it depends on (FR-013, Principle III).
@@ -182,6 +188,7 @@ async def run_strategist(
             usage_limits=limits,
         ),
         agent=AGENT,
+        budget_seconds=CALL_BUDGET_SECONDS,
     )
     latency_ms = int((time.perf_counter() - started) * 1000)
 
