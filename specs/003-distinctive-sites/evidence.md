@@ -340,15 +340,18 @@ illustrative triple in a `v4` and re-sampling — is the experiment that would t
 triple is what pulls the commitment back to paper-and-ink; this harness is what makes the
 re-sample cost $2.91 and half an hour rather than a judgement call.
 
-The restatement, written before these numbers existed and unchanged by them, **applied only on
-sign-off** since it is a spec change:
+The restatement was written before these numbers existed and is unchanged by them. **Signed off
+and applied to `spec.md` on 2026-08-14:**
 
 > Across N ≥ 4 sampled runs per fixture, the two fixtures' modal directions differ: no shared
 > pairing mode, modal palettes not same-direction under the calibrated thresholds, and no
 > shared archetype mode — verified by the sampling report, not by one pair of runs.
 
 One pair of runs cannot verify a distributional property; three samples already proved that
-twice in this document.
+twice in this document. Note what the restatement does **not** do: it does not lower the bar
+into reach. The draw above was already judged under it and still fails, on the palette. What it
+changes is that the failure is now a number that a re-sample can move, rather than a reading of
+two artifacts that the next pair of runs might reverse.
 
 ## SC-007, the pre/post regression guard — **NOT MET, for lack of headroom**
 
