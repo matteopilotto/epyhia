@@ -453,6 +453,107 @@ resolutions, neither cheap enough to guess at:
 Filed rather than done: choosing between them is a spec decision, and this document's record is
 that spending on the next sample before the criterion is settled buys another retraction.
 
+## The third fixture settles it — resolution 1, on the numbers (T043) — 2026-08-14
+
+Resolution 1 was run rather than argued. `tests/fixtures/briefs/three.json` is a neon studio
+whose product *is* darkness and saturated colour: its voice words are *nocturnal, vivid,
+unapologetic* and its `dont` list refuses the exact register the other two briefs demand — "call
+the work tasteful, understated or restrained", "show a sign switched off, or photographed in
+daylight". It is the first fixture that argues **for** the direction the other two argue against.
+
+Drawn 4 × 3 against a fresh scratch database, `v3` unchanged, no prompt or code change in the
+sample path. **$4.30** over 12 plan stages (487,898 in / 74,337 out; ledger `sum(cost_usd)` =
+$4.2979). All three fixtures were re-drawn rather than comparing the new one against the stored
+`samples/` docs, which carry no record of the prompt version that produced them.
+
+| | pairing | page archetype | bg | accent |
+|---|---|---|---|---|
+| one 0 | `archivo-black` / `libre-baskerville` | `split_technical` | `#F5EFE4` | `#C25A22` |
+| one 1 | `archivo-black` / `source-serif-4` | `editorial_stack` | `#F4EEE3` | `#14646F` |
+| one 2 | `archivo-black` / `source-serif-4` | `split_technical` | `#F4EFE6` | `#B4451F` |
+| one 3 | `zilla-slab` / `ibm-plex-sans` | `split_technical` | `#F7F3EC` | `#C25A2B` |
+| two 0 | `jetbrains-mono` / `source-serif-4` | `split_technical` | `#EDE8DE` | `#B4441C` |
+| two 1 | `zilla-slab` / `ibm-plex-sans` | `split_technical` | `#F1EBE0` | `#B44A1E` |
+| two 2 | `zilla-slab` / `ibm-plex-sans` | `split_technical` | `#EFE8DA` | `#B4451F` |
+| two 3 | `archivo-black` / `source-serif-4` | `split_technical` | `#F2EDE3` | `#B4441E` |
+| **three 0** | `bebas-neue` / `libre-baskerville` | `full_bleed_poster` | `#0A0B14` | `#FF2E63` |
+| **three 1** | `bebas-neue` / `ibm-plex-sans` | `full_bleed_poster` | `#0A0711` | `#FF2E88` |
+| **three 2** | `bebas-neue` / `ibm-plex-sans` | `full_bleed_poster` | `#0B0E1A` | `#FF2D95` |
+| **three 3** | `archivo-black` / `jetbrains-mono` | `full_bleed_poster` | `#0C1018` | `#FF2D6F` |
+
+**Outcome A, without ambiguity.** Fixture three is 4/4 near-black violet grounds and 4/4 hot
+pink accents — zero cream, zero burnt orange — under an archetype (`full_bleed_poster`) that
+neither other fixture has selected in these eight draws nor in the sixteen sampled earlier (the
+v3 control and the v4 experiment). Both pairs involving it pass every clause:
+
+| | modal pairings | modal palettes | modal archetypes | verdict |
+|---|---|---|---|---|
+| one × three | **PASS** | **PASS** — ΔE accent 49.1 (bar 20), bg 91.8 (bar 10) | **PASS** — `split_technical` vs `full_bleed_poster` | **MET** |
+| three × two | **PASS** | **PASS** — ΔE accent 46.0, bg 89.9 | **PASS** — `full_bleed_poster` vs `split_technical` | **MET** |
+| one × two | **PASS** | FAIL — ΔE accent 8.2, bg 2.6 | FAIL — `split_technical` both | NOT MET |
+
+So there is **no palette default the brief cannot override.** A brief that argues for the dark
+direction gets the dark direction, at ΔE ≈ 90 by ground from the cream family, and gets it four
+times out of four. Note also that fixture three's *internal* spread is the tightest of the three
+(accent ΔE median 17.5, bg median 3.0): this is not the model wandering, it is the model
+committing hard to what the brief asked for.
+
+The narrations close the loop, because the paper-and-ink direction was **drafted every time and
+argued out every time, in the brief's own words**:
+
+> Rejected — the brief forbids daylight and switched-off, and a paper page is a daylight page.
+
+> B loses on the brief's own instruction that the work is never shown in daylight or switched
+> off; a paper-and-ink page contradicts the voice at the level of the background colour.
+
+One draw also rejected the obvious version of the dark direction — *"rejected as the average
+neon page — every neon shop on earth is condensed caps on black"* — which is the anti-averaging
+instruction doing exactly its job on a brief where averaging would have gone dark anyway.
+
+**Which retires the suspicion, and moves the fault to the criterion.** Three explanations have
+now been tested and refuted in turn: the illustrative triple (v4, refuted), the palette
+instruction's traceability (already being done, unprompted), and a palette default (refuted
+here). What remains is the fixture set: one and two both argue understated and detail-led, and
+the Strategist converging on their palette is the Strategist reading them correctly.
+
+### The replication half, reported whether or not it flatters the earlier reading
+
+The one × two draw was repeated under identical conditions precisely so the v3 control's PASSes
+could be checked. Two of three replicate; **one does not**:
+
+| | v3 control (2026-08-14, first draw) | this draw |
+|---|---|---|
+| modal pairings differ | PASS | **PASS** — `archivo-black/source-serif-4` vs `zilla-slab/ibm-plex-sans` |
+| modal palettes differ | FAIL — ΔE accent 8.2, bg 1.7 | **FAIL** — ΔE accent 8.2, bg 2.6 |
+| modal archetypes differ | PASS — `editorial_stack` vs `split_technical` | **FAIL** — `split_technical` both |
+
+Fixture one moved from `editorial_stack` 3/4 to `split_technical` 3/4 with nothing changed. That
+is the same wholesale archetype shift the v4 section flagged as "least plausibly caused by a
+paragraph that never mentions archetypes" — and it is now confirmed to happen with **no prompt
+change at all**, so it was never evidence about v4. The honest reading: fixture one's archetype
+mode is not stable at n=4, and the archetype clause separates one from three and two from three
+robustly (4/4 vs 3/4 or 4/4) while separating one from two only by luck of the draw. The palette
+FAIL, by contrast, replicates to within 0.9 ΔE.
+
+### The indicated change to SC-001 — drafted, **not applied, awaiting sign-off**
+
+The palette clause asks a single run to satisfy a cross-run property it cannot see. Bound to
+briefs that actually disagree, it becomes a claim the system meets:
+
+> SC-001's palette clause binds pairs of briefs whose voices argue for different directions:
+> across N ≥ 4 sampled runs per fixture, fixtures whose briefs disagree in voice produce modal
+> palettes that are not same-direction under the calibrated thresholds. Fixtures whose briefs
+> argue for the same register (one and two, both understated and detail-led) are expected to
+> converge in palette while still separating by pairing and archetype — that convergence is the
+> Strategist following the brief, and following the brief wins.
+
+The pairing clause stays as restated; it separates all three pairs here. The archetype clause
+stays too, but the replication above is a caveat on it that belongs beside it: it is load-bearing
+across disagreeing briefs and unstable across agreeing ones.
+
+This is a spec change, so it is drafted here and applied to `spec.md` only on sign-off — the same
+procedure the previous restatement followed.
+
 ## SC-007, the pre/post regression guard — **NOT MET, for lack of headroom**
 
 Fixture one built off `main` in a worktree against a second scratch database ($0.755), linted

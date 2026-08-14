@@ -466,7 +466,7 @@ if __name__ == "__main__":
         "briefs",
         nargs="*",
         type=Path,
-        default=[FIXTURES / "one.json", FIXTURES / "two.json"],
+        default=sorted(FIXTURES.glob("*.json")),
         help="brief fixtures to sample (default: every fixture the suite ships)",
     )
     parser.add_argument("--samples", type=int, default=4, help="draws per brief")

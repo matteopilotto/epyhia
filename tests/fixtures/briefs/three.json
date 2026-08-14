@@ -1,0 +1,68 @@
+{
+  "business_name": "Coldwire Neon Studio",
+  "tagline": "Bent by hand, lit all night.",
+  "one_liner": "A two-bender studio hand-forming commissioned neon for bars, venues and late-opening shopfronts.",
+  "positioning": {
+    "who_its_for": "Bar, club and late-licence venue owners whose frontage has to pull people in off an unlit street.",
+    "what_problem": "LED strip pretending to be neon reads as plastic up close and goes patchy within two winters.",
+    "why_them": "Real glass, real gas, bent on our own ribbon burner, and we come back and relight it when it fails."
+  },
+  "products": [
+    {
+      "name": "Commissioned Frontage Sign",
+      "description": "A sign drawn, bent and pumped to order for one frontage: glass tubing, transformer, mounts and installation on site.",
+      "price_minor": 187500,
+      "currency_display": "GBP",
+      "currency_charge": "GBP",
+      "billing": "one_time",
+      "features": [
+        "Drawing and layout agreed before any glass is bent",
+        "Hand-bent tubing, pumped and aged on our own bench",
+        "Transformer, mounts and cabling included",
+        "Installed and set running on site"
+      ],
+      "not_covered": [
+        "Structural work to the frontage",
+        "Planning or listed-building consent"
+      ]
+    },
+    {
+      "name": "Relight and Re-Gas Plan",
+      "description": "A twice-yearly visit for signs that burn every night: dim tubes re-gassed, failed electrodes replaced, housings cleaned.",
+      "price_minor": 5750,
+      "currency_display": "GBP",
+      "currency_charge": "GBP",
+      "billing": "subscription",
+      "billing_interval": "month",
+      "billing_interval_count": 6,
+      "features": [
+        "Two visits a year, worked out of hours",
+        "Dim tubes re-gassed and failed electrodes replaced",
+        "Transformer checked under load",
+        "Callout inside 48 hours if a sign goes out"
+      ],
+      "not_covered": [
+        "Glass broken by impact or vandalism",
+        "Signs we did not build"
+      ]
+    }
+  ],
+  "voice": {
+    "adjectives": ["nocturnal", "vivid", "unapologetic"],
+    "do": [
+      "Describe the work lit, at night, in the colour it actually burns",
+      "Name the gas and the coating that make a colour"
+    ],
+    "dont": [
+      "Call the work tasteful, understated or restrained",
+      "Show a sign switched off, or photographed in daylight"
+    ]
+  },
+  "locale": "en-GB",
+  "established": 2013,
+  "contact": {
+    "email": "studio@coldwireneon.example",
+    "phone": "+44-161-496-0733",
+    "address": "Unit 6, Sackville Mills, Manchester"
+  }
+}
