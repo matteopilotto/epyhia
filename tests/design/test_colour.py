@@ -1,10 +1,12 @@
 """The perceptual distance, checked against the sample that motivated it.
 
-The palettes below are measurements, not client data: they are the ground and accent of the
-three brand docs recorded in `specs/003-distinctive-sites/evidence.md`, kept here because a
-threshold nothing calibrates it against is a number somebody liked the look of. No business
-name, price or currency reaches this file, and nothing here reads a brief.
+The palettes below are measurements, not client data: they are the ones recorded in
+`specs/003-distinctive-sites/evidence.md`, kept here because a threshold nothing calibrates
+it against is a number somebody liked the look of. No business name, price or currency
+reaches this file, and nothing here reads a brief.
 """
+
+from itertools import combinations
 
 import pytest
 
@@ -16,12 +18,15 @@ from epyhia.design.colour import (
     same_direction,
 )
 
-# The three sampled directions a reader called one direction: warm cream ground, near-black
-# brown ink, burnt-orange accent.
+# Every palette that evidence records in full, across both fixtures, which a reader called
+# one direction: pale cream ground, near-black brown ink, burnt-orange accent. Four rather
+# than the five sampled runs — one is recorded by ground and accent only, and completing it
+# from a neighbouring run's ink would be inventing the data this calibrates against.
 SAMPLED = (
     {"bg": "#F3EBDF", "fg": "#241C16", "accent": "#B5451B", "muted": "#6B5D50"},
     {"bg": "#f3eee3", "fg": "#1b1916", "accent": "#b4571f", "muted": "#6a6154"},
-    {"bg": "#F1EDE4", "fg": "#1B1A17", "accent": "#B23A16", "muted": "#5F5B51"},
+    {"bg": "#F4F1EA", "fg": "#1C1A17", "accent": "#A6431E", "muted": "#6A6459"},
+    {"bg": "#F2EDE4", "fg": "#1B1A17", "accent": "#C4562F", "muted": "#5F5B51"},
 )
 
 # Two directions the same evidence records as drafted and rejected: a dark ground with a
@@ -56,13 +61,14 @@ def test_distance_is_symmetric() -> None:
             )
 
 
-@pytest.mark.parametrize("index", (1, 2))
-def test_the_three_sampled_palettes_are_one_direction(index: int) -> None:
-    """The calibration. Whatever bar this module picks, it has to agree with the reading
-    those three samples already got — otherwise the measurement is answering a question
-    nobody asked."""
-    assert same_direction(SAMPLED[0], SAMPLED[index])
-    assert same_direction(SAMPLED[index], SAMPLED[0])
+@pytest.mark.parametrize("pair", tuple(combinations(range(len(SAMPLED)), 2)))
+def test_every_sampled_pair_is_one_direction(pair: tuple[int, int]) -> None:
+    """The calibration, over every pair rather than every pair with the first. Whatever bar
+    this module picks, it has to agree with the reading those samples already got —
+    otherwise the measurement is answering a question nobody asked."""
+    first, second = SAMPLED[pair[0]], SAMPLED[pair[1]]
+    assert same_direction(first, second)
+    assert same_direction(second, first)
 
 
 @pytest.mark.parametrize("other", (DARK, TEAL), ids=("dark", "teal"))
@@ -72,8 +78,8 @@ def test_a_rejected_direction_is_not_the_committed_one(other: dict[str, str]) ->
 
 
 def test_the_ground_is_what_separates_the_dark_direction() -> None:
-    """Its accent is inside the accent bar — ΔE 17 from one sampled orange — so a check on
-    the accent alone would call a dark poster the same direction as a cream page."""
+    """Its accent comes inside the accent bar — ΔE 17 from one sampled orange — so a check
+    on the accent alone would call a dark poster the same direction as a cream page."""
     assert delta_e(SAMPLED[1]["accent"], DARK["accent"]) < ACCENT_SAME_DELTA_E
     assert delta_e(SAMPLED[1]["bg"], DARK["bg"]) > BG_SAME_DELTA_E
 

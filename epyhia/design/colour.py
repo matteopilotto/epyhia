@@ -14,16 +14,16 @@ Nothing here reads a brief or a brand doc. It takes two colours and returns a nu
 
 from collections.abc import Mapping
 
-# Calibrated against the three sampled brand docs in specs/003-distinctive-sites/evidence.md,
-# whose palettes a reader called one direction — a pale cream ground, a near-black brown, a
-# burnt-orange accent. Measured across those three: grounds ΔE 1.15–2.18, accents ΔE
-# 4.38–14.11. The bar has to call them the same, and the same document's drafted-and-rejected
-# directions have to stay different: the dark one is ΔE 87 away by ground, the teal one 68.
+# Calibrated against the four palettes specs/003-distinctive-sites/evidence.md records in
+# full, which a reader called one direction — a pale cream ground, a near-black brown ink, a
+# burnt-orange accent. Measured across them: grounds ΔE 1.06–3.66, accents ΔE 6.82–9.85. The
+# bar has to call all four the same, and the same document's drafted-and-rejected directions
+# have to stay different: the dark one is ΔE 87 away by ground, the teal one 68.
 #
-# The accent bar alone would not do it — the dark direction's orange is only ΔE 17 from one
-# sampled accent, inside the bar — which is why both must hold. A ground is the decision the
-# accent is chosen against, so two palettes agreeing on the accent over different grounds are
-# not one direction. Fixed here once, the design lint's precedent (lint.py): these are
+# The accent bar alone would not do it — the dark direction's orange comes as close as ΔE 17
+# to a sampled accent, inside the bar — which is why both must hold. A ground is the decision
+# an accent is chosen against, so two palettes agreeing on the accent over different grounds
+# are not one direction. Fixed here once, the design lint's precedent (lint.py): these are
 # properties of perception, not of a client.
 ACCENT_SAME_DELTA_E = 20.0
 BG_SAME_DELTA_E = 10.0
