@@ -22,6 +22,7 @@ from epyhia.api.routers import (
     webhooks,
 )
 from epyhia.gate.keys import ALIAS_ORIGIN_PATTERN
+from epyhia.observability import configure_tracing
 
 CONSOLE_DIST = Path(__file__).resolve().parent.parent.parent / "console" / "dist"
 
@@ -31,7 +32,7 @@ API_PREFIX = "/api"
 
 
 def create_app() -> FastAPI:
-    logfire.configure(send_to_logfire="if-token-present")
+    configure_tracing()
 
     app = FastAPI(title="EPYHIA")
     logfire.instrument_fastapi(app)
