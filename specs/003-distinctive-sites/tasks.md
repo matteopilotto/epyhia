@@ -155,7 +155,7 @@ evidence pass, not CI.)
 
 ### Implementation for User Story 5
 
-- [x] T037 [US5] Add the divergence step to `prompts/strategist/v3.jinja`: draft at least three genuinely distinct directions — palette, pairing from the library, one-line rationale each — then commit to exactly one; the drafts live in extended thinking and only the chosen direction reaches the brand doc (FR-019, research R9)
+- [x] T037 [US5] Add the divergence step to `prompts/strategist/v3.jinja`: draft at least three genuinely distinct directions — palette, pairing from the library, one-line rationale each — then commit to exactly one; the drafts live in extended thinking and only the chosen direction reaches the brand doc (FR-019, research R9) — *2026-08-14: the prompt as written says neither, and the drafts arrive in the response text; see the correction at research R9*
 - [x] T038 [US5] Add explicit anti-slop language to `prompts/web_builder/v4.jinja`: name the generic tells outright — default font stacks, the gradient-on-dark hero, cookie-cutter card rows — naming no client data while doing so (FR-020)
 - [x] T039 [P] [US5] Tests in `tests/agents/test_strategist.py` (extend) and `tests/design/test_prompts_antislop.py`: the `BrandDocument` model's shape is unchanged — no field exists for discarded alternatives to leak into (FR-019); the rendered v4 builder prompt contains the named tells; genericity scans still pass over both updated templates (US5 acceptance scenarios 2–3, FR-021)
 
@@ -170,6 +170,7 @@ evidence pass, not CI.)
 
   **Run 2026-08-13/14; outcomes in `evidence.md`.** Fixture one passes end to end: `site` and schema-valid `design_report` artifacts, zero external requests, four embedded faces, revision kept taking the lint count 1 → 0, deploy verified live. **SC-001 NOT MET** — both fixtures chose the same pairing and perceptually identical palettes. **SC-007 not demonstrable** — the pre-feature baseline already scored zero structural tells, so "strictly fewer" has no headroom. The pass also found three defects, all fixed on this branch: the reviser was handed the embedded fonts (`e0efbe9`), the keep gate could not tell a page from a stub (`8e900dc`), and `numbered_process` typed step ordinals the grounding check refuses (`60f71d0`).
 - [x] T042 [P] Provoke the quickstart failure modes table and confirm each recorded behaviour: free-text face names fail fast naming the id; Chromium absent → `screenshots.captured=false`, run completes; unusable critic output → `critique.status="skipped"`; worse revision → `discarded_worse` with both counts (covered by the offline suite — verify each has an explicit test and none regressed)
+- [ ] T043 Test whether the prompt's illustrative triple is what the Strategist commits to (SC-001, follow-up to T041). The one traced `plan` stage drafted a dark high-contrast direction, a paper-and-ink one and a single saturated hue — matching `prompts/strategist/v3.jinja` lines 124–127 one for one — and committed to the middle example, which is the warm-cream family all five fixture-two samples have landed in. Sample the drafted directions and the committed palette across both fixtures (`plan` stage only, ~$0.20 each, and note that a driver calling `run_once()` directly must call `configure_tracing()` itself or it traces nothing), then vary the example triple in a `v4` prompt and re-sample. Two questions, both open on one observation: does the model narrate three directions every time, and does it stop landing on paper-and-ink when the prompt stops naming it? Record in `evidence.md`; a prompt change lands as a new version beside `v3` (FR-021)
 
 ---
 
@@ -180,7 +181,7 @@ evidence pass, not CI.)
 - **Setup (Phase 1)**: none — start immediately; T002 and T003 in parallel after T001
 - **Foundational (Phase 2)**: sequential chain T004 → T005 → T006 → T007 (registry names files; loader validates registry; tests exercise loader). **Blocks all user stories.**
 - **User Stories (Phases 3–7)**: all depend on Phase 2. US1 first (it moves both prompts to v3/v4 and reworks the site handler that US2/US3 extend). US2 before US3 (the lint gates the revision pass). US4 and US5 edit the same two prompt files US1 created — sequence them after US1 (US4 ∥ US5 is possible with care: they touch `_archetypes.jinja`+renders vs. divergence/tell language, but both edit `web_builder/v4.jinja` — coordinate or serialize).
-- **Polish (Phase 8)**: after all stories; T040 before T041; T042 parallel with T041.
+- **Polish (Phase 8)**: after all stories; T040 before T041; T042 parallel with T041; T043 after T041, which is what raised it.
 
 ### Within Each Story
 

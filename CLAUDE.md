@@ -186,7 +186,18 @@ Each of these is a bug you would otherwise write:
   a non-default value returns a 400. Reaching for `ModelSettings(temperature=...)` out of
   habit breaks both agents. Steer through prompting.
 - **Extended thinking is on by default on Opus 5**, and `max_tokens` caps thinking plus
-  response text together.
+  response text together. **Its content is never readable.** The raw chain of thought is not
+  returned and `thinking.display` defaults to `"omitted"`, so a `ThinkingPart` arrives with
+  `content=''` beside a non-zero `thinking_tokens`. Instrumentation cannot recover it —
+  `include_content=True` decides whether PydanticAI *copies* a part's content into the span,
+  not whether there is content to copy. The one readable form is a summary, asked for with
+  `AnthropicModelSettings(anthropic_thinking={"type": "adaptive", "display": "summarized"})`,
+  and a summary is prose. Never write a test, an eval assertion, or a diagnosis that depends
+  on reading what an agent thought.
+- **Never set `budget_tokens` on Opus 5.** `anthropic_thinking={"type": "enabled",
+  "budget_tokens": …}` raises PydanticAI `UserError` before the request leaves the process —
+  the model profile sets `anthropic_disallows_budget_thinking` — and the API rejects it too.
+  Adaptive plus `anthropic_effort` is the only shape that works.
 - **Stream the Web Builder's calls** (~64K `max_tokens`). A full site exceeds the
   non-streaming ceiling and yields SDK timeouts with truncated HTML — which is syntactically
   plausible and would then be deployed.

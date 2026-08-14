@@ -858,7 +858,15 @@ Recorded here because each one is a bug I would otherwise write:
 - **Never set `temperature`, `top_p`, or `top_k`** — these are removed on the frontier models
   I am using and a non-default value returns a 400. Steering happens through prompting.
 - **Extended thinking is on by default** on the top-tier model, and `max_tokens` caps thinking
-  plus response text together.
+  plus response text together. **What it thinks is never readable**: the raw chain of thought
+  is not returned and the display setting defaults to omitting it, so a thinking part arrives
+  empty beside a non-zero thinking-token count. Tracing cannot recover it — the
+  include-content switch decides whether the framework *copies* a part's content into a span,
+  not whether there is content to copy. A summary can be asked for; it is prose. I planned an
+  agent's behaviour around reading that content once — the Strategist's discarded visual
+  directions, R9 of feature 003 — and the requirement it produced was unverifiable until the
+  model turned out to be narrating the same material in its response text. Nothing an agent
+  thinks may carry a requirement.
 - **Stream the Web Builder's calls** (~64K `max_tokens`). A full site exceeds the
   non-streaming ceiling and produces SDK timeouts with truncated HTML — which would then be
   *deployed*, since it is syntactically plausible.
