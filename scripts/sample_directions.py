@@ -35,6 +35,7 @@ from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
 
+from pydantic_ai import capture_run_messages
 from pydantic_ai.messages import ModelResponse, TextPart, ToolCallPart
 from pydantic_ai.models.function import FunctionModel
 from sqlalchemy import func, select
@@ -161,7 +162,22 @@ async def ensure_brief(session: AsyncSession, payload: dict) -> Brief:
     return brief
 
 
-async def draw(session: AsyncSession, brief: Brief) -> tuple[dict, uuid.UUID]:
+@dataclass
+class Draw:
+    """One sample: what was recorded, what it cost, and what the model said on the way.
+
+    `narration` is the Strategist's response text. The drafted directions live there and
+    nowhere else — Opus 5 returns no thinking content, and the brand doc has no field for a
+    runner-up by design (FR-019) — so a sample that captures only the artifact can say which
+    direction was committed to but not what it was chosen against.
+    """
+
+    doc: dict
+    run_id: uuid.UUID
+    narration: str
+
+
+async def draw(session: AsyncSession, brief: Brief) -> Draw:
     """One plan stage through the real handler. Returns the brand doc it wrote."""
     run = Run(
         id=uuid.uuid4(),
@@ -179,8 +195,12 @@ async def draw(session: AsyncSession, brief: Brief) -> tuple[dict, uuid.UUID]:
     session.add(Task(id=task_id, run_id=run.id, kind="plan", state="pending"))
     await session.commit()
 
-    if not await run_once(session, kind="plan"):
-        raise RuntimeError("no plan task was claimable")
+    # One agent run happens inside this handler, which is the condition `capture_run_messages`
+    # documents for capturing anything at all. Nothing in the production path changes: the
+    # narration is read off the messages the run already produced.
+    with capture_run_messages() as messages:
+        if not await run_once(session, kind="plan"):
+            raise RuntimeError("no plan task was claimable")
     # `run_once` records a handler failure on the row rather than raising, so a sample that
     # did not produce a direction has to be read back or it is silently counted as one.
     task = await session.get(Task, task_id)
@@ -194,7 +214,14 @@ async def draw(session: AsyncSession, brief: Brief) -> tuple[dict, uuid.UUID]:
         .order_by(BrandDoc.version.desc())
         .limit(1)
     )
-    return doc.doc, run.id
+    narration = "\n\n".join(
+        part.content
+        for message in messages
+        if isinstance(message, ModelResponse)
+        for part in message.parts
+        if isinstance(part, TextPart) and part.content.strip()
+    )
+    return Draw(doc=doc.doc, run_id=run.id, narration=narration)
 
 
 # --- reading the draws --------------------------------------------------------------------
@@ -206,6 +233,11 @@ class Sampled:
 
     name: str
     docs: list[dict]
+    # How many of those draws wrote their drafting out in response text. Narrating is the
+    # model's choice, not a contract — FR-019 requires the drafting to happen and to stay out
+    # of the brand doc, and says nothing about where it is expressed. So this is a count of a
+    # diagnosis being available, never an assertion that it should be.
+    narrated: int = 0
 
     @property
     def pairings(self) -> Counter:
@@ -304,6 +336,8 @@ def report(samples: list[Sampled], *, real: bool, spend_usd: float) -> str:
             f" · bg max {max(grounds, default=0.0):.1f}, "
             f"median {statistics.median(grounds) if grounds else 0.0:.1f}",
             f"    medoid      {json.dumps(sampled.medoid, sort_keys=True)}",
+            f"    narrated    {sampled.narrated}/{len(sampled.docs)} draws wrote their "
+            "drafting out in response text",
         ]
 
     lines += ["", "## Across fixtures", ""]
@@ -389,22 +423,27 @@ async def main(brief_paths: list[Path], samples: int, real: bool, out: Path) -> 
         payload = json.loads(path.read_text())
         brief = await ensure_brief(session, payload)
         docs: list[dict] = []
+        narrated = 0
         for index in range(samples):
             if real:
-                doc, run_id = await draw(session, brief)
+                drawn_sample = await draw(session, brief)
             else:
                 with strategist.agent.override(model=stub_strategist(payload, index)):
-                    doc, run_id = await draw(session, brief)
+                    drawn_sample = await draw(session, brief)
+            doc, run_id = drawn_sample.doc, drawn_sample.run_id
             docs.append(doc)
             run_ids.append(run_id)
             destination = out / path.stem / f"{index}.json"
             destination.parent.mkdir(parents=True, exist_ok=True)
             destination.write_text(json.dumps(doc, indent=2, ensure_ascii=False))
+            if drawn_sample.narration:
+                narrated += 1
+                destination.with_suffix(".txt").write_text(drawn_sample.narration)
             print(
                 f"  {path.stem} {index}  {doc['type']['display']}/{doc['type']['body']}"
                 f"  {doc['composition_archetype']}  {doc['palette']['accent']}"
             )
-        drawn.append(Sampled(name=path.stem, docs=docs))
+        drawn.append(Sampled(name=path.stem, docs=docs, narrated=narrated))
 
     spend = await session.scalar(
         select(func.coalesce(func.sum(AgentCall.cost_usd), 0)).where(
