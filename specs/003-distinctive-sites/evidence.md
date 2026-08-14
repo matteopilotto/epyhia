@@ -182,6 +182,15 @@ at the drafting step, and the convergence is in the *commitment*.
 The brand doc this run then recorded carries direction B's four hex values unchanged, so the
 narration is not a post-hoc story — it predicts the artifact exactly.
 
+**Neither run appears in Logfire, and that is the harness, not a tracing fault.**
+`configure_tracing()` is called from `run_worker()`; the probe drove `run_once()` directly, so
+that process never configured an exporter and never instrumented PydanticAI — no spans were
+emitted to be missing. The directions above were read by printing the run's message parts. That
+the same text *does* reach a span was then checked offline against a `FunctionModel`: a sentinel
+in a `TextPart` arrives under `gen_ai.output.messages` on the chat span and
+`pydantic_ai.all_messages` on the agent span. Any script that drives stages outside
+`run_worker()` needs its own `configure_tracing()` call to be traced at all.
+
 **Which relocates the suspect.** The three directions match the prompt's illustrative triple at
 lines 124–127 one for one, and the committed one is the middle example — paper-and-ink. These
 two runs are fixture two's fourth and fifth samples (the truncated run committed `#F2EDE4` /

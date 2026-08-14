@@ -24,12 +24,17 @@ def configure_tracing() -> None:
     logfire.configure(send_to_logfire="if-token-present")
     # A global patch, so no `Agent(...)` construction needs an `instrument=` argument.
     #
-    # `include_content` stays on deliberately (its default): a `ThinkingPart` carries its
-    # `content` into the span only when it is set, and the Strategist's drafted directions
-    # exist nowhere else — FR-019 puts them in extended thinking and `BrandDocument` has no
-    # field for them. The cost of that choice, stated rather than assumed: every
-    # client-derived byte the crew handles — brief, brand doc, copy, the whole generated
-    # page — is sent to Logfire.
+    # `include_content` stays on deliberately (its default), but not for the reason first
+    # written here. That reason was that a `ThinkingPart` carries its `content` into the span
+    # only when it is set, and the Strategist's drafted directions live in extended thinking.
+    # Both halves are wrong: Opus 5 never returns its raw chain of thought, so the part is
+    # empty whatever this is set to, and nothing in FR-019 or the Strategist's prompt puts
+    # the drafts in thinking — the model writes them into its response text, which reaches
+    # `gen_ai.output.messages` because of this setting (evidence.md, "The drafts were never
+    # in thinking"). So the setting earns its place; the justification had to change.
+    #
+    # The cost of that choice, stated rather than assumed: every client-derived byte the crew
+    # handles — brief, brand doc, copy, the whole generated page — is sent to Logfire.
     #
     # `include_binary_content` is off, and its default is on: an agent that passes a
     # full-page screenshot would otherwise upload the render on every call, when what a
