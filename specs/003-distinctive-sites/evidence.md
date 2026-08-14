@@ -137,10 +137,41 @@ it is.
 compares hex strings, and two palettes one digit apart pass it. A perceptual threshold is what
 would have called the first two runs identical; per-channel distance would have done it.
 
-**Diagnosis is currently blind**: `LOGFIRE_TOKEN` is unset, and by FR-019's design the drafted
-alternatives exist in no field of the brand doc. Whether the Strategist drafted three genuinely
-distinct directions and chose the safe one, or drafted three variations of one, is not
-observable from the output. Turn tracing on before changing anything.
+### Diagnosis was blind, and turning tracing on did not fix it
+
+The instruction this section used to carry — *turn tracing on before changing anything* — was
+followed. Tracing landed in PR #33 and ran against a live `plan` stage: spans ship, `run_id` and
+`task_kind` are on every worker span, prompts and tool-call arguments are all there. The drafted
+directions are still unobservable, and not for want of instrumentation:
+
+```text
+ThinkingPart(content='')          gen_ai.usage.details.thinking_tokens = 662
+```
+
+662 tokens of thinking happened; none of it is readable. Opus 5 does not return its raw chain of
+thought and `thinking.display` defaults to `"omitted"`, so the part arrives empty and the span
+faithfully records an empty string. `include_content=True` governs whether PydanticAI *copies* a
+`ThinkingPart`'s content into the span, not whether there is content to copy. The Strategist
+sends no thinking configuration at all, so this is the provider's default and not a setting of
+ours — no telemetry change reaches it.
+
+FR-019 puts the drafted directions in extended thinking, and the `BrandDocument` shape
+deliberately has no field for them. Those two facts together make the requirement unverifiable
+by construction: not untested, not expensively tested — **unobservable**. The only test that
+exists, `test_the_discarded_directions_have_nowhere_to_land`
+(`tests/agents/test_brand_document.py:69`), asserts the shape has nowhere for them to leak,
+which is the opposite claim. DESIGN.md §8's standard — "a requirement whose only evidence lives
+in a SaaS dashboard is a requirement I cannot test" — is a step short of this one, whose
+evidence lives nowhere at all.
+
+So the *process* question is closed rather than answered, and SC-001 has to be settled on the
+*outcome* the tables above already measure: do two briefs produce two directions? One lever
+remains on the process side and is untried —
+`anthropic_thinking={"type": "adaptive", "display": "summarized"}` on the Strategist's call,
+which would make the drafts readable by a human reading a trace. It would not make them
+assertable: a summary is prose, and no test should parse it. Whether the summary is granular
+enough to separate "three distinct directions" from "three shades of one" is the open question;
+until it is run, treat FR-019's drafting step as instructional only.
 
 ## SC-007, the pre/post regression guard — **NOT MET, for lack of headroom**
 
