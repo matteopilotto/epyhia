@@ -274,12 +274,13 @@ is unchanged (no new fields leak the discarded alternatives).
 - **FR-019**: The Strategist MUST draft at least three distinct visual directions — palette,
   pairing, one-line rationale — and commit to exactly one. The brand doc's shape MUST NOT
   change: discarded directions never appear in it.
-  *Note (2026-08-14): the drafting step is instructional only and cannot be verified from the
-  provider's output. Opus 5 does not return its raw chain of thought, so the drafts are
-  readable nowhere — see `evidence.md`, "Diagnosis was blind". Do not write a test for it, and
-  do not read `test_the_discarded_directions_have_nowhere_to_land` as one: that test asserts
-  the shape constraint in the second sentence, which is verifiable, not the drafting in the
-  first, which is not.*
+  *Note (2026-08-14): the drafting is observable but not guaranteed. The Strategist narrates
+  all three directions — hexes, pairing, claim, and why each was rejected — in its response
+  text, which spans capture in full; it is not in extended thinking, and Opus 5's thinking
+  content is unreadable in any case (`evidence.md`, "The drafts were never in thinking").
+  Narrating them is the model's choice rather than a contract, so this supports diagnosis, not
+  assertion. Do not read `test_the_discarded_directions_have_nowhere_to_land` as a test of the
+  first sentence: it asserts the shape constraint in the second.*
 - **FR-020**: The Web Builder's prompt MUST name the generic tells explicitly — default font
   stacks as a deliberate choice, gradient-on-dark heroes, cookie-cutter card rows — without
   naming any client data.

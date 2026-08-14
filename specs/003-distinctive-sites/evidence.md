@@ -137,7 +137,7 @@ it is.
 compares hex strings, and two palettes one digit apart pass it. A perceptual threshold is what
 would have called the first two runs identical; per-channel distance would have done it.
 
-### Diagnosis was blind, and turning tracing on did not fix it
+### The drafts were never in thinking — they are in the response text
 
 The instruction this section used to carry — *turn tracing on before changing anything* — was
 followed. Tracing landed in PR #33 and ran against a live `plan` stage: spans ship, `run_id` and
@@ -155,23 +155,55 @@ faithfully records an empty string. `include_content=True` governs whether Pydan
 sends no thinking configuration at all, so this is the provider's default and not a setting of
 ours — no telemetry change reaches it.
 
-FR-019 puts the drafted directions in extended thinking, and the `BrandDocument` shape
-deliberately has no field for them. Those two facts together make the requirement unverifiable
-by construction: not untested, not expensively tested — **unobservable**. The only test that
-exists, `test_the_discarded_directions_have_nowhere_to_land`
-(`tests/agents/test_brand_document.py:69`), asserts the shape has nowhere for them to leak,
-which is the opposite claim. DESIGN.md §8's standard — "a requirement whose only evidence lives
-in a SaaS dashboard is a requirement I cannot test" — is a step short of this one, whose
-evidence lives nowhere at all.
+That looked like the end of the road, on the assumption that the drafted directions live in
+extended thinking. **They do not, and nothing ever said they did.** Neither FR-019 nor
+`prompts/strategist/v3.jinja` §"Before you commit to a direction" says where the drafting is to
+be expressed — only that it must happen and must not reach the brand doc. Asked to draft three
+and commit to one, the Strategist writes all three out in its **response text**, which spans
+already capture in full. Nobody had looked there.
 
-So the *process* question is closed rather than answered, and SC-001 has to be settled on the
-*outcome* the tables above already measure: do two briefs produce two directions? One lever
-remains on the process side and is untried —
-`anthropic_thinking={"type": "adaptive", "display": "summarized"}` on the Strategist's call,
-which would make the drafts readable by a human reading a trace. It would not make them
-assertable: a summary is prose, and no test should parse it. Whether the summary is granular
-enough to separate "three distinct directions" from "three shades of one" is the open question;
-until it is run, treat FR-019's drafting step as instructional only.
+One `plan` stage on fixture two, 2026-08-14, scratch database, plan stage only. The ledger puts
+the recorded run at $0.196 (17,946 in / 4,251 out, 61 s); a first run whose output was truncated
+before it could be read cost $0.32 at the same rates, so $0.52 in total. The response text,
+verbatim in structure:
+
+| | palette | pairing | verdict |
+|---|---|---|---|
+| **A — Arch at night** | `#14161A` / `#E8E4DC` / `#E4762B` / `#8A8F98` | `archivo-black` + `ibm-plex-sans` | rejected: "a dark poster shop reads as brand-forward" |
+| **B — The written docket** | `#F4F1EA` / `#1C1A17` / `#A6431E` / `#6A6459` | `zilla-slab` + `ibm-plex-sans` | **committed** |
+| **C — One saturated hue** | `#0F4F44` / `#F2F5F0` / `#F0C64A` / `#7FA79C` | `bebas-neue` + `work-sans` | rejected: "poster-loud contradicts 'unhurried, plainspoken'" |
+
+These disagree by the prompt's own test — a dark high-contrast against a paper-and-ink against a
+single saturated hue, three different display faces — and each rejection cites something the
+brief says. **The Strategist is not drafting three shades of one idea.** The question the SC-001
+section has been unable to ask since the first fixture-two run is answered: divergence happens
+at the drafting step, and the convergence is in the *commitment*.
+
+**Which relocates the suspect.** The three directions match the prompt's illustrative triple at
+lines 124–127 one for one, and the committed one is the middle example — paper-and-ink. A
+fourth sample of fixture two's committed palette (`#F2EDE4` / `#1B1A17` / `#C4562F` / `#5F5B51`,
+`zilla-slab` / `ibm-plex-sans`) lands in the same warm-cream family as the other three. So the
+hypothesis worth testing is no longer "the model cannot diverge" but "the prompt hands it the
+three directions to consider, and the paper-and-ink one wins on voice for every brief we have
+written". That is a prompt change to test, and the first cheap thing to try is varying or
+removing the example triple.
+
+The two smaller results, for the record:
+
+- **`display: "summarized"` works, and is not worth landing.** With
+  `anthropic_thinking={"type": "adaptive", "display": "summarized"}` overridden onto the
+  Strategist, the same part came back with 1,937 characters instead of `''`, coherently
+  describing the alternatives and the commitment. It names two of the three and gives hexes only
+  for the one it settled on — strictly short of the bar set for keeping it, and in any case a
+  worse source than the response text, which is free and complete. The setting is real and
+  available; no source change was made.
+- **The shape test is not a test of the drafting.**
+  `test_the_discarded_directions_have_nowhere_to_land` (`tests/agents/test_brand_document.py:69`)
+  asserts FR-019's second sentence — the runners-up have nowhere to leak — which is verifiable
+  and verified. The first sentence is observable in the response text but not guaranteed there:
+  narrating the drafts is the model's choice, not a contract. Diagnosis, not assertion. Making
+  it assertable means a `record_directions` tool call or a brand-doc field, and the second
+  reopens exactly what that test was written to close — a spec decision, not a wiring one.
 
 ## SC-007, the pre/post regression guard — **NOT MET, for lack of headroom**
 
