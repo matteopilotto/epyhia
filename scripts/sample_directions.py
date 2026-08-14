@@ -360,8 +360,15 @@ def report(samples: list[Sampled], *, real: bool, spend_usd: float) -> str:
 
 def _verdict(first: Sampled, second: Sampled) -> list[str]:
     """SC-001 restated as something a distribution can answer: across N samples per fixture,
-    the two fixtures' modal directions differ — no shared pairing mode, modal palettes not
-    same-direction under the calibrated thresholds, no shared archetype mode."""
+    a pair of fixtures' modal directions differ — no shared pairing mode, modal palettes not
+    same-direction under the calibrated thresholds, no shared archetype mode.
+
+    All three are printed for every pair, but SC-001 binds only the pairing clause across all
+    of them: palette and archetype bind pairs whose briefs argue for different directions, and
+    two briefs that agree are expected to converge in palette. Deciding which pairs those are
+    is a reading of the fixtures' voice fields and stays outside this script — a table here
+    naming which fixtures disagree would be client data in source.
+    """
     pairings = (_modes(first.pairings), _modes(second.pairings))
     archetypes = (_modes(first.archetypes), _modes(second.archetypes))
     checks = [
