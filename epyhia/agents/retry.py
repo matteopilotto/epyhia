@@ -2,6 +2,7 @@ import asyncio
 import logging
 from collections.abc import Awaitable, Callable
 
+import httpx
 from pydantic_ai.exceptions import ModelAPIError, ModelHTTPError
 
 logger = logging.getLogger(__name__)
@@ -26,20 +27,28 @@ def _backoff_seconds(attempt: int) -> float:
     return min(MODEL_BACKOFF_BASE_SECONDS * 2**attempt, MODEL_BACKOFF_CAP_SECONDS)
 
 
-def _is_transient(exc: ModelAPIError) -> bool:
+def _is_transient(exc: ModelAPIError | httpx.TransportError) -> bool:
     """Whether asking the same question again is worth the call.
 
     A `ModelAPIError` that is *not* a `ModelHTTPError` carries no status code: it is the
-    streamed-error case (the provider returned 200 and then an `error` event in the body) and
-    the connection-dropped case. Erring toward retrying the unclassifiable is right here —
-    the cost of a wrong retry is one wasted call, the cost of a wrong refusal is the run.
+    streamed-error case (the provider returned 200 and then an `error` event in the body).
+    An `httpx.TransportError` is the connection itself failing — and during stream iteration,
+    where a 64K-token generation spends nearly all its life, that is the *only* shape a
+    dropped connection has: the response body is read by httpx directly and neither the
+    Anthropic SDK nor PydanticAI wraps what it raises. Erring toward retrying the
+    unclassifiable is right for both — the cost of a wrong retry is one wasted call, the cost
+    of a wrong refusal is the run.
+
+    `httpx.StreamError` is deliberately not in that family. It subclasses `RuntimeError` and
+    means the stream was misused by the caller — read twice, or after close — which is a
+    programming error retrying would only repeat.
     """
     if isinstance(exc, ModelHTTPError):
         return exc.status_code in RETRYABLE_STATUS
     return True
 
 
-def _retry_after_seconds(exc: ModelAPIError) -> float | None:
+def _retry_after_seconds(exc: ModelAPIError | httpx.TransportError) -> float | None:
     """The provider's own answer, when it gave one. `ModelHTTPError.headers` is lowercased by
     PydanticAI, so there is one spelling to read."""
     headers = getattr(exc, "headers", None) or {}
@@ -55,9 +64,10 @@ async def call_with_retry[T](operation: Callable[[], Awaitable[T]], *, agent: st
     Takes a factory rather than a coroutine because the Web Builder's call is an async
     context manager and cannot be re-awaited — each attempt has to build its own.
 
-    Anything that is not a `ModelAPIError` propagates untouched, including
-    `UsageLimitExceeded` and `UnexpectedModelBehavior`: a token ceiling is a decision, not a
-    transient. So does a `ModelAPIError` whose status says the request itself is wrong.
+    Anything that is neither a `ModelAPIError` nor an `httpx.TransportError` propagates
+    untouched, including `UsageLimitExceeded` and `UnexpectedModelBehavior`: a token ceiling
+    is a decision, not a transient. So does a `ModelAPIError` whose status says the request
+    itself is wrong.
 
     Note for the ledger: `record_call` runs only on success, and a failed attempt's tokens
     cannot be read off a raised stream — so `runs.spend_usd` under-reports by whatever the
@@ -69,7 +79,7 @@ async def call_with_retry[T](operation: Callable[[], Awaitable[T]], *, agent: st
     for attempt in range(MODEL_RETRY_ATTEMPTS):
         try:
             return await operation()
-        except ModelAPIError as exc:
+        except (ModelAPIError, httpx.TransportError) as exc:
             last_attempt = attempt == MODEL_RETRY_ATTEMPTS - 1
             if last_attempt or not _is_transient(exc):
                 raise

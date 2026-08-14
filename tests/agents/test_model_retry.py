@@ -2,6 +2,7 @@ import asyncio
 import uuid
 from collections.abc import AsyncIterator, Callable
 
+import httpx
 import pytest
 from pydantic_ai.exceptions import ModelAPIError, ModelHTTPError
 from pydantic_ai.models.function import AgentInfo, FunctionModel
@@ -145,6 +146,49 @@ async def test_a_429_is_retried(db_session: AsyncSession, sleeps: list[float]) -
     assert len(calls) == 2
 
 
+async def test_a_dropped_connection_mid_stream_is_retried(
+    db_session: AsyncSession, sleeps: list[float]
+) -> None:
+    """The second failure of run `31b3e4ac`: `peer closed connection without sending complete
+    message body`, on a tethered link, recorded as a failed task with no retry.
+
+    A drop during *stream iteration* is the one the longest calls live on, and it is not a
+    `ModelAPIError`: the body is read by httpx directly, and neither the Anthropic SDK nor
+    PydanticAI wraps what it raises there.
+    """
+    run_id = await _open_run(db_session)
+
+    def dropped(attempt: int) -> None:
+        if attempt == 1:
+            raise httpx.RemoteProtocolError(
+                "peer closed connection without sending complete message body"
+            )
+
+    model, calls = _streaming_model(dropped)
+    assert await _build(db_session, run_id, model) == PAGE
+    assert len(calls) == 2
+    assert len(sleeps) == 1
+
+
+async def test_a_misused_stream_is_not_retried(
+    db_session: AsyncSession, sleeps: list[float]
+) -> None:
+    """`httpx.StreamError` is a `RuntimeError`, not a transport failure: it means the stream
+    was read twice or after close, which is our bug and not the network's. Retrying it would
+    repeat it three times and change nothing."""
+    run_id = await _open_run(db_session)
+
+    def misused(attempt: int) -> None:
+        raise httpx.StreamError("attempted to read after the content was already streamed")
+
+    model, calls = _streaming_model(misused)
+    with pytest.raises(httpx.StreamError):
+        await _build(db_session, run_id, model)
+
+    assert len(calls) == 1
+    assert sleeps == []
+
+
 async def test_a_400_costs_exactly_one_call(
     db_session: AsyncSession, sleeps: list[float]
 ) -> None:
@@ -224,3 +268,4 @@ async def test_the_ledger_records_one_call_not_one_per_attempt(
         select(func.count()).select_from(AgentCall).where(AgentCall.run_id == run_id)
     )
     assert rows == 1
+
