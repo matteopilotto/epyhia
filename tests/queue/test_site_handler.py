@@ -78,13 +78,20 @@ async def _seed_brand_doc(
     await session.commit()
 
 
-async def _seed_copy(session: AsyncSession, run_id: uuid.UUID, status: str) -> None:
+async def _seed_copy(
+    session: AsyncSession,
+    run_id: uuid.UUID,
+    status: str,
+    *,
+    revision: int = 0,
+    age_seconds: int = 0,
+) -> None:
     await session.execute(
         text(
             "INSERT INTO artifacts (id, run_id, kind, path, content_type, bytes, sha256, "
-            "grounding_status, violations, revision) "
+            "grounding_status, violations, revision, created_at) "
             "VALUES (:id, :run_id, 'copy', 'copy.json', 'application/json', :bytes, :sha, "
-            ":status, :violations, 0)"
+            ":status, :violations, :revision, now() - make_interval(secs => :age))"
         ),
         {
             "id": uuid.uuid4(),
@@ -95,6 +102,8 @@ async def _seed_copy(session: AsyncSession, run_id: uuid.UUID, status: str) -> N
             "violations": '[{"kind": "ungrounded_numeral", "quote": "1", "why": "not given"}]'
             if status == "flagged"
             else None,
+            "revision": revision,
+            "age": age_seconds,
         },
     )
     await session.commit()
@@ -275,6 +284,32 @@ async def test_a_flagged_copy_artifact_never_becomes_a_page(
 
     # No page was built and no deploy was requested — the held copy stopped short of both.
     assert await _counts(queue_session, run_id) == (0, 0)
+
+
+async def test_a_rerun_clean_copy_beats_a_stale_flagged_generation(
+    queue_session: AsyncSession,
+) -> None:
+    """The operator's remedy for held copy is to correct the brand doc and re-run the copy
+    stage, which appends a fresh artifact. `revision` counts review rounds *within* one
+    generation — the stale flagged generation burned two (revision 2), the fresh clean one
+    passed its first draft (revision 0) — so ordering by revision would pick the stale one
+    and refuse forever. Newest generation wins.
+
+    The unknown pairing is the proof the guard was passed: had the stale artifact been
+    selected, `UpstreamNotClean` would fire before the pairing is ever resolved.
+    """
+    run_id = await _make_buildable_run(queue_session, _doc(display="Helvetica Neue"))
+    # _make_buildable_run seeded today's clean copy; add the stale flagged generation the
+    # operator re-ran away from — older, but with the higher within-generation revision.
+    await _seed_copy(queue_session, run_id, "flagged", revision=2, age_seconds=3600)
+
+    with (
+        web_builder.agent.override(model=_never_called()),
+        pytest.raises(PairingError) as raised,
+    ):
+        await handle_site(queue_session, _site_task(run_id))
+
+    assert "unknown font id" in str(raised.value)
 
 
 async def test_a_missing_copy_artifact_never_becomes_a_page(

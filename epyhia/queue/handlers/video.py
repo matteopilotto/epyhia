@@ -63,11 +63,14 @@ async def handle_video(session: AsyncSession, task: Task) -> None:
     flagged props artifact is therefore not something to render and inspect afterwards —
     it is something that must not reach a frame at all (FR-026).
     """
+    # Newest generation, not highest revision — same reasoning as the site handler's copy
+    # lookup: `revision` counts review rounds within one generation, so a re-run's fresh
+    # clean props (revision 0) must beat a stale flagged generation that used its revisions.
     props_artifact = (
         await session.execute(
             select(Artifact)
             .where(Artifact.run_id == task.run_id, Artifact.kind == "video_props")
-            .order_by(Artifact.revision.desc())
+            .order_by(Artifact.created_at.desc(), Artifact.revision.desc())
         )
     ).scalars().first()
 

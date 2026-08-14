@@ -274,11 +274,15 @@ async def handle_site(session: AsyncSession, task: Task) -> None:
     brand_doc = await session.get(BrandDoc, run.brand_doc_id)
     brief = await session.get(Brief, run.brief_id)
 
+    # Newest generation, not highest revision: `revision` counts review rounds *within* one
+    # `produce()` call, so after an operator re-runs the copy stage the fresh clean artifact
+    # (revision 0, passed first draft) would lose to the stale flagged one (revision 2) and
+    # this stage would refuse forever on copy the run no longer stands behind.
     copy_artifact = (
         await session.execute(
             select(Artifact)
             .where(Artifact.run_id == run.id, Artifact.kind == "copy")
-            .order_by(Artifact.revision.desc())
+            .order_by(Artifact.created_at.desc(), Artifact.revision.desc())
         )
     ).scalars().first()
 
