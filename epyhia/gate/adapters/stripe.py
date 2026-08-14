@@ -174,6 +174,25 @@ class StripePriceAdapter(_StripeAdapter):
             payload["recurring"] = recurring
         try:
             price = await client.v1.prices.create_async(payload)
+        except stripe.InvalidRequestError as exc:
+            # The lookup key is derived, so a second run of the same brief asks for a key
+            # Stripe already holds — and the ledger cannot know that, because a re-run is a
+            # new `runs` row with new `actions` rows in *our* Postgres.
+            #
+            # The condition is asked rather than read off the message: the sibling product
+            # adapter matches `"already exists"`, and Stripe's wording here is "already uses
+            # that lookup key", so a copied string match would fail open. Created first and
+            # recovered on failure rather than checked before creating, because a pre-check
+            # races two runs of the same brief and this does not.
+            existing = await find_price(client, price_lookup_key(request))
+            if existing is None:
+                raise StripeCallFailed(str(exc)) from exc
+            # The key carries the brief hash, the slug, the amount and the currency, so a
+            # price holding it is the price this run wants — and the recurring clause cannot
+            # differ, since it comes from a brief that would have hashed differently. The
+            # truth still comes from verify(), which re-reads by key and holds it against the
+            # brief's own row.
+            price = existing
         except stripe.StripeError as exc:
             raise StripeCallFailed(str(exc)) from exc
         return {"price_id": price["id"]}
@@ -290,10 +309,21 @@ class CheckoutSessionAdapter(_StripeAdapter):
 
 
 async def find_price(client: stripe.StripeClient, lookup_key: str) -> dict | None:
-    """The price carrying this derived lookup key, or None. Listed rather than retrieved by
-    id because Stripe assigns price ids and this must not depend on what `execute()` said."""
-    listing = await client.v1.prices.list_async({"lookup_keys": [lookup_key], "limit": 1})
+    """The active price carrying this derived lookup key, or None. Listed rather than
+    retrieved by id because Stripe assigns price ids and this must not depend on what
+    `execute()` said.
+
+    The key is unique across *active* prices only, so archiving one frees it for the next: a
+    listing capped at one row lets the provider decide which of the two answers, and an
+    archived row returned here fails verification for a reason that has nothing to do with the
+    catalogue. An inactive row is still returned when it is all there is — that failure is the
+    honest one.
+    """
+    listing = await client.v1.prices.list_async({"lookup_keys": [lookup_key], "limit": 100})
     data = listing["data"]
+    for price in data:
+        if field(price, "active"):
+            return price
     return data[0] if data else None
 
 

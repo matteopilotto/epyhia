@@ -3,11 +3,13 @@ import uuid
 from pathlib import Path
 
 import pytest
+import stripe
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from epyhia.gate.adapters.stripe import (
     ArmChargePathAdapter,
     CheckoutSessionAdapter,
+    StripeCallFailed,
     StripePriceAdapter,
     StripeProductAdapter,
     plain,
@@ -131,6 +133,86 @@ async def test_a_price_that_drifted_from_the_brief_fails_verification() -> None:
 
     with pytest.raises(VerificationFailed):
         await prices.verify(request, {"price_id": price_id}, _ctx())
+
+
+async def test_the_same_brief_twice_reuses_the_catalogue_it_already_made() -> None:
+    """A re-run is a new `runs` row with new `actions` rows, so the gate's ledger correctly
+    says "never done" while Stripe says "already there" — the derived product id and the
+    derived lookup key both land on objects the first run created. Reaching them is the
+    intended outcome of the same brief twice, not a failure (§7.2, FR-044)."""
+    api = FakeStripe()
+    row = catalogue()[0]
+    products = StripeProductAdapter(client_factory=lambda _: api)
+    prices = StripePriceAdapter(client_factory=lambda _: api)
+    request = price_request(row, product_id_for(product_request(row)))
+
+    first_product = await products.execute(product_request(row), _ctx())
+    first = await prices.execute(request, _ctx())
+
+    second_product = await products.execute(product_request(row), _ctx())
+    second = await prices.execute(request, _ctx())
+
+    assert second_product == first_product
+    assert second == first
+    assert len(api.products.rows) == 1
+    assert len(api.prices.rows) == 1
+
+    # And the truth still comes from the probe, over an object this pass did not create.
+    evidence = await prices.verify(request, second, _ctx())
+    assert evidence["price_id"] == first["price_id"]
+    assert evidence["unit_amount"] == row["price_minor"]
+
+
+async def test_a_repriced_row_is_a_new_price_rather_than_a_reused_one() -> None:
+    """What the amount-in-the-key was for: the reuse above holds only because the key carries
+    the amount, so a catalogue priced differently cannot silently sell at the old price."""
+    api = FakeStripe()
+    row = catalogue()[0]
+    prices = StripePriceAdapter(client_factory=lambda _: api)
+    request = price_request(row, "prod_stub")
+    repriced = {**request, "price_minor": request["price_minor"] + 1}
+
+    first = await prices.execute(request, _ctx())
+    second = await prices.execute(repriced, _ctx())
+
+    assert price_lookup_key(repriced) != price_lookup_key(request)
+    assert second["price_id"] != first["price_id"]
+    assert len(api.prices.rows) == 2
+    assert (await prices.verify(repriced, {}, _ctx()))["unit_amount"] == repriced["price_minor"]
+
+
+async def test_a_collision_with_no_findable_price_still_fails_loudly() -> None:
+    """The fallback recovers a price it can read back. A refusal it cannot explain that way is
+    a genuine failure and must stay one — falling open here would deploy a charge path nobody
+    proved."""
+    api = FakeStripe()
+    row = catalogue()[0]
+    prices = StripePriceAdapter(client_factory=lambda _: api)
+
+    async def refuse(params: dict) -> None:
+        raise stripe.InvalidRequestError("A price already uses that lookup key.", "lookup_key")
+
+    api.prices.create_async = refuse
+
+    with pytest.raises(StripeCallFailed):
+        await prices.execute(price_request(row, "prod_stub"), _ctx())
+
+
+async def test_an_archived_price_sharing_the_key_does_not_shadow_the_active_one() -> None:
+    """Stripe's uniqueness constraint is over active prices only, so archiving one frees the
+    key for a second — and a listing that asks for a single row lets the provider choose which
+    of the two answers."""
+    api = FakeStripe()
+    row = catalogue()[0]
+    prices = StripePriceAdapter(client_factory=lambda _: api)
+    request = price_request(row, "prod_stub")
+
+    archived = await prices.execute(request, _ctx())
+    api.prices.rows[archived["price_id"]]["active"] = False
+    live = await prices.execute(request, _ctx())
+
+    assert live["price_id"] != archived["price_id"]
+    assert (await prices.verify(request, {}, _ctx()))["price_id"] == live["price_id"]
 
 
 async def _armed_request(api: FakeStripe) -> dict:
