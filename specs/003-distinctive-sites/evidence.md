@@ -179,10 +179,14 @@ brief says. **The Strategist is not drafting three shades of one idea.** The que
 section has been unable to ask since the first fixture-two run is answered: divergence happens
 at the drafting step, and the convergence is in the *commitment*.
 
+The brand doc this run then recorded carries direction B's four hex values unchanged, so the
+narration is not a post-hoc story — it predicts the artifact exactly.
+
 **Which relocates the suspect.** The three directions match the prompt's illustrative triple at
-lines 124–127 one for one, and the committed one is the middle example — paper-and-ink. A
-fourth sample of fixture two's committed palette (`#F2EDE4` / `#1B1A17` / `#C4562F` / `#5F5B51`,
-`zilla-slab` / `ibm-plex-sans`) lands in the same warm-cream family as the other three. So the
+lines 124–127 one for one, and the committed one is the middle example — paper-and-ink. These
+two runs are fixture two's fourth and fifth samples (the truncated run committed `#F2EDE4` /
+`#1B1A17` / `#C4562F` / `#5F5B51`), and both land in the same warm-cream family, on
+`zilla-slab` / `ibm-plex-sans`, as the three before them. So the
 hypothesis worth testing is no longer "the model cannot diverge" but "the prompt hands it the
 three directions to consider, and the paper-and-ink one wins on voice for every brief we have
 written". That is a prompt change to test, and the first cheap thing to try is varying or
