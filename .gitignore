@@ -18,8 +18,9 @@ out/
 *.mp4
 preview/
 
-# Sampled brand docs and their report — the findings go in evidence.md, the draws do not
-samples/
+# Sampled brand docs, narrations and reports — the findings go in evidence.md, the draws do
+# not. Glob, because comparing prompt versions means one directory per version.
+samples*/
 
 # Working notes, deliberately untracked (see .claude/DECISIONS.md header)
 .claude/DECISIONS.md
