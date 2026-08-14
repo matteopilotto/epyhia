@@ -17,6 +17,12 @@ AGENT = "reviewer"
 MODEL_ID = "claude-haiku-4-5"
 PROMPT_VERSION = prompt_service.active_version(AGENT)
 
+# The wall-clock ceiling on this call, retries included. Observed healthy calls take seconds;
+# the stage leases are 10 to 15 minutes and hold more than this one call, so five minutes is
+# far past slow and well inside the lease — a call still open at that point is the stalled
+# stream of 2026-08-13, not a busy provider.
+CALL_BUDGET_SECONDS = 300.0
+
 # Thinking is where the Reviewer works a check through; `why` is where it states the result.
 # Without a scratchpad it used `why` as one, and entries reading "this is correct" or
 # retracting themselves in their own sentence shipped as violations and spent revisions.
@@ -98,6 +104,7 @@ async def review(
             usage_limits=limits,
         ),
         agent=AGENT,
+        budget_seconds=CALL_BUDGET_SECONDS,
     )
     latency_ms = int((time.perf_counter() - started) * 1000)
 
