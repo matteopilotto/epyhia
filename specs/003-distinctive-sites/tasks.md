@@ -155,7 +155,7 @@ evidence pass, not CI.)
 
 ### Implementation for User Story 5
 
-- [x] T037 [US5] Add the divergence step to `prompts/strategist/v3.jinja`: draft at least three genuinely distinct directions — palette, pairing from the library, one-line rationale each — then commit to exactly one; the drafts live in extended thinking and only the chosen direction reaches the brand doc (FR-019, research R9)
+- [x] T037 [US5] Add the divergence step to `prompts/strategist/v3.jinja`: draft at least three genuinely distinct directions — palette, pairing from the library, one-line rationale each — then commit to exactly one; the drafts live in extended thinking and only the chosen direction reaches the brand doc (FR-019, research R9) — *2026-08-14: the prompt as written says neither, and the drafts arrive in the response text; see the correction at research R9*
 - [x] T038 [US5] Add explicit anti-slop language to `prompts/web_builder/v4.jinja`: name the generic tells outright — default font stacks, the gradient-on-dark hero, cookie-cutter card rows — naming no client data while doing so (FR-020)
 - [x] T039 [P] [US5] Tests in `tests/agents/test_strategist.py` (extend) and `tests/design/test_prompts_antislop.py`: the `BrandDocument` model's shape is unchanged — no field exists for discarded alternatives to leak into (FR-019); the rendered v4 builder prompt contains the named tells; genericity scans still pass over both updated templates (US5 acceptance scenarios 2–3, FR-021)
 

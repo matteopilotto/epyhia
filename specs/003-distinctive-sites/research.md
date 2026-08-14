@@ -257,6 +257,15 @@ invalid id raises `ModelRetry` inside the Strategist's own run (self-correction)
 with the site stage's fail-fast (R7 step 1) as the durable backstop for docs authored
 by older prompt versions.
 
+> **Correction, 2026-08-14 — "extended thinking is where the drafts live" was an assumption,
+> and it is wrong.** It travelled from here into T037's wording and into the justification for
+> `include_content` in `epyhia/observability.py`, and it cost a diagnosis built on the drafts
+> being unobservable. Opus 5 returns no thinking content at all, and the prompt this decision
+> produced never mentions thinking: the Strategist writes all three directions into its
+> response text, where a span already carries them. Everything else in R9 stands — the
+> divergence step, the unchanged brand doc shape, and the pairing validation all landed as
+> described. See `evidence.md`, "The drafts were never in thinking".
+
 **Divergence verification**: the two-fixture divergence assertions (US5 scenario 1,
 SC-001) are live-model properties; they land in the eval/quickstart evidence pass, not
 CI. CI asserts the mechanical half: prompt renders, schema unchanged, no client data.
