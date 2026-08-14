@@ -3,6 +3,7 @@ import logging
 import time
 from collections.abc import Awaitable, Callable
 
+import logfire
 from pydantic_ai.exceptions import ApprovalRequired
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
@@ -10,6 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_asyn
 from epyhia.config import settings
 from epyhia.cost.budget import HALTED, enforce_run_budget
 from epyhia.models.tasks import Task
+from epyhia.observability import configure_tracing
 from epyhia.queue.claim import claim_task
 from epyhia.queue.sweeper import resume_orphaned_actions, sweep_expired_leases
 
@@ -71,7 +73,13 @@ async def run_once(session: AsyncSession, *, kind: str | None = None) -> bool:
         handler = HANDLERS.get(task.kind)
         if handler is None:
             raise RuntimeError(f"no handler registered for task kind: {task.kind!r}")
-        await handler(session, task)
+        # Baggage rather than `Agent.run(run_id=...)`: every span opened under this block
+        # carries the run — agent spans, HTTP client spans, database spans, and whatever is
+        # instrumented next — from one place instead of one edit per agent call site. It
+        # also leaves PydanticAI's own `run_id` meaning what the framework means by it, one
+        # agent run, rather than the six-to-ten a pipeline makes under one EPYHIA run.
+        with logfire.set_baggage(run_id=str(task.run_id), task_kind=task.kind):
+            await handler(session, task)
         await session.execute(
             text(
                 "UPDATE tasks SET state = 'done', lease_expires_at = NULL WHERE id = :id"
@@ -129,7 +137,13 @@ async def run_worker(
     entrypoint otherwise builds its own engine from `settings.database_url` and cannot be
     reached. That seam is not decoration: the recovery call below was missing for four
     phases precisely because nothing could assert this loop makes it.
+
+    Tracing is configured here rather than in the `__main__` block below for that same
+    reason — the crew runs in this process, and a call reachable only by launching the
+    process is a call nothing can prove is made.
     """
+    configure_tracing()
+
     # Imported here rather than at module scope: each handler module registers itself by
     # calling `register_handler` above, so importing the package from the top would close
     # a cycle back onto this one.
