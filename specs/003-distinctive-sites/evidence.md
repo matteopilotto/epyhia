@@ -272,6 +272,12 @@ changes the thing being sampled.
 brand docs written, report produced, calibration held. The real draw — 4 × 2 at ~$0.33 a
 sample, about **$2.65** — has not been made. Nothing below it is settled until it has.
 
+It was attempted on 2026-08-14 and stopped on the first sample: the API account has no
+credit (`invalid_request_error`, "credit balance is too low"). Zero rows in `agent_calls`,
+zero spend, no brand docs written. Two things behaved as designed on the way through — the
+400 was not retried, and the harness read the plan task's state back and refused to count a
+failed stage as a draw.
+
 ### What the numbers will decide, and what stays a sign-off
 
 | if the samples show | the indicated fix |
