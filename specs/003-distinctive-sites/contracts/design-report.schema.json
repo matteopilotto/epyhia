@@ -1,0 +1,118 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://epyhia.dev/contracts/design-report.schema.json",
+  "title": "Design report",
+  "description": "One JSON artifact (kind='design_report') per site build, written by the site handler on every path — clean, flagged, skipped, or revised — so an operator can always see which tells the page carries and what the revision loop did (FR-008, FR-014, FR-015). Internal telemetry about the page: never deployed, sent, or published, which is why it carries grounding_status='clean' by construction rather than by scan (research R7). Rule ids and critique kinds are closed sets fixed in code; the only brand-parameterised judgements read the run's own brand doc (FR-009).",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["lint", "critique", "revision", "screenshots"],
+  "properties": {
+    "lint": {
+      "type": "array",
+      "description": "Deterministic findings on the original page. Empty means clean.",
+      "items": { "$ref": "#/$defs/lint_finding" }
+    },
+    "critique": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "findings"],
+      "description": "The Site Critic's outcome. A schema-valid empty punch list is 'clean' (approval derived from emptiness, mirroring the Reviewer); unusable output or a render/call failure is 'skipped' with the reason — the two are recorded distinctly even though neither triggers a revision by itself (research R5).",
+      "properties": {
+        "status": { "type": "string", "enum": ["clean", "findings", "skipped"] },
+        "findings": {
+          "type": "array",
+          "maxItems": 8,
+          "items": { "$ref": "#/$defs/critique_finding" }
+        },
+        "skip_reason": { "type": "string", "minLength": 1 }
+      }
+    },
+    "revision": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["outcome", "findings_before"],
+      "description": "The fact and outcome of the at-most-one revision pass (FR-014). 'kept' requires: still a page (it retains a share of the original's text blocks), grounding clean, within size budget, lint count not greater than the original's. The existence condition is checked first and reported as 'discarded_empty', because a truncated generation satisfies each of the others rather than failing one — nothing is ungrounded, nothing is oversized, and no tell is counted, precisely because there is no page. Both results are recorded — the kept page is the site artifact, the discarded one is this record.",
+      "properties": {
+        "outcome": {
+          "type": "string",
+          "enum": [
+            "not_needed",
+            "kept",
+            "discarded_grounding",
+            "discarded_worse",
+            "discarded_empty",
+            "skipped"
+          ]
+        },
+        "findings_before": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Lint finding count on the original page."
+        },
+        "findings_after": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Lint finding count on the revised page. Present whenever a revision was produced and linted (kept, discarded_grounding, discarded_worse, discarded_empty)."
+        },
+        "skip_reason": { "type": "string", "minLength": 1 }
+      }
+    },
+    "screenshots": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["captured", "widths"],
+      "description": "Whether the headless render ran. captured=false with the critique skipped is the degraded path FR-015 requires the stage to survive.",
+      "properties": {
+        "captured": { "type": "boolean" },
+        "widths": {
+          "type": "array",
+          "items": { "type": "integer", "minimum": 1 }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "lint_finding": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["rule", "detail", "where"],
+      "properties": {
+        "rule": {
+          "type": "string",
+          "enum": [
+            "uniform_sections",
+            "gradient_hero",
+            "single_radius",
+            "accent_overuse",
+            "weak_type_scale",
+            "ignored_pairing"
+          ]
+        },
+        "detail": { "type": "string", "minLength": 1 },
+        "where": { "type": "string", "minLength": 1 }
+      }
+    },
+    "critique_finding": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "where", "what"],
+      "description": "There is deliberately no field for replacement markup or copy: 'never rewrites the page' is a property of this shape (contracts/site-critic.md).",
+      "properties": {
+        "kind": {
+          "type": "string",
+          "enum": [
+            "palette_ignored",
+            "rhythm_uniform",
+            "type_timid",
+            "accent_overused",
+            "hierarchy_flat",
+            "broken_render",
+            "other"
+          ]
+        },
+        "where": { "type": "string", "minLength": 1 },
+        "what": { "type": "string", "minLength": 1 }
+      }
+    }
+  }
+}

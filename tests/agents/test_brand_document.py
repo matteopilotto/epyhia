@@ -64,3 +64,28 @@ def test_an_offering_mirrors_the_brief_product_field_for_field() -> None:
 
 def test_a_complete_brand_document_round_trips() -> None:
     assert BrandDocument.model_validate(_GENERIC_DOC).model_dump() == _GENERIC_DOC
+
+
+def test_the_discarded_directions_have_nowhere_to_land() -> None:
+    """FR-019. The Strategist now drafts several directions and commits to one, and the
+    enforcement that only the committed one travels is structural rather than instructional:
+    this shape is the whole of what the crew downstream ever reads. A field added here for
+    alternatives, rationales or runners-up would hand every later agent a choice the
+    Strategist was supposed to have made."""
+    assert set(BrandDocument.model_fields) == {
+        "name",
+        "descriptor",
+        "positioning",
+        "palette",
+        "type",
+        "motion_language",
+        "composition_archetype",
+        "video_archetype",
+        "voice",
+        "composition_plan",
+        "offerings",
+    }
+
+    # And an extra key does not ride along on the way through, either.
+    smuggled = {**_GENERIC_DOC, "alternatives": [{"palette": {}, "why": "the runner-up"}]}
+    assert "alternatives" not in BrandDocument.model_validate(smuggled).model_dump()

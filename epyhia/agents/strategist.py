@@ -5,13 +5,14 @@ from dataclasses import dataclass, field
 from typing import Literal
 
 from pydantic import BaseModel, Field
-from pydantic_ai import Agent, RunContext
+from pydantic_ai import Agent, ModelRetry, RunContext
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from epyhia.agents.retry import call_with_retry
 from epyhia.cost.ledger import record_call
 from epyhia.cost.limits import limits_for_run
+from epyhia.design.fonts import PairingError, library
 from epyhia.models.brand_docs import BrandDoc
 from epyhia.models.runs import Run
 from epyhia.prompts_service import prompt_service
@@ -38,6 +39,10 @@ class Palette(BaseModel):
 
 
 class TypePairing(BaseModel):
+    """Two font library ids. The shape is unchanged — two non-empty strings — because the
+    ids are checked where a failure can be handed back to the model to fix
+    (`write_brand_doc`), not inside a model every downstream reader also constructs."""
+
     display: str = Field(min_length=1)
     body: str = Field(min_length=1)
 
@@ -100,7 +105,9 @@ class StrategistDeps:
 agent = Agent(
     f"anthropic:{MODEL_ID}",
     deps_type=StrategistDeps,
-    instructions=prompt_service.render(AGENT, PROMPT_VERSION),
+    # The library is the single source: the selectable ids are rendered from the same
+    # registry the injector reads, so a face can never be offered here and missing there.
+    instructions=prompt_service.render(AGENT, PROMPT_VERSION, fonts=library.faces),
     # Constructing the agent must not require ANTHROPIC_API_KEY — only calling it does.
     defer_model_check=True,
 )
@@ -112,6 +119,15 @@ agent = Agent(
 @agent.tool
 async def write_brand_doc(ctx: RunContext[StrategistDeps], doc: BrandDocument) -> str:
     """Record the brand document for this run."""
+    # Self-correction, one layer of two: an id nobody curated comes back to the model with
+    # the reason, so the pairing is fixed inside this run. The site stage resolves the same
+    # ids again before it builds — the durable backstop for docs written by older prompt
+    # versions, which this check cannot reach (data-model.md "Validation, two layers").
+    try:
+        library.resolve_pairing(doc.type.display, doc.type.body)
+    except PairingError as exc:
+        raise ModelRetry(f"{exc}. Select both faces from the font library by id.") from exc
+
     session = ctx.deps.session
     next_version = (
         await session.execute(

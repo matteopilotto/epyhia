@@ -13,6 +13,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 import epyhia.queue.handlers  # noqa: F401  — registers every task handler
 from epyhia.agents import marketer, reviewer, strategist, web_builder
 from epyhia.config import settings
+from epyhia.design.fonts import library
 from epyhia.gate import gate, registry
 from epyhia.gate.adapters.vercel import build_marker
 from epyhia.gate.errors import VerificationFailed
@@ -31,6 +32,12 @@ from epyhia.prompts_service import prompt_service
 from epyhia.queue.worker import run_once
 
 FIXTURES = Path(__file__).resolve().parents[1] / "fixtures" / "briefs"
+
+# The pairing the fake Strategist commits to. Taken from the library by role rather than
+# named, so the curation can grow or be renamed without touching the pipeline tests — and so
+# nothing here pretends a face choice is a client fact.
+DISPLAY_ID = next(face for face in library.faces if face.role in ("display", "both")).id
+BODY_ID = next(face for face in library.faces if face.role in ("body", "both")).id
 
 
 def load_brief(name: str = "one.json") -> dict:
@@ -97,7 +104,7 @@ def _strategist_model(brief: dict) -> FunctionModel:
                 "accent": "#c2410c",
                 "muted": "#71717a",
             },
-            "type": {"display": "Display Face", "body": "Body Face"},
+            "type": {"display": DISPLAY_ID, "body": BODY_ID},
             "motion_language": "mechanical, deliberate",
             "composition_archetype": "editorial_stack",
             "video_archetype": "technical_spec_sheet",

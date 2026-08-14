@@ -8,15 +8,62 @@
   These are EPYHIA infrastructure names, not client data — nothing here varies by client,
   and nothing client-specific may ever be added to it (Principle I).
 #}
+{#
+  A page archetype is a specification, not a mood. `for` says when to reach for it; `grid`,
+  `rhythm`, `alternation`, `hero_must_not` and `signature` say what building it actually
+  commits you to. Ids are stable — a document written against an earlier version still names
+  something that exists.
+#}
 {%- set page_archetypes = [
   {"id": "editorial_stack",
-   "for": "long vertical rhythm, generous whitespace, one accent used sparingly"},
+   "for": "long vertical rhythm, generous whitespace, one accent used sparingly",
+   "grid": "one reading column held to a measure of roughly 60–70 characters, inset from a much wider page gutter; only rules and single fields run full-bleed",
+   "rhythm": "large and uneven vertical gaps — a section that opens an idea gets more air than one that continues it; never one constant padding value down the page",
+   "alternation": "consecutive sections alternate between the narrow reading column and a wider band, so no two neighbours share a width",
+   "hero_must_not": "must not be a centred headline stacked over a decorative background field",
+   "signature": "a hairline rule with a small section label running the full page width above each section"},
   {"id": "split_technical",
-   "for": "two-column, dense, ruled; specifications and detail carry the page"},
+   "for": "two-column, dense, ruled; specifications and detail carry the page",
+   "grid": "a fixed two-column split — a narrow label/spec column against a wide content column, with a visible rule between them and rules between rows",
+   "rhythm": "tight and even inside a section, a hard break between sections; density is the argument, not a shortage of space",
+   "alternation": "which side is narrow flips between sections, so the rule between columns moves down the page",
+   "hero_must_not": "must not be centred, and must not be a full-width band: the first screen is the first row of the same split",
+   "signature": "every section is labelled in the narrow column, so the page reads like a specification sheet rather than a pitch"},
   {"id": "catalogue_grid",
-   "for": "offering-forward and modular; the catalogue is the argument"},
+   "for": "offering-forward and modular; the catalogue is the argument",
+   "grid": "a modular grid on a shared baseline whose column count changes between blocks — the grid varies, the item style does not",
+   "rhythm": "even gutters inside a block, a full empty row between blocks",
+   "alternation": "block sizes change: one wide item against a run of small ones, never the same tile repeated the length of the page",
+   "hero_must_not": "must not be a hero in the usual sense — the first screen already shows part of the catalogue",
+   "signature": "one deliberately oversized cell breaking the grid's regularity, placed where the emphasis belongs"},
   {"id": "manifesto_minimal",
-   "for": "few sections, large type, near-monochrome; conviction over detail"}
+   "for": "few sections, large type, near-monochrome; conviction over detail",
+   "grid": "one column set at display size, hung to the left edge, with most of the page left deliberately empty",
+   "rhythm": "very few sections, each occupying most of a screen; the space between statements is as large as the statements",
+   "alternation": "a statement at display size, then one small block of supporting text at body size, repeated — the two sizes never meet in the middle",
+   "hero_must_not": "must not carry a subheading and a button beneath a centred headline",
+   "signature": "type size is the layout: the opening statement runs to the page edge and is the only thing on its screen"},
+  {"id": "asymmetric_editorial",
+   "for": "off-axis and composed rather than stacked; the page reads like a spread",
+   "grid": "a twelve-column grid used off-centre — content starts on a different column in each section and is never centred in the viewport",
+   "rhythm": "vertical gaps taken from a ratio scale rather than one spacing unit, so no two gaps read as the same size",
+   "alternation": "each section shifts both its start column and its width relative to the one above it",
+   "hero_must_not": "must not be symmetric — nothing on the first screen may be horizontally centred",
+   "signature": "one element deliberately crossing a section boundary, overlapping the block above or below it"},
+  {"id": "dense_index",
+   "for": "list-led and information-first; the page is an index of what there is",
+   "grid": "full-width rows on a tight baseline, ruled between, with a persistent narrow label column on the left of every row",
+   "rhythm": "compact and regular within a run of rows; the only generous space sits above and below the run",
+   "alternation": "runs of index rows are interrupted by a single wide statement row that carries no label",
+   "hero_must_not": "must not be a marketing hero — the first screen names the thing and starts the index immediately",
+   "signature": "the rows are the page: it reads top to bottom as a single index, with no cards anywhere in it"},
+  {"id": "full_bleed_poster",
+   "for": "one composed field per screen; the page reads as a sequence of posters",
+   "grid": "each section is a full-bleed field with content positioned inside it — against a corner, on a third — with no shared container width between sections",
+   "rhythm": "one section per viewport, no partial sections, nothing that asks to be scrolled through",
+   "alternation": "the position of the content within the field moves from screen to screen, and no two consecutive fields place it alike",
+   "hero_must_not": "must not soften the first field with a wash, a vignette or a fade — colour fields are flat",
+   "signature": "type is set against the field's own edges rather than centred inside a container"}
 ] -%}
 {%- set section_layouts = [
   {"id": "hero_stacked", "for": "headline, sub, one action, centred"},
@@ -27,7 +74,11 @@
   {"id": "proof_strip", "for": "a single band of short attributions or credentials"},
   {"id": "manifesto_block", "for": "one long statement set large, no adornment"},
   {"id": "faq_accordion", "for": "questions that open and close"},
-  {"id": "contact_block", "for": "how to reach them, and nothing else"}
+  {"id": "contact_block", "for": "how to reach them, and nothing else"},
+  {"id": "stat_band", "for": "a full-width band of given figures, each under a short label"},
+  {"id": "numbered_process", "for": "sequential steps, one line of explanation each, as an ordered list — the list supplies the numbering, which is never typed into the markup"},
+  {"id": "split_manifesto", "for": "one statement set large beside a narrow column of detail"},
+  {"id": "sticky_rail", "for": "a rail that holds while the content beside it scrolls past"}
 ] -%}
 {%- set video_archetypes = [
   {"id": "technical_spec_sheet",
