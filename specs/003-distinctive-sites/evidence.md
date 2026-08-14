@@ -551,8 +551,20 @@ The pairing clause stays as restated; it separates all three pairs here. The arc
 stays too, but the replication above is a caveat on it that belongs beside it: it is load-bearing
 across disagreeing briefs and unstable across agreeing ones.
 
-This is a spec change, so it is drafted here and applied to `spec.md` only on sign-off — the same
-procedure the previous restatement followed.
+**Signed off and applied to `spec.md` on 2026-08-14** (PR #40 merged as the sign-off on these
+numbers), with **one departure from the draft above, forced by the draft's own data.** The
+drafted sentence says fixtures whose briefs agree are expected to converge in palette "while
+still separating by pairing and archetype". They do not separate by archetype: `one × two`
+returned FAIL on the archetype clause in this very draw. Applying that sentence verbatim would
+have shipped a criterion failing on the day it landed — the exact defect this document has now
+corrected three times. So the archetype clause was rebound alongside the palette clause, on the
+replication evidence above, and only pairing binds every pair.
+
+One thing the applied wording deliberately leaves to a reader: which briefs "argue for different
+directions" is decided by reading the fixtures' voice fields, and is **not** encoded anywhere. A
+table in code listing which fixtures disagree would be client data in source. So
+`sample_directions.py` keeps printing all three verdicts for every pair mechanically, and the
+report is evidence rather than a pass/fail oracle.
 
 ## SC-007, the pre/post regression guard — **NOT MET, for lack of headroom**
 

@@ -164,20 +164,25 @@ converges on similar brand docs across different briefs — but it refines the p
 than adding a capability, so it lands last.
 
 **Independent Test**: Sample the plan stage N ≥ 4 times per fixture through the real handler
-(`scripts/sample_directions.py`) and confirm the two fixtures' modal directions differ in
-palette, pairing, and archetype; confirm the brand doc's shape is unchanged (no new fields
-leak the discarded alternatives).
+(`scripts/sample_directions.py`) and confirm the fixtures' modal directions differ as SC-001
+binds them — pairing across every pair, palette and archetype across pairs whose briefs argue
+for different directions; confirm the brand doc's shape is unchanged (no new fields leak the
+discarded alternatives).
 
 **Acceptance Scenarios**:
 
-1. **Given** the two existing brief fixtures, **When** each is sampled N ≥ 4 times through
-   the Strategist, **Then** the two fixtures' modal directions share no type pairing, no page
-   archetype, and no palette direction under the calibrated perceptual thresholds. A single
-   run of each cannot settle this — it is a property of the distribution, and reading it off
-   one pair produced two conclusions that later samples retracted.
-2. **Given** a produced brand doc, **When** its shape is validated, **Then** it is unchanged
+1. **Given** two brief fixtures whose voices argue for different directions, **When** each is
+   sampled N ≥ 4 times through the Strategist, **Then** their modal directions share no type
+   pairing, no page archetype, and no palette direction under the calibrated perceptual
+   thresholds. A single run of each cannot settle this — it is a property of the distribution,
+   and reading it off one pair produced two conclusions that later samples retracted.
+2. **Given** two brief fixtures whose voices argue for the same register, **When** each is
+   sampled N ≥ 4 times, **Then** their modal pairings still differ, and a shared palette
+   direction is the expected result rather than a failure — the Strategist is following both
+   briefs, which say the same thing about how the page should feel.
+3. **Given** a produced brand doc, **When** its shape is validated, **Then** it is unchanged
    from today — the drafted alternatives do not appear in it.
-3. **Given** the Web Builder's rendered prompt, **When** it is read, **Then** it names the
+4. **Given** the Web Builder's rendered prompt, **When** it is read, **Then** it names the
    generic tells explicitly, and names no client data while doing so.
 
 ---
@@ -310,10 +315,17 @@ leak the discarded alternatives).
 
 ### Measurable Outcomes
 
-- **SC-001**: Across N ≥ 4 sampled runs per fixture, the two existing brief fixtures' modal
-  directions differ: no shared pairing mode, modal palettes not same-direction under the
-  calibrated perceptual thresholds, and no shared page archetype mode — verified by the
-  sampling report (`scripts/sample_directions.py`), not by one pair of runs.
+- **SC-001**: Across N ≥ 4 sampled runs per fixture, measured by the sampling report
+  (`scripts/sample_directions.py`) and never by one pair of runs:
+
+  - **pairing** — every pair of fixtures has disjoint modal type pairings;
+  - **palette** — every pair of fixtures *whose briefs argue for different directions* has
+    modal palettes that are not same-direction under the calibrated perceptual thresholds;
+  - **archetype** — every such pair also has disjoint modal page archetypes.
+
+  Fixtures whose briefs argue for the same register converge in palette, and may share an
+  archetype mode. That convergence is the Strategist reading the brief correctly, and
+  following the brief wins.
 
   *Restated 2026-08-14, on the evidence in `evidence.md`.* The original wording asked for two
   runs to share no pairing, palette or skeleton, "verifiable by inspecting the two runs'
@@ -322,6 +334,22 @@ leak the discarded alternatives).
   way had to be retracted once a third sample existed. And "no shared palette" was read as
   string inequality, which two palettes one hex digit apart satisfy — the criterion passed on
   a technicality while both pages were a cream ground with a burnt-orange accent.
+
+  *Palette and archetype clauses rebound to disagreeing briefs, 2026-08-14, on the third
+  fixture's draw.* The distributional restatement above was still binding two briefs that
+  **agree**: one and two are both understated and detail-led, so both reject dark and both
+  reject loud, and asking their palettes to differ was asking the Strategist to ignore what it
+  was told. A third fixture whose voice argues *for* the dark direction takes it 4/4 at ΔE ≈ 90
+  from the cream family and passes every clause against both — so the convergence was never a
+  default. The archetype clause moved with the palette clause for a separate, measured reason:
+  re-drawing one × two under identical conditions flipped its archetype verdict from PASS to
+  FAIL with nothing changed, so that clause is load-bearing across disagreeing briefs and not
+  stable across agreeing ones. Pairing keeps binding every pair, because it separated all three
+  of them here and its verdict replicated.
+
+  What decides "argue for different directions" is the briefs' own voice fields, read by a
+  person. It is deliberately **not** encoded: a table in code saying which fixtures disagree
+  would be client data in source, which is the one thing this system may not do.
 - **SC-002**: A page built with deliberate default tells is detected: the lint reports every
   seeded tell, and after the single revision pass the finding count strictly decreases.
 - **SC-003**: A clean run's added cost is one visual review; a flagged run's added cost is
