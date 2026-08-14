@@ -94,22 +94,48 @@ passes because no hex string repeats; that is the check being generous rather th
 being distinct. Both are a warm cream ground, a near-black brown, and a burnt-orange accent.
 
 Not a shortage of options: the library offers six display-capable and seven body-capable faces,
-roughly forty valid pairings, and both runs chose the same one.
+roughly forty valid pairings.
 
-Two structural causes are visible, neither of them "the divergence instruction is too weak":
+### A third sample, and what it costs the reading above
 
-1. **The display roster has one moderate face among five extremes** — `playfair-display`
-   (hairline editorial), `bebas-neue` (poster-loud caps), `archivo-black` (signage),
-   `space-grotesk` (technical), `jetbrains-mono` (terminal), and `zilla-slab` (sturdy,
-   mid-century). Any small physical-goods business honestly lands on the sixth, twice.
-2. **The palette instruction bans exactly one default** — near-black on near-white with a
-   saturated blue accent — and both runs avoided it identically. Naming one banned default
-   relocates the default rather than removing it.
+Fixture two was run again on 2026-08-14 to verify the `numbered_process` fix (`60f71d0`). No
+instruction the Strategist reads had changed except that layout's one-line description, and the
+brand doc came back **differently**:
+
+| | fixture two, first run | fixture two, second run |
+|---|---|---|
+| pairing | `zilla-slab` / `ibm-plex-sans` | **`archivo-black`** / `ibm-plex-sans` |
+| `bg` | `#f3eee3` | `#F1EDE4` |
+| `accent` | `#b4571f` | `#B23A16` |
+| archetype | `split_technical` | `split_technical` |
+
+So the display face is sampling variance, and "both fixtures converge on one pairing" was a
+conclusion drawn from n=2 that a third sample does not support. What *does* repeat across all
+three brand docs is the palette: a warm cream ground, a near-black brown, a burnt-orange
+accent, every time. The body face has also been `ibm-plex-sans` three times out of three.
+
+SC-001 as written still fails — the pairing shares its body face, and the palettes are close —
+but the two candidate causes are now unequally supported:
+
+1. **The palette instruction bans exactly one default** — near-black on near-white with a
+   saturated blue accent — and every run so far has avoided it identically. Naming one banned
+   default appears to relocate the default rather than remove it. **Three samples.**
+2. **The display roster has one moderate face among five extremes.** Plausible, but the second
+   fixture-two run chose `archivo-black` — one of the extremes — which weakens it. **Not
+   supported by the current samples.**
+
+The honest state: the palette is the convergent thing, the type may not be, and n=3 across two
+briefs is still too thin to rewrite a prompt on.
 
 SC-001 is also, structurally, a cross-run property that no single run can enforce: each run
 sees one brief, one library, one prompt, and nothing makes the second aware of the first. It
-should be restated as a tendency measured over a sample, or the enforcement (library spread,
-prompt framing) named for what it is.
+should be restated as a tendency measured over a sample — which is what these three runs
+already show it has to be — or the enforcement (library spread, prompt framing) named for what
+it is.
+
+**The measurement needs fixing before any of this can be judged.** "No shared palette value"
+compares hex strings, and two palettes one digit apart pass it. A perceptual threshold is what
+would have called the first two runs identical; per-channel distance would have done it.
 
 **Diagnosis is currently blind**: `LOGFIRE_TOKEN` is unset, and by FR-019's design the drafted
 alternatives exist in no field of the brand doc. Whether the Strategist drafted three genuinely
@@ -154,9 +180,30 @@ loop was bypassed:
 ```
 
 A layout whose premise is "sequential steps, numbered" guarantees ordinals on the page, and
-ordinals past whatever the brief happens to state are ungrounded by construction. Either the
-derivation set admits ordinals for a numbered layout, or the layout must not emit them, or the
-Strategist must not select it. This needs a decision before the layout is used again.
+ordinals past whatever the brief happens to state are ungrounded by construction.
+
+**Fixed in `60f71d0` and verified live.** The layout now asks for an ordered list and lets the
+list supply the numbering; the builder's fact rule says the same thing where it explains what a
+numeral is. Fixture two re-run 2026-08-14 ($0.98), with the Strategist selecting
+`numbered_process` again — so the broken path was genuinely exercised:
+
+| | before | after |
+|---|---|---|
+| site artifact | flagged on `{"value": "5"}` | **clean**, 94,446 bytes |
+| the steps section | `<ol>` with six typed `step-number` spans | `<ol>`, zero numerals in the markup, `counter()` in the CSS |
+| critique | skipped (flagged page) | ran — one `type_timid` finding |
+| revision | skipped (flagged page) | **kept**, findings 1 → 0 |
+
+The model had been writing the ordered list *and* typing the digits into it. The list was never
+the problem; the hand-written numbers were.
+
+### The critic's first substantive finding
+
+This run is also the first where the Site Critic said something checkable: `type_timid` on
+`.stat .num`, corroborating the lint's own `weak_type_scale` — a largest declared size of 2.40×
+body against the 2.5 threshold. That is `contracts/site-critic.md`'s "corroborate or extend"
+behaving as specified, and no `broken_render` complaint about invisible text. One sample, but
+it is the first evidence the visual review adds signal rather than noise.
 
 The same page also tripped `uniform_sections` — nine sections in one 1400px container — while
 its brand doc named `split_technical`, whose spec sheet commits to a two-column split that
