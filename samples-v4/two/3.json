@@ -1,0 +1,126 @@
+{
+  "name": "Hollowfield Cycle Workshop",
+  "type": {
+    "body": "ibm-plex-sans",
+    "display": "archivo-black"
+  },
+  "voice": {
+    "do": [
+      "Name the part and the measurement",
+      "Say what a job will not fix",
+      "Keep sentences short and declarative",
+      "Use British spelling throughout",
+      "Describe the work, not the rider"
+    ],
+    "dont": [
+      "Never mention lifestyle, freedom, or the ride of your life",
+      "Never quote or imply a price before the bike has been seen",
+      "No exclamation marks",
+      "Never call a job quick, easy, or painless",
+      "Never describe a bike as beautiful, admired, or a work of art",
+      "Never use racing or marketing jargon such as marginal gains, game-changing, or revolutionary",
+      "Never promise a turnaround the workshop has not stated",
+      "Never claim to be the best or the only workshop of its kind"
+    ],
+    "adjectives": [
+      "meticulous",
+      "unhurried",
+      "plainspoken",
+      "measured"
+    ]
+  },
+  "palette": {
+    "bg": "#EDE7DC",
+    "fg": "#1B1F22",
+    "muted": "#5E635F",
+    "accent": "#A33B14"
+  },
+  "offerings": [
+    {
+      "name": "Winter Service Plan",
+      "billing": "subscription",
+      "features": [
+        "Quarterly strip-down and rebuild",
+        "Chain wear measured and reported each visit",
+        "Cables and brake fluid included",
+        "Same-week booking through the season"
+      ],
+      "description": "A quarterly strip-down through the salt season: drivetrain cleaned and measured, cables replaced, brakes bled, bearings checked.",
+      "not_covered": [
+        "Replacement drivetrain parts",
+        "Frame respray"
+      ],
+      "price_minor": 6500,
+      "currency_display": "GBP"
+    },
+    {
+      "name": "Hand-Built Wheelset",
+      "billing": "one_time",
+      "features": [
+        "Hand-laced, tensioned and stress-relieved",
+        "Rim and hub chosen with the rider",
+        "Tension chart supplied with the build",
+        "One free re-true after the first month"
+      ],
+      "description": "A pair of wheels laced and tensioned by hand on our own bench, built to the rider's weight and the roads they ride.",
+      "not_covered": [
+        "Tyres and tubes",
+        "Electronic hub dynamos"
+      ],
+      "price_minor": 27500,
+      "currency_display": "GBP"
+    }
+  ],
+  "descriptor": "Two-bench railway-arch bike workshop",
+  "positioning": "For commuters and audax riders whose one bike carries real winter mileage, Hollowfield is the arch where two mechanics work a bench each and quote every job in writing first — because a three-week wait that returns your bike with the same worn drivetrain on it was never a service.",
+  "motion_language": "unhurried mechanical settle",
+  "video_archetype": "technical_spec_sheet",
+  "composition_plan": [
+    {
+      "intent": "First row of the specification split: the narrow column labels what this place is and where it stands, the wide column states the work and offers one way to start it. Nothing centred, nothing softened.",
+      "layout": "hero_split",
+      "section": "opening row"
+    },
+    {
+      "intent": "One large statement of the workshop's method beside a narrow column of detail, so conviction and specifics sit on the same row rather than in separate sections.",
+      "layout": "split_manifesto",
+      "section": "the standing position"
+    },
+    {
+      "intent": "One idea per full-width row — bench capacity, quoting before work, measurement and reporting — so each commitment can be read on its own and none blur together.",
+      "layout": "feature_rows",
+      "section": "how the bench works"
+    },
+    {
+      "intent": "The sequence a bike actually goes through, sequential and ordered by the list itself, so the customer knows where the written quote falls in the order of events.",
+      "layout": "numbered_process",
+      "section": "from drop-off to collection"
+    },
+    {
+      "intent": "A held rail of capability labels while the detail of the work scrolls past it, letting the reader stay oriented in a dense body of technical detail.",
+      "layout": "sticky_rail",
+      "section": "what the arch can do"
+    },
+    {
+      "intent": "The offerings side by side, one column each, with what is and is not included given the same weight so the boundaries are read, not discovered later.",
+      "layout": "offer_table",
+      "section": "the catalogue"
+    },
+    {
+      "intent": "A band of figures the business has already stated, each under a short label, to anchor the claims in verifiable facts rather than adjectives.",
+      "layout": "stat_band",
+      "section": "the record"
+    },
+    {
+      "intent": "Open and close the awkward questions — exclusions, waits, what a job will not fix — where a prospective customer expects to find them.",
+      "layout": "faq_accordion",
+      "section": "questions the bench gets asked"
+    },
+    {
+      "intent": "Address, email and telephone alone, so someone who has decided can act without scrolling back through the page.",
+      "layout": "contact_block",
+      "section": "finding the arch"
+    }
+  ],
+  "composition_archetype": "split_technical"
+}

@@ -1,0 +1,19 @@
+Three directions I worked through, then the one I'm committing to.
+
+**A — "Greaseproof spec sheet."** Manila-paper ground, bituminous ink, one hi-vis amber. Slab display over humanist sans. The bet: *type and rule do the arguing while colour stays a workshop consumable* — one hue only, paper warmth instead of white.
+
+**B — "The arch at night."** Near-black slate ground, bone fg, oxidised-copper accent, Bebas over Libre Baskerville. The bet: *maximum contrast and poster volume* — the page as a hoarding on the viaduct.
+
+**C — "Tension chart."** Pale zinc ground, ink navy, brass and a second cool hue in play, Space Grotesk over Source Serif 4. The bet: *two hues carry the page and the type stays neutral.*
+
+B flatters the bike; this brief explicitly refuses to admire bikes. C's second hue buys nothing a quote sheet needs. A is the one the brief argues for: written quotes, measurements, exclusions stated out loud. Committing to A.
+
+Brand document recorded and all four stages queued.
+
+The committed direction, for the crew's reference:
+
+- **Ground** is manila/greaseproof `#f2ece1`, not white — the colour of the paper a written quote is handed over on. Ink `#22201c` is bituminous rather than black, the tone of the arch wall. One hue only, `#c2540f`, the hi-vis amber of workshop signage: it appears on rules, labels and measurements, nowhere decorative, and it separates from the ink by lightness as well as hue, so red-green vision still reads it. `#6f6a5e` holds up as secondary text on the paper without going grey-on-grey.
+- **Type** pairs `zilla-slab` against `ibm-plex-sans` — a mechanical mid-century slab for headings against an engineered humanist sans for the spec runs. Contrast of era and of warmth, not two grotesques trading places.
+- **Archetype** is `split_technical` because this business's actual product is a written quote: a narrow label column against a wide content column, ruled, flipping sides down the page so it reads as a specification sheet rather than a pitch. The video takes `technical_spec_sheet` for the same reason.
+- **Motion** is *measured detent stepping* — things arrive on a stop, like a torque wrench clicking, never easing or floating.
+- Both offerings are carried across verbatim, `currency_charge` stripped. The exclusions travel with their offering on purpose: "say what a job will not fix" is this brand's most distinguishing habit, and the offer table is built to show it rather than hide it.

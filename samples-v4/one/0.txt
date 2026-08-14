@@ -1,0 +1,23 @@
+Three directions I worked through before committing:
+
+**A — "Roast ledger":** warm paper ground `#f4ece1`, dark-roast brown text, burnt-orange accent; `zilla-slab` + `ibm-plex-sans`. Bet: the *ground* carries the warmth so the type can be blunt and mechanical, and freshness gets argued as specification — dates, weights, intervals — rather than as lifestyle photography.
+
+**B — "Roast log terminal":** near-black `#12100e` ground, cream text, hot amber accent; `jetbrains-mono` + `work-sans`. Bet: contrast pushed to the wall, one hue, type doing data. Rejected — a monospace dark page reads like a devtool, and the brief's voice is "warm, unpretentious," not instrumented.
+
+**C — "Market poster":** cream ground, deep pine `#1b3a2f` text, tomato accent, three hues in play; `bebas-neue` + `libre-baskerville`. Bet: volume — poster type shouting the tagline. Rejected — all-caps condensed loudness is the opposite of "no burnt beans, honest sourcing"; it sells a brand, not a roast date.
+
+Committing to A. The brief's whole case is verifiable detail — grams, weeks, hours between roast and shipping, what is explicitly *not* covered — so the page should read like a spec sheet printed on butcher paper.
+
+I dropped two required fields. Resubmitting complete.
+
+Brand doc recorded, all four stages queued. The direction, for the crew's reference:
+
+**The bet:** freshness is a specification, not a feeling. `split_technical` turns the page into a roast sheet — a persistent narrow label column against the content, ruled rows, the rule flipping sides section to section. That is why `numbered_process` and `stat_band` are both in the plan: the brief's own facts (340g, four weeks, 48 hours, 2016) are the argument, and a spec grid is the only layout that treats them as such.
+
+**Why the palette isn't dark:** the ground carries all the warmth (`#f4ece1`, unbleached paper), which frees the type to be blunt. Dark-roast brown `#2b1d15` rather than black keeps it off the default near-black-on-white axis. `#c2551f` is scorch orange — the colour of a roast at the edge of too far, held back, which is the tagline's whole point. It sits far enough down in lightness from the brown to stay separable without relying on hue. `#77685a` clears 4.5:1 on the paper for the label column, where most of the small type lives.
+
+**Why this pairing:** `zilla-slab`'s squared wedge serifs read as machinery and printed labels, not café chalkboard; `ibm-plex-sans`'s engineered joints stay steady through long spec rows. Contrast of structure — mechanical display against open humanist body — rather than two grotesques agreeing with each other.
+
+**Motion:** *weighted settle* — things arrive with mass and stop, no bounce, no drift. Same timing governs the `technical_spec_sheet` video.
+
+Two notes on what I deliberately did not do. The brief lists `currency_charge: USD` against `currency_display: EUR`; I carried the display value verbatim as instructed and left the charging field off the document entirely, but Ops should confirm that mismatch is intentional before Money builds against it. And the `dont` list is all reader-checkable — the brief's "keep sentences short" stayed a `do` in the brief's own register rather than becoming a word count, since the reviewer judges words and does no counting.

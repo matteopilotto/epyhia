@@ -1,0 +1,17 @@
+Three directions I worked through before committing:
+
+**A — "Hi-vis night shift":** grease-charcoal ground `#1C1E1F`, bone type, hi-vis yellow accent, `archivo-black` + `ibm-plex-sans`. Bet: the ground goes dark and one loud hue does all the shouting — signage blunt.
+**B — "Workshop ledger":** warm zinc paper ground, oil-black ink, oxide-rust accent, `zilla-slab` + `ibm-plex-sans`. Bet: paper and rules, not colour — the page is the written quote the brief promises, and type carries era contrast (mid-century slab against engineered contemporary sans).
+**C — "Club run":** cream ground, two hues in play — enamel teal and clay red — `playfair-display` + `libre-baskerville`. Bet: romance and heritage, colour doing the charm.
+
+C dies on the brief's own `dont` — no lifestyle, no ride-of-your-life; Playfair is admiration typography for a shop that says bikes get ridden, not admired. A is honest but bets on loudness, and "unhurried" is the one adjective a hi-vis dark poster cannot hold. **B wins:** a business whose product is a written quote, a chain-wear measurement and a tension chart is a business made of paper and rules.
+
+Brand document recorded and all four stages queued.
+
+The committed direction, so the crew knows why each lock is there:
+
+- **Palette** — `bg #EDE9E1` is workshop paper, the written quote the brief sells; `fg #17181A` is oil-black ink, not a fashionable off-black; `accent #B4491A` is iron oxide — rust, the enemy of the salt season, used as the marker on measurements and labels, and it separates from near-black by lightness so red/green confusion can't collapse the two; `muted #6A665E` is a warm grey that holds up against the paper for spec labels and exclusions.
+- **Type** — `zilla-slab` display against `ibm-plex-sans` body: a mid-century mechanical slab against an engineered contemporary humanist sans. Era and warmth contrast, both sturdy, neither decorative. The slab is signage above the arch; the Plex is the job sheet.
+- **Archetypes** — `split_technical` because a business whose deliverables include a chain-wear report and a tension chart should publish a specification sheet, not a pitch; `technical_spec_sheet` video for the same reason. `motion_language` is *ratchet-step, unhurried, no bounce* — movement that clicks into position and stays there.
+- **Voice** — the brief's two `dont`s carried across and sharpened into ten single-sentence checks, all judgeable by reading a line: no lifestyle, no pre-inspection pricing, no exclamation marks, no superlatives, no "passion". "Keep sentences short" stays in the `do` list as words, with no count attached.
+- **Offerings** — both products verbatim, in the brief's order, prices in minor units untouched, exclusions carried across as stated. `currency_charge` omitted.

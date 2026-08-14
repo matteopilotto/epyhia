@@ -1,0 +1,13 @@
+Brand document recorded and all four stages queued.
+
+**The three directions I worked through, and why this one won**
+
+1. *Brass on bench-dark* — near-black slate ground, chalk-cream text, lamp-brass accent; `bebas-neue` / `work-sans`. Bet: the ground does everything, one hue, poster-loud type. Rejected — a dark ground makes rules and measurements decorative, and this business argues with figures, not atmosphere.
+2. *Terminal ledger* — flat white, `jetbrains-mono` throughout, no accent but a rule weight. Bet: refuse colour entirely and let the monospace carry the whole voice. Rejected — it reads like a tooling company, not two people in an arch in Sheffield.
+3. *Salt-and-oxide spec sheet* — committed. Warm chalk ground `#EDE7DC` (salt-stained paper, the season the plan is built for), bench-ink `#1B1F22`, oxide `#A33B14` for the accent (rust, chain wear, the thing they measure and report), and a cool grease grey `#5E635F` for muted. Bet: two temperatures in play — the ground is warm and human, the greys are cold metal — so colour tells the story the type isn't.
+
+**Why the rest of the choices follow.** `split_technical` because every differentiator in the brief is a specification: chain wear measured and reported, a tension chart supplied, a written quote before a spanner touches anything. A page shaped like a spec sheet *is* the argument; a marketing hero would contradict it. `archivo-black` against `ibm-plex-sans` is a contrast of width and register — blunt signage weight, the kind stencilled on an arch, over an engineered text face that stays warm across long technical detail. Two grotesques of the same temperature would have been no pairing at all. Motion is *unhurried mechanical settle*: things arrive and stop, no bounce, matching "unhurried" in their own voice fields.
+
+**Two notes on what I withheld.** The `dont` list turns entirely on words a reviewer can catch in a single sentence — lifestyle language, exclamation marks, "revolutionary", pricing before inspection — and never on a count, since the brief's own register was "plainspoken", not a word limit. And `currency_charge` was left off both offerings; the display currency travels, the charging detail does not.
+
+The offerings are verbatim, both products, in the brief's order — including the `not_covered` lines, which on this page get the same weight as the features rather than a footnote.

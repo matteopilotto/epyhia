@@ -1,0 +1,19 @@
+## Three directions considered
+
+**A — "Sodium arch."** bg `#141613`, fg `#E6E2D8`, accent `#F0A03C`, muted `#7E8378`; `bebas-neue` + `work-sans`. Bet: the ground goes dark and the page trades on atmosphere — night riding, lamplight on a wet arch. Rejected: this business sells written quotes and tension charts, not atmosphere, and a dark poster page hides detail.
+
+**B — "Grit and salt."** bg `#D6DAD5`, fg `#20262A`, accent `#2E7D6B`, muted `#6E7873`; `space-grotesk` + `source-serif-4`. Bet: two cool hues, low contrast, a clinical winter temperature. Rejected: it reads like a dental practice; the teal accent has no claim on a bike shop and the low contrast wastes the ruled density the work deserves.
+
+**C — "Workshop ledger."** bg `#E7E3D9`, fg `#1B1D1A`, accent `#B4451F`, muted `#6B6459`; `archivo-black` + `ibm-plex-sans`. Bet: one warm hue only, on job-card paper, with a blunt signage display doing what colour refuses to do — the argument is the written record, priced and measured. **Committed.** The brief's own proof is a quote before a spanner and a chain wear figure each visit; the page should look like the paperwork, and rust-oxide is the only colour actually present in the trade.
+
+The brand doc needs its fields at the top level, not nested. Resubmitting.
+
+Brand document recorded, stages queued (copy, site, demand, money).
+
+**The committed direction — "Workshop ledger."**
+
+- **Ground:** `#E7E3D9`, the buff of a job card, not white. **Ink:** `#1B1D1A`, a black with a trace of green in it, like blackened steel rather than pure ink. **Accent:** `#B4451F`, rust oxide — the one colour actually present in a salted drivetrain, and clearly separable from the near-black ink by luminance for a red-green colourblind reader. **Muted:** `#6B6459` for labels and spec text, a grease-grey that still holds against the buff.
+- **Type:** `archivo-black` over `ibm-plex-sans` — a wide, blunt, signage-weight display against a humanist body with engineered joints. The contrast is width and register: arch signage above a service record.
+- **Motion:** `indexed, damped, unhurried` — each transition lands with the detent of an indexed shifter and stops dead. Nothing eases in slowly for effect, nothing overshoots.
+- **Composition:** `split_technical`. The brief's own proof is a written quote and a measured chain, so the page is built as a specification sheet: a narrow label column against wide content, ruled between rows, the rule flipping side down the page. Video follows as `technical_spec_sheet`.
+- **Both offerings are carried across verbatim**, in the brief's order, with `currency_charge` withheld.

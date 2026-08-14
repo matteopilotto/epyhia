@@ -1,0 +1,123 @@
+{
+  "name": "Hollowfield Cycle Workshop",
+  "type": {
+    "body": "ibm-plex-sans",
+    "display": "zilla-slab"
+  },
+  "voice": {
+    "do": [
+      "Name the part and the measurement",
+      "Say what a job will not fix",
+      "Say who does the work and at which bench",
+      "Keep sentences short and declarative",
+      "Prefer the trade word to the marketing word",
+      "Use British spelling throughout"
+    ],
+    "dont": [
+      "Never use the phrase 'the ride of your life'",
+      "Never write about lifestyle, freedom, adventure or wellbeing",
+      "Never quote or imply a price for work before the bike has been seen",
+      "No exclamation marks",
+      "Never call the workshop passionate, artisanal or boutique",
+      "Never describe a job as quick, easy or effortless",
+      "Never use 'revolutionary', 'game-changing' or 'cutting-edge'",
+      "Never address the reader as a cyclist tribe ('fellow riders', 'the peloton')",
+      "Never promise that a service will fix something it does not cover"
+    ],
+    "adjectives": [
+      "meticulous",
+      "unhurried",
+      "plainspoken",
+      "workshop-dry"
+    ]
+  },
+  "palette": {
+    "bg": "#f2ece1",
+    "fg": "#22201c",
+    "muted": "#6f6a5e",
+    "accent": "#c2540f"
+  },
+  "offerings": [
+    {
+      "name": "Winter Service Plan",
+      "billing": "subscription",
+      "features": [
+        "Quarterly strip-down and rebuild",
+        "Chain wear measured and reported each visit",
+        "Cables and brake fluid included",
+        "Same-week booking through the season"
+      ],
+      "description": "A quarterly strip-down through the salt season: drivetrain cleaned and measured, cables replaced, brakes bled, bearings checked.",
+      "not_covered": [
+        "Replacement drivetrain parts",
+        "Frame respray"
+      ],
+      "price_minor": 6500,
+      "currency_display": "GBP"
+    },
+    {
+      "name": "Hand-Built Wheelset",
+      "billing": "one_time",
+      "features": [
+        "Hand-laced, tensioned and stress-relieved",
+        "Rim and hub chosen with the rider",
+        "Tension chart supplied with the build",
+        "One free re-true after the first month"
+      ],
+      "description": "A pair of wheels laced and tensioned by hand on our own bench, built to the rider's weight and the roads they ride.",
+      "not_covered": [
+        "Tyres and tubes",
+        "Electronic hub dynamos"
+      ],
+      "price_minor": 27500,
+      "currency_display": "GBP"
+    }
+  ],
+  "descriptor": "Two-bench railway-arch bicycle workshop",
+  "positioning": "For year-round commuters and audax riders who put real mileage on one bike, Hollowfield is the two-bench arch where the worn part is measured, named and quoted in writing before a spanner touches anything — the opposite of a three-week queue and a bike handed back with the same drivetrain on it.",
+  "motion_language": "measured detent stepping",
+  "video_archetype": "technical_spec_sheet",
+  "composition_plan": [
+    {
+      "intent": "Open on the first row of the spec split rather than a pitch: name the workshop and where it stands, with one visual field holding the arch interior. Narrow column carries the identifying label, wide column the plain statement of what happens here.",
+      "layout": "hero_split",
+      "section": "Bench and address"
+    },
+    {
+      "intent": "State the failure this workshop exists against, set large, with the narrow detail column qualifying it in flat specifics so the claim reads as observation rather than complaint.",
+      "layout": "split_manifesto",
+      "section": "What comes through the door"
+    },
+    {
+      "intent": "Make the sequence from drop-off to inspection to written quote to handback legible before anyone books, so the process itself is the reassurance. The ordered list supplies the numbering.",
+      "layout": "numbered_process",
+      "section": "How a job runs"
+    },
+    {
+      "intent": "Set what is sold side by side, one column per offering, with each offering's exclusions visible inside its own column rather than buried below the table.",
+      "layout": "offer_table",
+      "section": "Work on the board"
+    },
+    {
+      "intent": "One row per bench practice, each carrying a single idea about measurement, wear or tolerance; the rows flip which side is narrow so the rule between columns walks down the page.",
+      "layout": "feature_rows",
+      "section": "Measured, not guessed"
+    },
+    {
+      "intent": "A band of the given figures under short labels so scale and standing are stated flatly and no reader has to infer them.",
+      "layout": "stat_band",
+      "section": "The workshop in figures"
+    },
+    {
+      "intent": "Answer the questions a rider asks before handing over a bike: what a quote covers, what it deliberately does not, how long the bike stays.",
+      "layout": "faq_accordion",
+      "section": "Asked at the bench"
+    },
+    {
+      "intent": "Address, phone and email, and nothing else — the closing row of the specification sheet.",
+      "layout": "contact_block",
+      "section": "Bring the bike in"
+    }
+  ],
+  "composition_archetype": "split_technical"
+}

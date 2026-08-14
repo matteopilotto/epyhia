@@ -1,0 +1,23 @@
+## Three directions considered
+
+**A — "Kraft ledger."** bg `#f4ede3` / fg `#241a14` / accent `#c2410c` / muted `#6f5f52`, `zilla-slab` + `ibm-plex-sans`. Bet: the *ground* does the work — unbleached paper, one warm hue family, and a mechanical slab that reads like stencilling on a bag. Claims: this is a working roastery that keeps records, not a lifestyle label.
+
+**B — "Roast log, lights out."** bg `#141210` / fg `#ece4d8` / accent `#e8a33d` / muted `#8c8378`, `jetbrains-mono` + `work-sans`. Bet: inverted contrast pushed hard, type doing all the technical talking. Claims: coffee is data — dates, grams, altitudes. Rejected: the brief's own voice words are *warm* and *unpretentious*, and a terminal-black page argues the opposite of a neighbourhood shop on Alder Street.
+
+**C — "Market poster."** bg `#0f4034` / fg `#fdf6e8` / accent `#e2543a` / muted `#9fb8a8`, `bebas-neue` + `source-serif-4`. Bet: two saturated hues in play and condensed caps shouting. Claims: this is produce, sold loud. Rejected: poster-loud collides with "no burnt beans, honest sourcing" — the brief's differentiator is verifiable detail, and detail is what a poster has no room for.
+
+**Committed: A.** The freshness claim is a *record* — roasted to order, shipped inside 48 hours, every time — so the page should look like a spec sheet kept by people who are warm about it. Paper ground and a sturdy slab keep the warmth; the ruled two-column split makes the promise checkable instead of decorative.
+
+I dropped the offerings block. Resubmitting complete, with both products carried across verbatim.
+
+Brand document recorded, all four stages queued.
+
+**What's locked, and why:**
+
+- **Palette** — unbleached paper `#f4ede3` for the ground (the kraft bag, not a white SaaS page), dark-roast ink `#241a14` for text, burnt terracotta `#c2410c` as the single accent (roast colour; separable from the fg by lightness, so red–green deficiency doesn't collapse it), warm ash `#6f5f52` for muted, which holds legible contrast on the paper ground. One hue family, no blue anywhere.
+- **Type** — `zilla-slab` over `ibm-plex-sans`: a mechanical wedge-serif slab against a warm humanist sans. Contrast of temperature and purpose — signage above, long-read below — rather than two grotesques pretending to be a pairing.
+- **Archetype** — `split_technical`, because the differentiator in this brief is a *record*: roast to order, small batches, within 48 hours, every time. A ruled label-and-content split makes that checkable. `technical_spec_sheet` for video follows the same logic.
+- **Motion** — *slow settle, hard cut*: things arrive with weight and stop; transitions are edges, not fades. No bounce, no drift.
+- **Voice** — the brief's own three adjectives sharpened with *plainspoken* and *specific*; the `dont` list names the exact jargon to reject and bans the two hedges this category always reaches for. Every entry reads against a single sentence, and none of them turns on a count.
+
+One note for the record: the brief lists `currency_charge: USD` against `currency_display: EUR` on both products. I carried `currency_display` verbatim as instructed and left the charging currency off the document entirely — but that mismatch is Ops' to confirm, not mine to reconcile, and the money stage should be told before anything renders a price.
