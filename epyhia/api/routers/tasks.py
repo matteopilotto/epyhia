@@ -17,7 +17,7 @@ router = APIRouter(dependencies=[Depends(require_operator)])
 async def retry_task(
     task_id: uuid.UUID, session: AsyncSession = Depends(get_session)
 ) -> dict:
-    """Put a `failed` stage back on the queue (T142, FR-044).
+    """Put a `failed` or `done` stage back on the queue (T142, T145, FR-044).
 
     `failed` is terminal by design — `sweep_expired_leases` reclaims lapsed leases and
     deliberately does not touch it, because auto-retrying a handler exception is the loop the
@@ -25,10 +25,18 @@ async def retry_task(
     human clicking a button is the circuit breaker that cap stands in for, which is why
     `attempts` resets to 0 rather than carrying its history forward.
 
-    Repeating no effect is what makes this safe: every gate key derives from the brief hash
+    `done` is equally terminal, and the operator remedy for a flagged artifact — correct the
+    brand doc and re-run the stage that produced it — needs a route back into a stage that
+    *completed* around its held output. Run `9445c473` proved the remedy unexecutable without
+    one: its copy stage ended `done` with the artifact flagged, and the only way to re-run it
+    was a raw UPDATE in psql (T145).
+
+    Repeating no effect is what makes both safe: every gate key derives from the brief hash
     (§7.2), so a re-queued stage's `gate.request` short-circuits onto the rows that already
     succeeded and returns their stored evidence. A re-queued `site` whose deploy already
-    succeeded republishes nothing.
+    succeeded republishes nothing. And agent calls memoise on the brand doc version (§7.3),
+    so a re-run without an edit replays its stored outputs, while a re-run after one — the
+    remedy case — regenerates precisely because the input that matters changed.
 
     Dependents need no handling either — `_CLAIM_SQL` already refuses to claim a task whose
     `depends_on` are not all `done`, so re-queueing an upstream stage leaves the ones below
@@ -43,16 +51,19 @@ async def retry_task(
             status_code=404, detail={"error": "not_found", "detail": "task not found"}
         )
 
-    # Only `failed`. A `running` task belongs to the lease sweep and an `awaiting_approval`
-    # one belongs to the approve button; this is the route out of the single state that
-    # nothing else can leave.
-    if task.state != "failed":
+    # Only the terminal states. A `running` task belongs to the lease sweep, a `pending` one
+    # to the claim loop, and an `awaiting_approval` one to the approve button; this is the
+    # route out of the two states nothing else can leave.
+    if task.state not in ("failed", "done"):
         raise HTTPException(
             status_code=409,
             detail={
-                "error": "not_failed",
+                "error": "not_retryable",
                 "state": task.state,
-                "detail": f"only a failed task can be re-queued; this one is {task.state}",
+                "detail": (
+                    "only a failed or done task can be re-queued; "
+                    f"this one is {task.state}"
+                ),
             },
         )
 

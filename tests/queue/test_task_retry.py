@@ -70,12 +70,35 @@ async def test_an_unknown_task_is_a_404(queue_session: AsyncSession) -> None:
     assert response.json()["error"] == "not_found"
 
 
-@pytest.mark.parametrize("state", ["done", "running", "awaiting_approval"])
-async def test_only_a_failed_task_is_re_queueable(
+async def test_a_done_task_returns_to_pending_and_is_claimable(
+    queue_session: AsyncSession,
+) -> None:
+    """The operator remedy for a flagged artifact — correct the brand doc, re-run the stage —
+    needs a route back into a stage that *completed* around its held output (T145). Without
+    this, the remedy the spec documents takes a raw UPDATE in psql, which is where run
+    `9445c473` ended up."""
+    run_id = await make_run(queue_session)
+    task_id = await _insert_task(queue_session, run_id, kind="copy", state="done")
+
+    async with client_for(queue_session) as client:
+        response = await client.post(f"/tasks/{task_id}/retry")
+
+    assert response.status_code == 200
+    assert response.json() == {"state": "pending"}
+    assert await _state_of(queue_session, task_id) == ("pending", None, 0)
+
+    claimed = await claim_task(queue_session, kind="copy")
+    await queue_session.commit()
+    assert claimed is not None
+    assert claimed.id == task_id
+
+
+@pytest.mark.parametrize("state", ["pending", "running", "awaiting_approval"])
+async def test_only_a_terminal_task_is_re_queueable(
     queue_session: AsyncSession, state: str
 ) -> None:
-    """Each of these is a different mechanism's territory: `running` belongs to the lease
-    sweep, `awaiting_approval` to the approve button, and `done` to nothing at all."""
+    """Each of these is a different mechanism's territory: `pending` belongs to the claim
+    loop, `running` to the lease sweep, and `awaiting_approval` to the approve button."""
     run_id = await make_run(queue_session)
     task_id = await _insert_task(queue_session, run_id, kind="money", state=state)
 
@@ -84,7 +107,7 @@ async def test_only_a_failed_task_is_re_queueable(
 
     assert response.status_code == 409
     body = response.json()
-    assert body["error"] == "not_failed"
+    assert body["error"] == "not_retryable"
     assert body["state"] == state
     assert (await _state_of(queue_session, task_id))[0] == state
 

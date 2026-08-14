@@ -142,13 +142,17 @@ function summarise(event: RunEvent): string {
 }
 
 /**
- * The operator's route out of `failed` — the one task state nothing else can leave (T142).
+ * The operator's route out of the terminal states (T142, T145). `failed` reads as "Retry";
+ * `done` reads as "Re-run" — the remedy for a flagged artifact is to correct the brand doc
+ * and re-run the stage that completed around it, and this button is that remedy's only
+ * executable path.
  *
  * A `running` task belongs to the lease sweep and an `awaiting_approval` one to the approve
  * button, so neither gets a button here. Re-queueing repeats no effect: every gate key
- * derives from the brief hash, so the stage resumes onto the rows that already succeeded.
+ * derives from the brief hash, so the stage resumes onto the rows that already succeeded,
+ * and agent calls replay from their memo unless the brand doc edit changed their key.
  */
-function RetryTask({ taskId }: { taskId: string }) {
+function RetryTask({ taskId, label }: { taskId: string; label: string }) {
   const retry = useMutation({
     mutationFn: () => api.post<{ state: string }>(`/tasks/${taskId}/retry`),
   });
@@ -162,7 +166,7 @@ function RetryTask({ taskId }: { taskId: string }) {
         disabled={retry.isPending || retry.isSuccess}
         onClick={() => retry.mutate()}
       >
-        {retry.isSuccess ? "Re-queued" : "Retry"}
+        {retry.isSuccess ? "Re-queued" : label}
       </Button>
       {error && <span className="text-xs text-red-400">{error.error}</span>}
     </>
@@ -254,9 +258,12 @@ export function RunDetailRoute() {
             <Badge variant={eventVariant(event)}>{event.kind}</Badge>
             <span>{summarise(event)}</span>
             {event.kind === "task" &&
-              event.data.state === "failed" &&
+              (event.data.state === "failed" || event.data.state === "done") &&
               latestTaskEvent.get(String(event.data.id)) === event.data.at && (
-                <RetryTask taskId={String(event.data.id)} />
+                <RetryTask
+                  taskId={String(event.data.id)}
+                  label={event.data.state === "failed" ? "Retry" : "Re-run"}
+                />
               )}
             <span className="ml-auto font-mono text-[11px] text-ink-muted">
               {String(event.data.at).slice(11, 19)}
