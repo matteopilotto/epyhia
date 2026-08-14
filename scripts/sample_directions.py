@@ -12,7 +12,7 @@ version, same model tier, same code path a client's run takes — and reports wh
 actually look like: pairing and archetype distributions within each brief, and perceptual
 palette distance across them.
 
-`--real` calls Opus 5 and costs roughly $0.33 a sample. Everything else runs offline against
+`--real` calls Opus 5 and costs roughly $0.36 a sample. Everything else runs offline against
 a stubbed Strategist, which exercises this harness and measures nothing about the model.
 
 Two things worth knowing before reading a number out of this:
@@ -67,7 +67,8 @@ OUT = REPO / "samples"
 FIXTURES = REPO / "tests/fixtures/briefs"
 
 # What one plan stage has cost in the ledger to date, for the warning before spending it.
-COST_PER_SAMPLE_USD = 0.33
+# The 4 × 2 draw of 2026-08-14 came to $2.912 over eight calls ($0.199–$0.538 each).
+COST_PER_SAMPLE_USD = 0.36
 
 PALETTE_SLOTS = ("bg", "fg", "accent", "muted")
 
