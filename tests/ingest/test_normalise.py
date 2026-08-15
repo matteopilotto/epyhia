@@ -69,3 +69,46 @@ def test_a_written_number_still_spans_its_own_spaces_and_hyphen() -> None:
     must keep reading as one, or spelling a number out becomes a way around the check."""
     assert [str(e.value) for e in find_amounts("twenty-three", "en-US")] == ["23"]
     assert [str(e.value) for e in find_amounts("one hundred twenty three", "en-US")] == ["123"]
+
+
+def test_a_bare_dollar_sign_resolves_through_the_briefs_region() -> None:
+    """Regression test: "$" was hard-mapped to USD, so the first en-AU brief through the
+    system had its correct "$349" read as `34900 USD` and held as fabricated against a
+    grounding set that knew the amount as AUD — on every revision and every re-run, since
+    the check is deterministic. Which dollar a bare symbol means is a fact about the
+    brief's locale, never a constant (run a9f3d800, Principle I)."""
+    assert [(str(e.value), e.currency) for e in find_amounts("$349", "en-AU")] == [
+        ("34900", "AUD")
+    ]
+    assert [(str(e.value), e.currency) for e in find_amounts("$349", "en-US")] == [
+        ("34900", "USD")
+    ]
+    assert [(str(e.value), e.currency) for e in find_amounts("$349", "en-NZ")] == [
+        ("34900", "NZD")
+    ]
+
+
+def test_a_locale_without_a_region_keeps_the_conventional_dollar() -> None:
+    """A bare-language locale gives the symbol nothing to resolve against, so it keeps
+    reading as it always did rather than becoming a new failure mode."""
+    assert [(str(e.value), e.currency) for e in find_amounts("$349", "en")] == [
+        ("34900", "USD")
+    ]
+
+
+def test_an_explicit_iso_code_is_never_overridden_by_the_region() -> None:
+    """Only the bare symbol is ambiguous. Copy that names USD in an en-AU brief means USD,
+    and the grounding check should hold it if the brief never stated a USD amount."""
+    assert [(str(e.value), e.currency) for e in find_amounts("USD 349", "en-AU")] == [
+        ("34900", "USD")
+    ]
+
+
+def test_the_word_dollars_resolves_through_the_briefs_region_too() -> None:
+    """Spelling the currency out is not a way around the resolution, in either direction."""
+    assert [(str(e.value), e.currency) for e in find_amounts("forty-two dollars", "en-AU")] == [
+        ("4200", "AUD")
+    ]
+    assert [(str(e.value), e.currency) for e in find_amounts("forty-two dollars", "en-US")] == [
+        ("4200", "USD")
+    ]

@@ -9,6 +9,16 @@ from decimal import Decimal
 MINOR_EXPONENT = {"JPY": 0, "KRW": 0, "BHD": 3, "KWD": 3, "OMR": 3}
 
 _CURRENCY_SYMBOLS = {"$": "USD", "€": "EUR", "£": "GBP", "¥": "JPY"}
+# "$" names a family of currencies, not one, and so does the word "dollars". Which dollar a
+# bare symbol means is a fact about the brief's locale, never a constant (Principle I):
+# the first en-AU brief through the system had its correct "$349" read as USD and held as
+# fabricated against a grounding set that knew the amount as AUD. Region-scoped the same
+# way _WORD_MAPS is language-scoped; a locale without a region, or a region not listed,
+# keeps the symbol's conventional reading, so en-US and bare-language locales behave as
+# before. An explicit ISO code in the text is never overridden — only the bare symbol and
+# the bare word are ambiguous.
+_DOLLAR_BY_REGION = {"US": "USD", "AU": "AUD", "CA": "CAD", "NZ": "NZD", "SG": "SGD", "HK": "HKD"}
+_DOLLAR_WORDS = {"dollar", "dollars"}
 _ISO_CODE_RE = re.compile(r"\b[A-Z]{3}\b")
 _SEPARATOR_CHARS = ",. '"
 # The class between the two digits is exactly `_SEPARATOR_CHARS`, and has to stay that way:
@@ -103,11 +113,19 @@ def _parse_digit_token(token: str) -> Decimal:
     return Decimal(re.sub(f"[{re.escape(_SEPARATOR_CHARS)}]", "", token))
 
 
-def _detect_currency(text: str) -> tuple[str | None, str]:
+def _region(locale: str) -> str | None:
+    parts = locale.split("-")
+    return parts[1].upper() if len(parts) > 1 else None
+
+
+def _detect_currency(text: str, region: str | None = None) -> tuple[str | None, str]:
     """Finds a currency symbol or ISO code and strips it out, returning the
-    currency (if any) and the remaining text."""
+    currency (if any) and the remaining text. A bare dollar sign resolves
+    through the brief's own region rather than to a fixed currency."""
     for symbol, code in _CURRENCY_SYMBOLS.items():
         if symbol in text:
+            if symbol == "$":
+                code = _DOLLAR_BY_REGION.get(region, code)
             return code, text.replace(symbol, "").strip()
 
     iso_match = _ISO_CODE_RE.search(text)
@@ -129,7 +147,7 @@ def _to_minor(value: Decimal, currency: str | None) -> Decimal:
 def normalise_amount(raw: str, locale: str) -> GroundingEntry | None:
     """Strips separators and currency symbols, maps number words to digits, and
     reduces the amount to minor units when a currency is present (FR-006)."""
-    currency, text = _detect_currency(raw.strip())
+    currency, text = _detect_currency(raw.strip(), _region(locale))
 
     digit_match = _DIGIT_TOKEN_RE.search(text)
     if digit_match:
@@ -150,11 +168,12 @@ def find_amounts(text: str, locale: str) -> list[GroundingEntry]:
     quantities and are excluded from both sides of the comparison."""
     entries = []
     text = _PHONE_RE.sub(" ", text)
+    region = _region(locale)
 
     for match in _DIGIT_TOKEN_RE.finditer(text):
         start, end = match.span()
         window = text[max(0, start - 4) : min(len(text), end + 4)]
-        currency, _ = _detect_currency(window)
+        currency, _ = _detect_currency(window, region)
         value = _to_minor(_parse_digit_token(match.group(0)), currency)
         entries.append(GroundingEntry(value=value, currency=currency))
 
@@ -180,7 +199,10 @@ def find_amounts(text: str, locale: str) -> list[GroundingEntry]:
         value = words_to_number(run_text, locale)
         currency = None
         if j + 1 < len(tokens):
-            currency = _CURRENCY_WORDS.get(tokens[j + 1].group(0).lower())
+            word_after = tokens[j + 1].group(0).lower()
+            currency = _CURRENCY_WORDS.get(word_after)
+            if word_after in _DOLLAR_WORDS:
+                currency = _DOLLAR_BY_REGION.get(region, currency)
 
         if value is not None:
             entries.append(GroundingEntry(value=_to_minor(value, currency), currency=currency))
