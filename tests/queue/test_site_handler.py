@@ -23,6 +23,7 @@ from epyhia.design.fonts import (
 from epyhia.design.lint import lint
 from epyhia.design.screenshot import Screenshots
 from epyhia.gate import registry
+from epyhia.gate.keys import deploy_key
 from epyhia.models.tasks import Task
 from epyhia.queue.handlers import site as site_handler
 from epyhia.queue.handlers.site import UpstreamNotClean, handle_site
@@ -757,6 +758,46 @@ async def test_a_critic_that_returns_nothing_usable_is_a_skip_not_a_failed_run(
     assert report["screenshots"] == {"captured": True, "widths": [390, 1440]}
     assert report["revision"]["outcome"] == "not_needed"
     assert await _counts(queue_session, run_id) == (1, 1)
+
+
+async def test_the_deploy_keys_on_the_web_builders_prompt_version_not_the_runs_column(
+    queue_session: AsyncSession, deploy_adapter: None, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """T143. `runs.prompt_version` is the Strategist's version, stamped at ingest — keyed on
+    it, a fix to the Web Builder's instructions cannot change the deploy key, so the
+    corrected page short-circuits onto the old publication and republishes nothing. The key
+    and the build-marker request field must both read the version of the prompt that built
+    the page."""
+    run_id = await _make_buildable_run(queue_session, _doc())
+    # A version the run's column ('v1', per make_run) can never equal, so the assertion
+    # cannot pass by the two versions coinciding.
+    monkeypatch.setattr(web_builder, "PROMPT_VERSION", "v998")
+
+    task = await _persisted_site_task(queue_session, run_id)
+    with web_builder.agent.override(model=_builder(PAGE)), pytest.raises(ApprovalRequired):
+        await handle_site(queue_session, task)
+
+    brief_hash, run_prompt_version = (
+        await queue_session.execute(
+            text(
+                "SELECT b.content_sha256, r.prompt_version FROM runs r "
+                "JOIN briefs b ON b.id = r.brief_id WHERE r.id = :run_id"
+            ),
+            {"run_id": run_id},
+        )
+    ).one()
+    action = (
+        await queue_session.execute(
+            text("SELECT idempotency_key, request FROM actions WHERE run_id = :run_id"),
+            {"run_id": run_id},
+        )
+    ).one()
+
+    assert action.idempotency_key == deploy_key(brief_hash, 1, "v998")
+    assert action.request["prompt_version"] == "v998"
+    # And the run's column played no part: a key derived from it would be a different key.
+    assert run_prompt_version != "v998"
+    assert action.idempotency_key != deploy_key(brief_hash, 1, run_prompt_version)
 
 
 async def test_no_browser_completes_the_stage_with_the_page_it_already_checked(
