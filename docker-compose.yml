@@ -30,6 +30,10 @@ services:
       DATABASE_URL: postgresql+asyncpg://epyhia:epyhia@postgres:5432/epyhia
       SMTP_HOST: mailpit
       MAILPIT_API_URL: http://mailpit:8025
+      # A local, self-issued token with nothing behind it to protect — same posture as
+      # POSTGRES_PASSWORD above — shared with `worker` so `require_sink_token` has something
+      # to compare the publish adapter's bearer against.
+      SINK_TOKEN: epyhia-dev-sink-token
     ports:
       - "8000:8000"
     depends_on:
@@ -44,6 +48,12 @@ services:
       DATABASE_URL: postgresql+asyncpg://epyhia:epyhia@postgres:5432/epyhia
       SMTP_HOST: mailpit
       MAILPIT_API_URL: http://mailpit:8025
+      # The publish adapter's `execute()`/`verify()` run here, and `localhost` inside this
+      # container means the worker container, not `web` — `.env`'s `SINK_BASE_URL` is right
+      # for everything running on the host but wrong across the compose network, the same gap
+      # SMTP_HOST/MAILPIT_API_URL already close for SMTP.
+      SINK_BASE_URL: http://web:8000/sink
+      SINK_TOKEN: epyhia-dev-sink-token
     depends_on:
       postgres:
         condition: service_healthy

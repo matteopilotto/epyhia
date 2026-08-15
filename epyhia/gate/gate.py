@@ -85,6 +85,34 @@ async def _check_preconditions(session: AsyncSession, action_type: str, run_id: 
         if row is None or row[0] != "succeeded":
             raise PreconditionFailed("not_armed")
 
+    if action_type == "publish":
+        row = (
+            await session.execute(
+                text(
+                    "SELECT grounding_status FROM artifacts "
+                    "WHERE run_id = :run_id AND kind = 'posts' "
+                    "ORDER BY created_at DESC LIMIT 1"
+                ),
+                {"run_id": run_id},
+            )
+        ).first()
+        if row is None or row[0] != "clean":
+            raise PreconditionFailed("posts artifact is not clean")
+
+    if action_type == "send_email":
+        row = (
+            await session.execute(
+                text(
+                    "SELECT grounding_status FROM artifacts "
+                    "WHERE run_id = :run_id AND kind = 'email' "
+                    "ORDER BY created_at DESC LIMIT 1"
+                ),
+                {"run_id": run_id},
+            )
+        ).first()
+        if row is None or row[0] != "clean":
+            raise PreconditionFailed("email artifact is not clean")
+
 
 async def request(
     session: AsyncSession,

@@ -18,6 +18,7 @@ import httpx
 import pytest
 
 import eval.eval as ev
+from epyhia.ingest.hashing import content_sha256
 
 
 @dataclass
@@ -71,11 +72,13 @@ def record(
     artifacts: list[dict] | None = None,
     orders: list[dict] | None = None,
     cost: dict | None = None,
+    brief: dict | None = None,
+    posts: dict | None = None,
 ) -> ev.RunRecord:
     """A stored run carrying no client data — placeholder strings and integers only."""
     return ev.RunRecord(
         label="a-brief",
-        brief={"products": []},
+        brief=brief or {"products": []},
         brief_sha256="0" * 64,
         run={"id": "a-run", "alias": "an-alias"},
         actions=actions or [],
@@ -83,6 +86,7 @@ def record(
         brand_doc={"doc": {"name": "A Placeholder Name"}},
         orders=orders or [],
         cost=cost or {"calls": [], "total_usd": 0.0},
+        posts=posts,
     )
 
 
@@ -207,6 +211,145 @@ def test_no_publication_at_all_still_fails() -> None:
     passed, detail = ev.CHECKS["deliverables-site-published"](source)
     assert not passed
     assert detail.endswith("no succeeded deploy action")
+
+
+POSTS = [
+    {"angle": "a", "body": "one"},
+    {"angle": "b", "body": "two"},
+    {"angle": "c", "body": "three"},
+]
+
+
+def posts_artifact(*, grounding_status: str = "clean", revision: int = 0) -> dict:
+    return {
+        "id": "a-posts-artifact",
+        "kind": "posts",
+        "revision": revision,
+        "grounding_status": grounding_status,
+        "sha256": "2" * 64,
+    }
+
+
+def publish(post: dict, **overrides) -> dict:
+    evidence = {
+        "post_id": post["angle"],
+        "permalink": "https://sink.invalid",
+        "payload_sha256": content_sha256(post),
+    } | overrides.pop("evidence", {})
+    return action(
+        "publish", "succeeded", id=f"publish-{post['angle']}", evidence=evidence, **overrides
+    )
+
+
+def test_posts_published_when_every_post_was_published() -> None:
+    rec = record(
+        artifacts=[posts_artifact()],
+        actions=[publish(post) for post in POSTS],
+        posts={"posts": POSTS},
+    )
+
+    passed, detail = ev.CHECKS["deliverables-posts-published"](StubSource(records=[rec]))
+    assert passed, detail
+    assert "3 succeeded publish action(s), 3 distinct payload(s) matching 3 post(s)" in detail
+
+
+def test_posts_published_fails_when_a_post_was_never_published() -> None:
+    rec = record(
+        artifacts=[posts_artifact()],
+        actions=[publish(post) for post in POSTS[:2]],
+        posts={"posts": POSTS},
+    )
+
+    passed, _ = ev.CHECKS["deliverables-posts-published"](StubSource(records=[rec]))
+    assert not passed
+
+
+def test_posts_published_fails_on_a_payload_sha_mismatch() -> None:
+    tampered = publish(POSTS[0], evidence={"payload_sha256": "not-the-right-sha"})
+    rec = record(
+        artifacts=[posts_artifact()],
+        actions=[tampered, publish(POSTS[1]), publish(POSTS[2])],
+        posts={"posts": POSTS},
+    )
+
+    passed, _ = ev.CHECKS["deliverables-posts-published"](StubSource(records=[rec]))
+    assert not passed
+
+
+def test_posts_published_fails_for_a_succeeded_publish_beside_a_flagged_artifact() -> None:
+    """The `gate-refuses-flagged-and-unarmed` symmetry: publication against a flagged posts
+    artifact is itself the violation, however clean any one payload looks."""
+    rec = record(
+        artifacts=[posts_artifact(grounding_status="flagged")],
+        actions=[publish(POSTS[0])],
+    )
+
+    passed, detail = ev.CHECKS["deliverables-posts-published"](StubSource(records=[rec]))
+    assert not passed
+    assert "flagged" in detail
+
+
+def test_posts_published_does_not_fail_a_flagged_artifact_that_published_nothing() -> None:
+    """The gate refusing a flagged artifact's publish is the system working as built, not a
+    failure to publish."""
+    rec = record(artifacts=[posts_artifact(grounding_status="flagged")], actions=[])
+
+    passed, _ = ev.CHECKS["deliverables-posts-published"](StubSource(records=[rec]))
+    assert passed
+
+
+def test_posts_published_fails_when_no_posts_artifact_exists_at_all() -> None:
+    rec = record(artifacts=[], actions=[])
+
+    passed, detail = ev.CHECKS["deliverables-posts-published"](StubSource(records=[rec]))
+    assert not passed
+    assert detail.endswith("no posts artifact for this run")
+
+
+def test_posts_published_fails_when_approvals_were_never_worked() -> None:
+    """§6/§7 of the outreach plan, accepted deliberately: a clean posts artifact whose
+    publish actions were simply never approved reads as an incomplete deliverable."""
+    rec = record(artifacts=[posts_artifact()], actions=[], posts={"posts": POSTS})
+
+    passed, _ = ev.CHECKS["deliverables-posts-published"](StubSource(records=[rec]))
+    assert not passed
+
+
+def email_sent(recipient: str, **overrides) -> dict:
+    return action(
+        "send_email",
+        "succeeded",
+        evidence={"message_id": "a-message-id", "recipient": recipient, "subject": "A subject"},
+        **overrides,
+    )
+
+
+def test_email_sent_to_the_briefs_own_contact_address() -> None:
+    rec = record(
+        brief={"contact": {"email": "hello@example.invalid"}},
+        actions=[email_sent("hello@example.invalid")],
+    )
+
+    passed, detail = ev.CHECKS["deliverables-email-sent"](StubSource(records=[rec]))
+    assert passed, detail
+
+
+def test_email_sent_fails_when_the_recipient_does_not_match_the_brief() -> None:
+    rec = record(
+        brief={"contact": {"email": "hello@example.invalid"}},
+        actions=[email_sent("someone-else@example.invalid")],
+    )
+
+    passed, _ = ev.CHECKS["deliverables-email-sent"](StubSource(records=[rec]))
+    assert not passed
+
+
+def test_email_sent_fails_when_nothing_was_sent() -> None:
+    rec = record(brief={"contact": {"email": "hello@example.invalid"}}, actions=[])
+
+    passed, detail = ev.CHECKS["deliverables-email-sent"](StubSource(records=[rec]))
+    assert not passed
+    assert "0 succeeded send_email action(s)" in detail
 
 
 def test_a_resubmission_that_published_again_fails_the_rerun_check() -> None:

@@ -727,6 +727,7 @@ bakery on the first try.
 | Checkout session | `sha256(brief_hash + product + buyer session)` |
 | Video render | `sha256(archetype_id + props + remotion_version)` |
 | Email send | `sha256(brief_hash + template + recipient)` |
+| Publish | `sha256(brief_hash + brand_doc_version + marketer_prompt_version + slot)` |
 
 The video key includes the **pinned Remotion version** on purpose: without it, a Remotion
 upgrade produces output that is legitimately different but keys identical, so the system

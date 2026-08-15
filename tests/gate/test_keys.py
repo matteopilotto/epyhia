@@ -23,6 +23,19 @@ def test_video_render_key_changes_when_pinned_remotion_version_is_bumped() -> No
     assert key_before != key_after
 
 
+def test_publish_key_is_distinct_across_slots() -> None:
+    key_0 = keys.publish_key("brief_hash_1", 1, "v1", 0)
+    key_1 = keys.publish_key("brief_hash_1", 1, "v1", 1)
+    assert key_0 != key_1
+    assert keys.publish_key("brief_hash_1", 1, "v1", 0) == key_0
+
+
+def test_publish_key_changes_when_brand_doc_version_or_prompt_version_changes() -> None:
+    base = keys.publish_key("brief_hash_1", 1, "v1", 0)
+    assert keys.publish_key("brief_hash_1", 2, "v1", 0) != base
+    assert keys.publish_key("brief_hash_1", 1, "v2", 0) != base
+
+
 def test_alias_is_a_pure_function_of_the_brief_hash() -> None:
     alias_a = keys.alias_for("brief_hash_1")
     alias_b = keys.alias_for("brief_hash_1")

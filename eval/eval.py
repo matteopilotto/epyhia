@@ -172,6 +172,12 @@ class RunRecord:
     brand_doc: dict | None
     orders: list[dict]
     cost: dict
+    # The newest `posts` artifact's own content, parsed — `None` when there is none or it is
+    # not `clean`. `list_run_artifacts` deliberately omits artifact bytes (research.md R1),
+    # so this is the one field fetched a second way, the same single-artifact route the
+    # console uses for a preview. Defaulted so every existing `RunRecord(...)` call site —
+    # real and stubbed — stays valid without editing.
+    posts: dict | None = None
 
 
 class RecordSource(Protocol):
@@ -228,16 +234,18 @@ class DeployedRecords:
         brief_sha256 = content_sha256(brief)
         run = _resolve_run(runs, brief_sha256, path.name)
         run_id = run["id"]
+        artifacts = self.client.get(f"/runs/{run_id}/artifacts")
         return RunRecord(
             label=path.stem,
             brief=brief,
             brief_sha256=brief_sha256,
             run=run,
             actions=self.client.get(f"/runs/{run_id}/actions"),
-            artifacts=self.client.get(f"/runs/{run_id}/artifacts"),
+            artifacts=artifacts,
             brand_doc=_optional(self.client, f"/runs/{run_id}/brand-doc"),
             orders=self.client.get(f"/runs/{run_id}/orders"),
             cost=self.client.get(f"/runs/{run_id}/cost"),
+            posts=_newest_clean_content(self.client, artifacts, "posts"),
         )
 
 
@@ -250,6 +258,21 @@ def _optional(client: EvalClient, path: str) -> dict | None:
         if exc.response.status_code == 404:
             return None
         raise
+
+
+def _newest_clean_content(client: EvalClient, artifacts: list[dict], kind: str) -> dict | None:
+    """The newest artifact of this `kind`, fetched a second way and parsed — `None` if there
+    is none or it is not `clean`. `list_run_artifacts` deliberately omits artifact bytes, so
+    a check that needs to read inside one fetches it the same route a console preview would.
+    """
+    of_kind = [artifact for artifact in artifacts if artifact["kind"] == kind]
+    if not of_kind:
+        return None
+    newest = max(of_kind, key=lambda artifact: artifact["revision"])
+    if newest["grounding_status"] != "clean":
+        return None
+    full = client.get(f"/artifacts/{newest['id']}")
+    return json.loads(full["content"]) if full.get("content") else None
 
 
 def _resolve_run(runs: list[dict], brief_sha256: str, name: str) -> dict:
@@ -378,6 +401,75 @@ def _order_persists(source: RecordSource) -> tuple[bool, str]:
         ]
         passed = bool(paid) and len(matched) == len(paid)
         return passed, f"{len(record.orders)} orders, {len(paid)} paid, {len(matched)} matching"
+
+    return for_each_run(source, assertion)
+
+
+@check("deliverables-posts-published")
+def _posts_published(source: RecordSource) -> tuple[bool, str]:
+    """The outreach half of the deliverables evidence (§7 of the outreach plan): a promised
+    deliverable is not real until it left, and `deliverables-pack-grounded` only asserts the
+    posts artifact was grounded, never that anything happened with it."""
+
+    def assertion(record: RunRecord) -> tuple[bool, str]:
+        newest = latest(record, "posts")
+        succeeded = [
+            action
+            for action in record.actions
+            if action["action_type"] == "publish" and action["state"] == "succeeded"
+        ]
+        # A missing artifact is `deliverables-pack-grounded`'s failure, not a run this check
+        # is entitled to skip — mirroring `deliverables-site-published`'s "no succeeded
+        # deploy action" refusal to pass vacuously.
+        if newest is None:
+            return False, "no posts artifact for this run"
+        if newest["grounding_status"] != "clean" or record.posts is None:
+            # The `gate-refuses-flagged-and-unarmed` symmetry: a succeeded publish beside a
+            # flagged posts artifact is a violation; a flagged artifact with nothing
+            # published is the gate working as built, not a failure to publish.
+            return not succeeded, (
+                f"{len(succeeded)} succeeded publish action(s) against a "
+                f"{newest['grounding_status']} posts artifact"
+            )
+
+        expected = {content_sha256(post) for post in record.posts["posts"]}
+        published = {
+            action["evidence"]["payload_sha256"]
+            for action in succeeded
+            if action.get("evidence")
+        }
+        passed = bool(expected) and published == expected and len(succeeded) == len(expected)
+        return passed, (
+            f"{len(succeeded)} succeeded publish action(s), {len(published)} distinct "
+            f"payload(s) matching {len(expected)} post(s) in the artifact"
+        )
+
+    return for_each_run(source, assertion)
+
+
+@check("deliverables-email-sent")
+def _email_sent(source: RecordSource) -> tuple[bool, str]:
+    """The other outreach deliverable: a succeeded send to the recipient the run's own
+    brief named, never a literal (FR-018) — the brief carries the recipient once, at
+    `contact.email`, and this reads it from the run's own row exactly as the handler did."""
+
+    def assertion(record: RunRecord) -> tuple[bool, str]:
+        sent = [
+            action
+            for action in record.actions
+            if action["action_type"] == "send_email" and action["state"] == "succeeded"
+        ]
+        expected_recipient = (record.brief.get("contact") or {}).get("email")
+        matched = [
+            action
+            for action in sent
+            if (action.get("evidence") or {}).get("recipient") == expected_recipient
+        ]
+        passed = expected_recipient is not None and bool(matched)
+        return passed, (
+            f"{len(sent)} succeeded send_email action(s), {len(matched)} matching the "
+            "brief's own contact.email"
+        )
 
     return for_each_run(source, assertion)
 

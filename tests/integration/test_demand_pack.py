@@ -260,3 +260,56 @@ async def test_flagged_props_still_queue_the_render(
     video = await _tasks(integration_session, run.id, "video")
     assert len(video) == 1
     assert video[0].state == "pending"
+
+
+async def test_demand_enqueues_outreach_tasks_depending_on_site(
+    integration_session: AsyncSession,
+) -> None:
+    """One `publish` task per post plus one `send_email` task, each ordered behind the run's
+    `site` task — launch announcements go out only after the site is live."""
+    brief_payload = load_brief()
+    run = await _open_run(integration_session, brief_payload)
+    site_task = Task(id=uuid.uuid4(), run_id=run.id, kind="site", state="done")
+    integration_session.add(site_task)
+    await integration_session.commit()
+
+    await _run_demand(integration_session, _marketer_model())
+
+    posts_artifact = (await _artifacts(integration_session, run.id))["posts"]
+    posts_count = len(json.loads(posts_artifact.bytes)["posts"])
+
+    publish = await _tasks(integration_session, run.id, "publish")
+    assert {t.payload["slot"] for t in publish} == set(range(posts_count))
+    assert all(t.state == "pending" for t in publish)
+    assert all(t.depends_on == [site_task.id] for t in publish)
+
+    send_email = await _tasks(integration_session, run.id, "send_email")
+    assert len(send_email) == 1
+    assert send_email[0].state == "pending"
+    assert send_email[0].depends_on == [site_task.id]
+
+
+async def test_demand_fan_out_is_idempotent_on_rerun(
+    integration_session: AsyncSession,
+) -> None:
+    """A re-queued `demand` task (the operator's remedy for a flagged artifact, T145) must
+    not double the outreach fan-out — a duplicate `publish` task would park on an action
+    whose `task_id` names the first task and never settle (§1 of the outreach plan)."""
+    brief_payload = load_brief()
+    run = await _open_run(integration_session, brief_payload)
+
+    await _run_demand(integration_session, _marketer_model())
+    first_publish = {t.id for t in await _tasks(integration_session, run.id, "publish")}
+    first_send_email = {t.id for t in await _tasks(integration_session, run.id, "send_email")}
+    assert first_publish and first_send_email
+
+    # The operator's re-queue remedy: put `demand` back on the queue and run it again.
+    demand = (await _tasks(integration_session, run.id, "demand"))[0]
+    demand.state = "pending"
+    await integration_session.commit()
+    await _run_demand(integration_session, _marketer_model())
+
+    second_publish = {t.id for t in await _tasks(integration_session, run.id, "publish")}
+    second_send_email = {t.id for t in await _tasks(integration_session, run.id, "send_email")}
+    assert second_publish == first_publish
+    assert second_send_email == first_send_email
