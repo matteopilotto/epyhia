@@ -1,5 +1,6 @@
 import asyncio
 import base64
+import html
 import re
 from decimal import Decimal
 
@@ -118,7 +119,10 @@ class VercelAdapter:
             raise VerificationFailed(f"{url} returned {response.status_code}")
 
         body = response.text
-        if name not in body:
+        # The stored name is text; the body is HTML, where "&" is legitimately "&amp;".
+        # Compare in text space, or the first client with an ampersand in its name fails
+        # verification on a page that presents it correctly (run a9f3d800).
+        if name not in html.unescape(body):
             raise VerificationFailed(f"{url} does not present the brand doc name")
 
         match = _MARKER_TAG.search(body)

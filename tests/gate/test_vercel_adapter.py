@@ -215,3 +215,32 @@ async def _seed_clean_run(session: AsyncSession) -> uuid.UUID:
     )
     await session.commit()
     return run_id
+
+
+async def test_an_ampersand_in_the_name_verifies_against_the_escaped_body() -> None:
+    """Regression test: the probe compared the stored name against raw HTML, where "&" is
+    legitimately "&amp;" — so the first client with an ampersand in its name failed
+    verification on a page that presented it correctly, three times over (run a9f3d800).
+    The comparison happens in text space; the marker check stays on the raw markup."""
+    name = "Rook & Lantern Supply"
+    escaped_page = (
+        f'<!doctype html><html><head><meta name="epyhia-build" content="{MARKER}">'
+        f"</head><body><h1>Rook &amp; Lantern Supply</h1></body></html>"
+    )
+    adapter = _adapter(serves=escaped_page)
+    ctx = GateContext(
+        run_id=uuid.uuid4(), brand_doc={"name": name}, credentials=_Credentials()
+    )
+
+    evidence = await adapter.verify(REQUEST, {}, ctx)
+
+    assert evidence["matched_name"] == name
+    assert evidence["status"] == 200
+
+
+async def test_a_name_genuinely_absent_still_fails_after_unescaping() -> None:
+    """The unescape must not weaken the probe: a page without the name is still a refusal."""
+    adapter = _adapter(serves=_page(MARKER, name="Some Other Business"))
+
+    with pytest.raises(VerificationFailed, match="does not present the brand doc name"):
+        await adapter.verify(REQUEST, {}, _ctx())
