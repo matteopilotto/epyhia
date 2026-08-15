@@ -43,6 +43,15 @@ def send_email_key(brief_hash: str, template: str, recipient: str) -> str:
     return _digest("send_email", brief_hash, template, recipient)
 
 
+def publish_key(brief_hash: str, brand_doc_version: int, prompt_version: str, slot: int) -> str:
+    """Identity, not bytes, for exactly `deploy_key`'s reason: the posts artifact is generated
+    content, so keying on its hash would publish twice whenever a re-run's memo misses.
+
+    `prompt_version` is the **Marketer's** active version — the T143 lesson applied to a
+    second agent — never `runs.prompt_version`, which is the Strategist's (§7.2)."""
+    return _digest("publish", brief_hash, brand_doc_version, prompt_version, slot)
+
+
 def alias_for(brief_hash: str) -> str:
     """`epyhia-<brief_hash[:12]>.vercel.app` — a pure function of the brief hash, so the
     deploy adapter's `verify()` derives the URL it probes rather than being told it (R2)."""

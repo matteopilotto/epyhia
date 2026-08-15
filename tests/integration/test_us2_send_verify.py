@@ -160,6 +160,19 @@ async def _open_run(session: AsyncSession) -> uuid.UUID:
         ),
         {"id": run_id, "brief_id": brief_id, "alias": alias_for(BRIEF_HASH)},
     )
+    # The gate's own preconditions for `publish`/`send_email` — a clean `posts`/`email`
+    # artifact — same posture as `deploy`'s site-artifact precondition. This module tests the
+    # adapter halves, not the precondition, so the artifacts exist only to clear it.
+    for kind in ("posts", "email"):
+        await session.execute(
+            text(
+                "INSERT INTO artifacts (id, run_id, kind, path, content_type, bytes, sha256, "
+                "grounding_status, revision) "
+                "VALUES (:id, :run_id, :kind, 'artifact.json', 'application/json', :bytes, "
+                ":sha, 'clean', 0)"
+            ),
+            {"id": uuid.uuid4(), "run_id": run_id, "kind": kind, "bytes": b"{}", "sha": "0" * 64},
+        )
     await session.commit()
     return run_id
 
