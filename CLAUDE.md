@@ -17,6 +17,12 @@ lint, and `eval/`. Recovery is complete in both directions a stage can die: a tr
 provider refusal is retried in `epyhia/agents/retry.py`, a lapsed lease is swept, an action
 orphaned mid-verify is re-driven, and a `failed` stage is re-queued by an operator through
 `POST /tasks/{id}/retry`. The Fly deploy (T126) is live — `web` + `worker` from one image.
+Outreach is wired: `handle_demand` (`epyhia/queue/handlers/demand.py`) enqueues one `publish`
+task per post and one `send_email` task, depending on the run's `site` task so launch
+announcements go out only after the site is live; `epyhia/queue/handlers/outreach.py` reads
+the newest clean `posts`/`email` artifact and requests the gated action, exactly as `deploy`
+is requested. `scripts/backfill_outreach.py` enqueues the same rows for the four runs
+processed before this landed, without a re-run of ingest, plan or demand.
 
 Remaining: Phase 9's two operator-driven tasks — the quickstart evidence pass (T129) and the
 demo recording (T131). Both need a person at the deployed console; neither is code. The rest

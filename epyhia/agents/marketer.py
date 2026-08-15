@@ -107,8 +107,10 @@ agent = Agent(
 )
 # Structured output is asked for in the prompt rather than through an output tool, so the
 # toolset stays exactly the gate handles the contract fixes it at and nothing else
-# (contracts/agent-io.md). The Marketer holds `send_email` and `publish` and never `deploy`;
-# both land with their adapters in 4b (T078, T080).
+# (contracts/agent-io.md). The Marketer never holds `deploy`. `send_email` and `publish` are
+# attributed to it (`requested_by="marketer"`) but exercised on its behalf by the outreach
+# task handlers, not through a deferred toolset on this agent — the same "plain typed calls"
+# shape `resume.py` describes for the gate generally.
 # Never set temperature/top_p/top_k — removed on Sonnet 5, and a non-default value 400s.
 
 
