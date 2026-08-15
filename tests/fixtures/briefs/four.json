@@ -1,0 +1,85 @@
+{
+  "business_name": "Wattlebird Pet & Aquatics",
+  "tagline": "The right animal, or no sale at all.",
+  "one_liner": "A family-run pet and aquatics shop that matches animals to owners and backs every sale with real husbandry advice.",
+  "positioning": {
+    "who_its_for": "First-time keepers and families who want a pet still thriving a year in, not an impulse bought in a plastic cup.",
+    "what_problem": "Big-box pet aisles sell the tank, the fish and the food in one trip and leave new owners to find out the hard way that the water wasn't ready.",
+    "why_them": "Everyone on our counter keeps animals of their own, and we would rather talk you out of a sale than send an animal to the wrong home."
+  },
+  "products": [
+    {
+      "name": "Cycled Aquarium Starter",
+      "description": "A complete first aquarium delivered already running: tank, filter, heater and lighting cycled on our own bench for four weeks before it reaches your living room.",
+      "price_minor": 34900,
+      "currency_display": "AUD",
+      "currency_charge": "AUD",
+      "billing": "one_time",
+      "features": [
+        "Tank, filter, heater and lighting included",
+        "Cycled in-store for 4 weeks before delivery",
+        "Delivered, sited and planted",
+        "Free water test any time in the first 3 months"
+      ],
+      "not_covered": [
+        "Fish and other livestock",
+        "Custom cabinets or stands"
+      ]
+    },
+    {
+      "name": "Small Animal Hamper",
+      "description": "A monthly box for rabbits, guinea pigs and rats: fresh-cut hay, safe chews and one rotating enrichment toy, packed for the animals on your file rather than a generic box.",
+      "price_minor": 4250,
+      "currency_display": "AUD",
+      "currency_charge": "AUD",
+      "billing": "subscription",
+      "billing_interval": "month",
+      "features": [
+        "Fresh-cut oaten hay in every box",
+        "Chews vetted by our own keepers",
+        "One rotating enrichment toy each month",
+        "Pause or cancel anytime"
+      ],
+      "not_covered": [
+        "Prescription or veterinary diets",
+        "Live insects and frozen feed"
+      ]
+    },
+    {
+      "name": "Nail, Wing and Health Check Visit",
+      "description": "A booked visit at our counter for birds, rabbits and other small animals: nails and wings trimmed as needed, weight recorded, and husbandry questions answered on the spot.",
+      "price_minor": 3800,
+      "currency_display": "AUD",
+      "currency_charge": "AUD",
+      "billing": "one_time",
+      "features": [
+        "Nails, wings and teeth checked and trimmed as needed",
+        "Weight recorded and compared against the last visit",
+        "Husbandry advice specific to your setup",
+        "Referral letter if the animal needs a vet"
+      ],
+      "not_covered": [
+        "Veterinary diagnosis or medication",
+        "Dogs and cats"
+      ]
+    }
+  ],
+  "voice": {
+    "adjectives": ["gentle", "exacting", "unsentimental"],
+    "do": [
+      "Name the species, the age and the setup before recommending anything",
+      "Say plainly when an animal is the wrong fit for a home"
+    ],
+    "dont": [
+      "Call an animal stock or a unit",
+      "Promise a pet will suit every household"
+    ]
+  },
+  "locale": "en-AU",
+  "established": 2019,
+  "contact": {
+    "email": "counter@wattlebirdpetaquatics.example",
+    "phone": "+61-3-5550-7214",
+    "address": "212 Sydney Road, Brunswick, Melbourne VIC"
+  }
+}
