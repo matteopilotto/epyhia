@@ -44,6 +44,27 @@ function describeTarget(action: Action, run: Run | undefined): string {
   }
 }
 
+/**
+ * What approving actually does, in one sentence — the badge names the action type, but
+ * FR-039 asks the screen to say what is about to happen, and "deploy" is a verb only to
+ * someone who already knows the system. Generic by construction: the concrete target — the
+ * URL, the recipient, the prices — is the run's own data, rendered beside it.
+ */
+function describeConsequence(action: Action): string {
+  switch (action.action_type) {
+    case "deploy":
+      return "Publishes this run's site at its alias — the page goes live for anyone to open.";
+    case "send_email":
+      return "Sends the launch email to the recipient below.";
+    case "publish":
+      return "Publishes the post through the recording sink, permalink and all.";
+    case "arm_charge_path":
+      return "Arms the charge path — buyers can complete checkout against every price below.";
+    default:
+      return "Executes an external action through the gate.";
+  }
+}
+
 type CatalogueRow = {
   slug: string;
   name: string;
@@ -120,12 +141,17 @@ function ApprovalCard({ action, run }: { action: Action; run: Run | undefined })
       <div className="flex items-center gap-3">
         <Badge variant="warn">{action.action_type}</Badge>
         <span className="text-xs text-ink-muted">requested by {action.requested_by}</span>
+        {/* Which run this decision belongs to — with two briefs pending at once, a card
+            without its run is a decision made from memory (FR-039). */}
+        {run && <span className="font-mono text-xs text-ink-muted">{run.alias}</span>}
         <span className="ml-auto text-xs text-ink-muted">
           {action.projected_cost_usd === null
             ? "no projected cost"
             : `${Number(action.projected_cost_usd).toFixed(2)} USD projected`}
         </span>
       </div>
+
+      <p className="mt-3 text-sm">{describeConsequence(action)}</p>
 
       <dl className="mt-3 grid grid-cols-[8rem_1fr] gap-y-1 text-sm">
         <dt className="text-ink-muted">Target</dt>
@@ -141,13 +167,19 @@ function ApprovalCard({ action, run }: { action: Action; run: Run | undefined })
         <Catalogue rows={(action.request.catalogue ?? []) as CatalogueRow[]} />
       )}
 
+      {/* Disabled from the click until the refetch removes the card: the server refuses a
+          second decision anyway (409), but a button that stays live in that window invites
+          one. */}
       <div className="mt-4 flex gap-2">
-        <Button disabled={decide.isPending} onClick={() => decide.mutate("approve")}>
+        <Button
+          disabled={decide.isPending || decide.isSuccess}
+          onClick={() => decide.mutate("approve")}
+        >
           Approve
         </Button>
         <Button
           variant="destructive"
-          disabled={decide.isPending}
+          disabled={decide.isPending || decide.isSuccess}
           onClick={() => decide.mutate("deny")}
         >
           Deny
@@ -192,7 +224,15 @@ export function ApprovalsRoute() {
 
       {runs.isLoading && <p className="text-sm text-ink-muted">Loading…</p>}
 
-      {!runs.isLoading && pending.length === 0 && (
+      {/* A failed load and an empty queue must not read the same: "nothing is waiting" on
+          a screen that could not ask is an approval queue silently invisible. */}
+      {runs.isError && (
+        <p className="text-sm text-red-400">
+          The runs could not be loaded — the queue may not be empty.
+        </p>
+      )}
+
+      {!runs.isLoading && !runs.isError && pending.length === 0 && (
         <p className="text-sm text-ink-muted">Nothing is waiting on a decision.</p>
       )}
 

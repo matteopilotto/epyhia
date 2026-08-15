@@ -348,7 +348,7 @@ businesses — and the report is honest about which half of it a machine checked
 ## Phase 9: Polish & Cross-Cutting Concerns
 
 - [X] T126 Deploy to Fly using `fly.toml` — one image, `web` + `worker` processes, `release_command = "alembic upgrade head"`, with a real Auth0 tenant configured (§12 step 12). **Blocks the whole of Phase 8's eval** — T122–T125 and T137–T140 assert against the deployed system (FR-061) and authenticate through this tenant (FR-058), so it runs before them despite its position in the list
-- [ ] T127 [P] Polish the console limited to the approval view in `console/src/routes/approvals.tsx` — design effort belongs in the generated client site, not here (spec Assumptions)
+- [X] T127 [P] Polish the console limited to the approval view in `console/src/routes/approvals.tsx` — design effort belongs in the generated client site, not here (spec Assumptions)
 - [ ] T128 [P] Write `README.md` — the clone-to-running path from [quickstart.md](./quickstart.md) Prerequisites, and the explicit statement that the app starts with no credentials
 - [ ] T129 Run every section of [quickstart.md](./quickstart.md) S0–S6 against the running system and record the evidence each table asks for — S6 requires both briefs already driven end to end by an operator, since the eval grades stored records rather than driving them
 - [ ] T131 Record the 60–90s demo and put its URL in a **tracked file** so the `evidence`-kind row for it resolves through T138 — until the recording exists the row renders `missing`, which is the honest rendering and does not fail the eval (§12 step 13, FR-063, FR-068)
