@@ -13,6 +13,7 @@ from epyhia.cost.budget import HALTED, enforce_run_budget
 from epyhia.models.tasks import Task
 from epyhia.observability import configure_tracing
 from epyhia.queue.claim import claim_task
+from epyhia.queue.settle import settle_run
 from epyhia.queue.sweeper import resume_orphaned_actions, sweep_expired_leases
 
 logger = logging.getLogger(__name__)
@@ -86,6 +87,9 @@ async def run_once(session: AsyncSession, *, kind: str | None = None) -> bool:
             ),
             {"id": task.id},
         )
+        # In the same transaction as the state change that may have been the run's last:
+        # if no stage can still move, the run settles `succeeded`/`failed` here (T144).
+        await settle_run(session, task.run_id)
     except ApprovalRequired as exc:
         action_id = (exc.metadata or {}).get("action_id")
         await session.execute(
@@ -115,6 +119,7 @@ async def run_once(session: AsyncSession, *, kind: str | None = None) -> bool:
             ),
             {"id": task.id, "error": f"{type(exc).__name__}: {exc}"},
         )
+        await settle_run(session, task.run_id)
         await session.commit()
         return True
 

@@ -96,6 +96,11 @@ One execution against one brief. Its `id` threads through every agent call and e
   amended afterwards by anything — least of all by model output (FR-005, Principle VI).
 - `spend_usd` crossing `budget_usd` moves `status` to `halted_budget` and stops the run
   (FR-053, SC-011).
+- `status` settles to `succeeded`/`failed` at the moment the run's last movable stage lands
+  terminal — every stage `done` is `succeeded`, a `failed` stage among them is `failed` —
+  written where the queue settles a task, never by a periodic sweep; re-queueing a stage
+  through `POST /tasks/{id}/retry` re-opens a settled run to `running` (T144). A settle
+  never overwrites `halted_budget`.
 - `alias` is a pure function of `brief_hash`, so `verify()` and `eval.py` derive the URL they
   probe rather than reading it from the action they are checking (R2).
 - A run whose brief was rejected at intake is opened and immediately `failed`, with no task

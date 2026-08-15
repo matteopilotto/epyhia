@@ -112,6 +112,31 @@ async def test_only_a_terminal_task_is_re_queueable(
     assert (await _state_of(queue_session, task_id))[0] == state
 
 
+async def test_re_queueing_a_stage_re_opens_a_settled_run(
+    queue_session: AsyncSession,
+) -> None:
+    """T144's other half. A `failed` stage the operator is about to re-queue is not a failed
+    run — the click is the statement that the run is not finished after all, so the run
+    re-opens with the stage and settles again when it next has no stage that can move."""
+    run_id = await make_run(queue_session)
+    task_id = await _insert_task(queue_session, run_id, kind="site", state="failed")
+    await queue_session.execute(
+        text("UPDATE runs SET status = 'failed' WHERE id = :id"), {"id": run_id}
+    )
+    await queue_session.commit()
+
+    async with client_for(queue_session) as client:
+        response = await client.post(f"/tasks/{task_id}/retry")
+
+    assert response.status_code == 200
+    status = (
+        await queue_session.execute(
+            text("SELECT status FROM runs WHERE id = :id"), {"id": run_id}
+        )
+    ).scalar_one()
+    assert status == "running"
+
+
 async def test_a_halted_run_refuses_rather_than_re_failing_the_task(
     queue_session: AsyncSession,
 ) -> None:

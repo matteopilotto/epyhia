@@ -5,6 +5,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from epyhia.gate import gate
 from epyhia.gate.registry import get_adapter
+from epyhia.queue.settle import settle_run
 
 logger = logging.getLogger(__name__)
 
@@ -30,6 +31,7 @@ _SWEEP_TO_FAILED_SQL = text(
     WHERE state IN ('claimed', 'running')
       AND lease_expires_at < now()
       AND attempts + 1 > :cap
+    RETURNING run_id
     """
 )
 
@@ -38,8 +40,13 @@ async def sweep_expired_leases(session: AsyncSession, *, cap: int = TASK_ATTEMPT
     """Return expired-lease rows to `pending`, incrementing `attempts`; past `cap` the row
     lands `failed` instead (R8, data-model.md "tasks" state transitions).
     """
-    await session.execute(_SWEEP_TO_FAILED_SQL, {"cap": cap})
+    failed_runs = set((await session.execute(_SWEEP_TO_FAILED_SQL, {"cap": cap})).scalars())
     await session.execute(_SWEEP_TO_PENDING_SQL, {"cap": cap})
+    # This is the one task-settle point outside the worker loop, so it settles the run too
+    # (T144) — after the to-pending pass, whose revived rows keep a run with attempts left
+    # correctly unsettled.
+    for run_id in failed_runs:
+        await settle_run(session, run_id)
 
 
 # An action's owner is the lease on its task, so an action still `executing` or `verifying`
