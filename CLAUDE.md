@@ -18,11 +18,13 @@ provider refusal is retried in `epyhia/agents/retry.py`, a lapsed lease is swept
 orphaned mid-verify is re-driven, and a `failed` stage is re-queued by an operator through
 `POST /tasks/{id}/retry`. The Fly deploy (T126) is live — `web` + `worker` from one image.
 
-Remaining: Phase 9 — the console's approval-view polish (T127), `README.md` (T128), the
-quickstart evidence pass (T129), the demo recording (T131), and two filed defects: T143 (the
-deploy key cannot see the Web Builder's prompt version, so a Web-Builder-only prompt fix
-republishes nothing) and T144 (`runs.status` has no path to `succeeded` or `failed`, so a run
-never settles).
+Remaining: Phase 9's two operator-driven tasks — the quickstart evidence pass (T129) and the
+demo recording (T131). Both need a person at the deployed console; neither is code. The rest
+of Phase 9 has landed: the approval-view polish (T127), `README.md` (T128), and both filed
+defects — T143 (the deploy key and build marker now read the Web Builder's own prompt
+version, so a Web-Builder-only prompt fix republishes) and T144 (a run settles
+`succeeded`/`failed` where its last stage does, in `epyhia/queue/settle.py`, and
+`POST /tasks/{id}/retry` re-opens a settled run).
 
 One thing the checkpoint language can mislead about: **`eval/` is implemented and unit-tested
 against a stubbed record source, but has never been run against the deployed system.** FR-061
