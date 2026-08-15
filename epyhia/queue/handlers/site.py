@@ -6,6 +6,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 import epyhia.gate.adapters  # noqa: F401  — registers the deploy pair
+from epyhia.agents import web_builder
 from epyhia.agents.site_critic import CritiqueFinding, critique
 from epyhia.agents.web_builder import build_site, revise_site
 from epyhia.artifacts.store import PostgresArtifactStore
@@ -423,6 +424,10 @@ async def handle_site(session: AsyncSession, task: Task) -> None:
     # Builder is what makes that ordering unavoidable: there is no path on which a page
     # reaches the world before its numerals have been checked.
     await session.commit()
+    # The Web Builder's own prompt version, not `runs.prompt_version` — that column is the
+    # Strategist's version, stamped at ingest, and a fix to the instructions that build the
+    # page must change this key or the corrected page short-circuits onto the old
+    # publication and republishes nothing (T143, §7.2).
     await gate.request(
         session,
         run_id=run.id,
@@ -432,10 +437,10 @@ async def handle_site(session: AsyncSession, task: Task) -> None:
             "files": [{"file": "index.html", "data": page}],
             "brief_hash": brief.content_sha256,
             "brand_doc_version": brand_doc.version,
-            "prompt_version": run.prompt_version,
+            "prompt_version": web_builder.PROMPT_VERSION,
         },
         idempotency_key=deploy_key(
-            brief.content_sha256, brand_doc.version, run.prompt_version
+            brief.content_sha256, brand_doc.version, web_builder.PROMPT_VERSION
         ),
         task_id=task.id,
         brand_doc=brand_doc.doc,

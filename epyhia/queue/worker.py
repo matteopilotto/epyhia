@@ -13,6 +13,7 @@ from epyhia.cost.budget import HALTED, enforce_run_budget
 from epyhia.models.tasks import Task
 from epyhia.observability import configure_tracing
 from epyhia.queue.claim import claim_task
+from epyhia.queue.settle import settle_run
 from epyhia.queue.sweeper import resume_orphaned_actions, sweep_expired_leases
 
 logger = logging.getLogger(__name__)
@@ -115,6 +116,7 @@ async def run_once(session: AsyncSession, *, kind: str | None = None) -> bool:
             ),
             {"id": task.id, "error": f"{type(exc).__name__}: {exc}"},
         )
+        await settle_run(session, task.run_id)
         await session.commit()
         return True
 
@@ -122,6 +124,11 @@ async def run_once(session: AsyncSession, *, kind: str | None = None) -> bool:
     # Whatever this task spent is now on the run's row, so the next claim decides against a
     # current number rather than the one that was true a stage ago.
     await enforce_run_budget(session, task.run_id)
+    # After the budget verdict on purpose: a run that crossed its budget on its final stage
+    # halts, and the settle's `running` guard leaves the halt standing. Otherwise, if no
+    # stage can still move, the run settles `succeeded`/`failed` here (T144).
+    await settle_run(session, task.run_id)
+    await session.commit()
     return True
 
 

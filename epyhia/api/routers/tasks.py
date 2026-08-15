@@ -87,5 +87,10 @@ async def retry_task(
         ),
         {"id": task_id},
     )
+    # A settled run re-opens with its stage: `succeeded`/`failed` are written where the
+    # queue settles a task (T144), and re-queueing one is the operator's statement that the
+    # run is not finished after all. `halted_budget` was refused above and stays put.
+    if run.status in ("succeeded", "failed"):
+        run.status = "running"
     await session.commit()
     return {"state": "pending"}

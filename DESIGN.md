@@ -299,7 +299,7 @@ sequenceDiagram
     par
         Q->>B: claim site (brand doc + copy artifact)
         B->>B: grounding set-difference over rendered site
-        B->>G: deploy(files, key=sha(brief,brand_doc_v,prompt_v))
+        B->>G: deploy(files, key=sha(brief,brand_doc_v,web_builder_prompt_v))
         G-->>C: awaiting_approval — target, cost, key
         C-->>G: APPROVE
         G->>G: execute → alias → verify (GET alias, 200 + brand_doc.name) → succeeded
@@ -721,7 +721,7 @@ bakery on the first try.
 
 | Action | Key derived from |
 |---|---|
-| Deploy | `sha256(brief_hash + brand_doc_version + prompt_version)` |
+| Deploy | `sha256(brief_hash + brand_doc_version + web_builder_prompt_version)` |
 | Arm charge path | `sha256(brief_hash + resolved catalogue hash)` |
 | Stripe product/price | `sha256(brief_hash + product name + price_minor + billing)` |
 | Checkout session | `sha256(brief_hash + product + buyer session)` |
@@ -745,6 +745,13 @@ brand doc version, under these prompts. Those three are what should produce a di
 byte-level generation noise should not. Re-running an identical brief short-circuits regardless
 of what the model happened to emit. Editing the brand doc bumps `brand_doc_version`, which is a
 new key and a real second deploy — which is the §5.3 demo, and is supposed to fire.
+
+The prompt version in the key is the **Web Builder's** — the agent whose instructions build
+the page — read from its active prompt at deploy-request time, never `runs.prompt_version`,
+which records the Strategist's version at ingest. Keyed on the run's column, a fix to the Web
+Builder's instructions could not change the key, so the corrected page would short-circuit
+onto the old publication and republish nothing — the T143 defect, found when a dropped
+buy-button contract was restored as a new prompt version and nothing redeployed.
 
 **One brief, one URL: the alias carries it.** Vercel gives every deployment its own immutable
 URL, so "one site" has to mean something stronger than "one deployment." Each brief owns a
