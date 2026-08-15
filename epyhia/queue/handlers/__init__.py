@@ -4,6 +4,7 @@ from epyhia.queue.handlers import (  # noqa: F401
     copy,
     demand,
     money,
+    outreach,
     plan,
     resume,
     site,
