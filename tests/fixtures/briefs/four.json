@@ -65,14 +65,17 @@
     }
   ],
   "voice": {
-    "adjectives": ["gentle", "exacting", "unsentimental"],
+    "adjectives": ["sunlit", "gentle", "exacting", "unsentimental"],
     "do": [
       "Name the species, the age and the setup before recommending anything",
-      "Say plainly when an animal is the wrong fit for a home"
+      "Say plainly when an animal is the wrong fit for a home",
+      "Describe the shop as it is at ten in the morning: sun through the front glass, planted tanks glowing green, water clear enough to read a label through"
     ],
     "dont": [
       "Call an animal stock or a unit",
-      "Promise a pet will suit every household"
+      "Promise a pet will suit every household",
+      "Make the shop look dark, moody or dimly lit",
+      "Dress the shop in rustic, earthy, craft-shop warmth"
     ]
   },
   "locale": "en-AU",
