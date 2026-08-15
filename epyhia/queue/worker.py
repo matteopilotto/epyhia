@@ -87,9 +87,6 @@ async def run_once(session: AsyncSession, *, kind: str | None = None) -> bool:
             ),
             {"id": task.id},
         )
-        # In the same transaction as the state change that may have been the run's last:
-        # if no stage can still move, the run settles `succeeded`/`failed` here (T144).
-        await settle_run(session, task.run_id)
     except ApprovalRequired as exc:
         action_id = (exc.metadata or {}).get("action_id")
         await session.execute(
@@ -127,6 +124,11 @@ async def run_once(session: AsyncSession, *, kind: str | None = None) -> bool:
     # Whatever this task spent is now on the run's row, so the next claim decides against a
     # current number rather than the one that was true a stage ago.
     await enforce_run_budget(session, task.run_id)
+    # After the budget verdict on purpose: a run that crossed its budget on its final stage
+    # halts, and the settle's `running` guard leaves the halt standing. Otherwise, if no
+    # stage can still move, the run settles `succeeded`/`failed` here (T144).
+    await settle_run(session, task.run_id)
+    await session.commit()
     return True
 
 
