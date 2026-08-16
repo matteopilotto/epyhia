@@ -30,7 +30,7 @@ the Strategist reads the brief and writes the brand doc; every other agent reads
 doc, never the raw brief, with only the exceptions named in Principle III. A different client
 MUST be representable as a different brief alone, never as a code change.
 
-**Rationale**: This violation is invisible while only one client (GRAFT) runs through the
+**Rationale**: This violation is invisible while only one client runs through the
 system, and a well-meaning change is the most likely way to introduce it. EPYHIA is the
 product; any single client is one row of input data, and the codebase must stay provably true
 to that at every commit.

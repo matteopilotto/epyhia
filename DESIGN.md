@@ -11,16 +11,16 @@ cut), and a Stripe test-mode checkout whose completed purchase writes an order r
 real database. Every action that deploys, charges, or sends passes through a single Action
 Gate.
 
-### 1.1 EPYHIA is the product. GRAFT is one row of input data.
+### 1.1 EPYHIA is the product. The client is one row of input data.
 
 This distinction is the single most important thing to understand about the repository, so
 it goes first. The assignment says it plainly — *"Same system every time — you're choosing
 the customer, not a different project"* — and it is easy to build the wrong thing here: a
-very nice website for a fictional clinic, with an agent framework wrapped around it.
+very nice website for one fictional business, with an agent framework wrapped around it.
 
-|  | **EPYHIA** | **GRAFT** |
+|  | **EPYHIA** | **A client** |
 |---|---|---|
-| What it is | A crew of agents that turns *any* client brief into a site, a pack, and a checkout | A fictional ripperdoc clinic used to demonstrate that capability once |
+| What it is | A crew of agents that turns *any* client brief into a site, a pack, and a checkout | One business's facts, catalogue and voice, used to demonstrate that capability once |
 | Where it lives | Code, schemas, prompts, migrations, infrastructure | A JSON brief in the `briefs` table, submitted through the console |
 | When it changes | When I improve the agency | Never — I submit a different brief instead |
 | Graded on | Architecture, the gate, orchestration, idempotency, cost | Whether the three artifacts it produced are real and don't read as slop |
@@ -42,38 +42,46 @@ it is invisible while I only ever run one client through the system.
 Three concrete consequences, each of which shows up in the sections below:
 
 - The deploy verification probe asserts the site body contains `brand_doc.name`, read from
-  the run's own row at verify time. It does not contain the string `"GRAFT"`.
+  the run's own row at verify time. No client's name appears in it as a literal.
 - The Reviewer checks the marketing draft against numbers extracted from the run's brief at
   ingest, not against a list of prices in the source.
 - The Web Builder's prompt describes a *mechanism* (composition plan, anti-slop bar) and
   contains no aesthetic direction for any particular client. "Dark clinical surfaces" is
   something the Strategist writes into a brand doc, not something I write into a prompt.
 
-### 1.3 The demo tenant
+### 1.3 The demo tenants
 
-**GRAFT** — a ripperdoc clinic in Watson, operating since '69, selling maintenance plans to
-people who already have cyberware installed: immune suppressants, firmware patches,
-periodic diagnostics. A phone plan for your body. Its catalogue is three subscription tiers
-(€$45 / €$120 / €$340 per month) plus a one-time €$250 installation deposit; it prices in
-an in-world unit and charges in USD.
+There is no single demo tenant, and that is the point — the tenants are files in
+`tests/fixtures/briefs/`, none of which any source file knows the name of:
 
-I picked it for four properties, all of which are properties of a *good test case* rather
-than of a business I want to build:
+| Fixture | Business | Prices in / charges in |
+|---|---|---|
+| `one.json` | Meridian Coffee Roasters — a neighbourhood roastery shipping single-origin | EUR / USD |
+| `two.json` | Hollowfield Cycle Workshop — a railway-arch workshop servicing commuter bikes | GBP / GBP |
+| `three.json` | Coldwire Neon Studio — a two-bender studio hand-forming commissioned neon | GBP / GBP |
+| `four.json` | Wattlebird Pet & Aquatics — a family-run pet and aquatics shop | AUD / AUD |
 
-1. **Recurring subscriptions** mean `checkout.session.completed` can be replayed with one
+The eval in §10 grades `one.json` and `two.json` driven end to end; the rest exist because
+the genericity lint harvests its token set from *every* fixture on disk, and because a
+palette or archetype claim is only worth making against briefs whose voices disagree.
+
+Each is written to be a *good test case* rather than a business anyone wants to build, and
+the four properties that matter are properties every fixture carries:
+
+1. **A recurring subscription** means `checkout.session.completed` can be replayed with one
    `stripe trigger` command — the cleanest available proof of "a re-run produces no
    duplicate order," which is one of the two rows that carry the grade.
 2. **Two billing types** (subscription + one-time) prove the catalogue path isn't
    single-SKU and that `billing` is a per-product brief field, not a global setting.
-3. **A split display/charge currency** forces the currency pair into the brief instead of
-   into the Ops agent's code.
-4. **A deadpan clinical voice** is genuinely hard to render as generic AI slop, and the
-   failure mode is interesting: when the Marketer starts writing quips, that is off-brand
-   here, and the Reviewer should catch it. The funny thing and the off-brand thing look
-   similar in this voice, which makes it a real exercise for the self-review pass rather
-   than a rubber stamp.
+3. **A currency pair stated per product** forces display-vs-charge into the brief instead of
+   into the Ops agent's code. `one.json` is the fixture where the two differ, so the split
+   is exercised rather than merely permitted.
+4. **A voice with a named failure mode.** Each brief's `voice.dont[]` says what is off-brand
+   for *that* business — wine-tasting jargon for the roastery, showroom gloss for the
+   workshop — so the self-review pass has something specific to catch. A voice that only
+   said "be nice" would make the Reviewer a rubber stamp.
 
-Fictional ≠ ungrounded. The brief states every price and every feature, and the Reviewer
+Fictional ≠ ungrounded. Every brief states every price and every feature, and the Reviewer
 rejects any claim outside it exactly as it would for a real client.
 
 ### 1.4 In scope / out of scope
@@ -206,8 +214,8 @@ One orchestrator, three specialists, and a review pass that belongs to the Marke
 
 ### 3.1 Why tiers are assigned by role, not by client
 
-Opus plans, Sonnet writes, Haiku checks and wires. That mapping holds for a ripperdoc
-clinic and for a bakery, because it follows the *shape of the work* — open-ended judgement,
+Opus plans, Sonnet writes, Haiku checks and wires. That mapping holds for a coffee roastery
+and for a bike workshop, because it follows the *shape of the work* — open-ended judgement,
 constrained generation, checklist evaluation — not the subject matter. It also produces the
 demo the spec asks for directly: a per-call cost log showing the expensive seat was used
 once, for planning, and the drafting ran on mid-tier models.
@@ -518,8 +526,8 @@ locale · established · contact
 
 `price_minor` is the Stripe amount in minor units, so the Reviewer's price check and Ops's
 product creation read one number from one place. `currency_display` may differ from
-`currency_charge` — a client can price in a local or fictional unit and charge in USD.
-`billing` is **per product**, not a global switch, which is why the demo tenant deliberately
+`currency_charge` — a client can price in one unit and charge in another.
+`billing` is **per product**, not a global switch, which is why every demo brief deliberately
 carries both a subscription and a one-time item.
 
 The submitted payload is persisted verbatim as JSONB in `briefs`, with a `content_sha256`.
@@ -539,18 +547,18 @@ sentence. Two refinements, both computed at ingest so they stay client-agnostic:
 
 **Normalisation before comparison.** Numerals are compared as canonical values, not as
 strings: separators and currency symbols stripped, amounts reduced to minor units in a named
-currency, and number words mapped to digits (`forty-five` → `45`) so spelling one out is not a
+currency, and number words mapped to digits (`eighteen` → `18`) so spelling one out is not a
 way around the check. Without this the `currency_display` ≠ `currency_charge` split alone
-would generate constant false positives — `€$120`, `120.00`, `$120/mo` and "one hundred and
-twenty" are one fact in four costumes, and the demo tenant was chosen partly *because* it
-exercises that.
+would generate constant false positives — `€18.00`, `18.00`, `$18/mo` and "eighteen euros"
+are one fact in four costumes, and a fixture that prices in one currency and charges in
+another exists partly *because* it exercises that.
 
-**A derived set alongside the literal one.** Legitimate copy computes: `€$1,440 a year` from a
-€$120 month, `three plans` from `len(products)`, `since '69` becoming an age. So ingest also
-persists a closed set of derivations over the literal values — ×12 and ×52 annualisations,
-sums and differences of prices, collection counts, and `now − established` — and the check
-passes on `literal ∪ derived`. Closed is the operative word: the set is enumerated in code
-once, applies to any brief, and is not extended by anything a model says.
+**A derived set alongside the literal one.** Legitimate copy computes: `€216 a year` from an
+`€18` subscription, `two products` from `len(products)`, `since 2016` becoming an age. So
+ingest also persists a closed set of derivations over the literal values — ×12 and ×52
+annualisations, sums and differences of prices, collection counts, and `now − established`
+— and the check passes on `literal ∪ derived`. Closed is the operative word: the set is
+enumerated in code once, applies to any brief, and is not extended by anything a model says.
 
 A numeral outside both sets is **flagged**, which routes it to the revision loop and then to
 the console (§9.2). Calling it a fabrication is a claim the check cannot make; refusing to let
@@ -1082,9 +1090,9 @@ Handed two briefs, it asserts against the database:
 
 ### 10.1 The genericity test
 
-The eval also asserts over a **second, unrelated brief** driven end to end (a bakery fixture):
-the two runs produce different brand-doc palettes, different deployed URLs, and no shared
-artifact hashes.
+The eval also asserts over a **second, unrelated brief** driven end to end (`two.json`, a bike
+workshop, sharing no facts with the roastery in `one.json`): the two runs produce different
+brand-doc palettes, different deployed URLs, and no shared artifact hashes.
 
 This is the cheapest and by far the strongest evidence that EPYHIA is an agency rather than a
 one-client script, and it is much harder to fake than the brand-doc-edit demo. If §1.2 has
