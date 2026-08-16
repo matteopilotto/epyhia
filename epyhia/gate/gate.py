@@ -9,7 +9,12 @@ from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from epyhia.config import settings
-from epyhia.gate.errors import ActionInProgress, PreconditionFailed, VerificationFailed
+from epyhia.gate.errors import (
+    ActionInProgress,
+    ActionTerminallyFailed,
+    PreconditionFailed,
+    VerificationFailed,
+)
 from epyhia.gate.registry import Adapter, GateContext, get_adapter
 from epyhia.models.actions import Action
 
@@ -155,8 +160,15 @@ async def request(
         existing = (
             await session.execute(select(Action).where(Action.idempotency_key == idempotency_key))
         ).scalar_one()
-        if existing.state in TERMINAL_STATES:
+        if existing.state == "succeeded":
             return _result(existing)
+        if existing.state in ("failed", "denied"):
+            # Only `succeeded` short-circuits silently. Callers ignore this return value, so
+            # handing back a failed result completed the handler and the worker wrote `done`
+            # over an unproved effect (T147) — raising lands the task `failed` naming the
+            # action, which is the state the re-verify affordance acts on. `denied` raising
+            # matches deny's contract: nothing executes, ever, for that key.
+            raise ActionTerminallyFailed(existing.id, existing.state)
         if existing.state == "awaiting_approval":
             # Parked exactly where a fresh request would park it, so the caller parks too —
             # a re-run of a stage waiting on a human is waiting, not failing. Raising

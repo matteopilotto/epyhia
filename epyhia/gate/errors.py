@@ -4,6 +4,7 @@ from epyhia.config import CredentialNotConfigured
 
 __all__ = [
     "ActionInProgress",
+    "ActionTerminallyFailed",
     "CredentialNotConfigured",
     "PreconditionFailed",
     "VerificationFailed",
@@ -20,6 +21,22 @@ class PreconditionFailed(Exception):
     def __init__(self, reason: str) -> None:
         self.reason = reason
         super().__init__(reason)
+
+
+class ActionTerminallyFailed(Exception):
+    """The keyed row already ended `failed` or `denied`, and a request must say so.
+
+    Returning the stored result here is what manufactured false greens (T147): every caller
+    ignores `request()`'s return value, so a re-queued task completed and the worker wrote
+    `done` over an unproved effect — the exact inversion of the gate's promise. Raised, so
+    the task lands `failed` naming the stuck action, which is the state the re-verify
+    affordance (T146) acts on. Only `succeeded` short-circuits silently.
+    """
+
+    def __init__(self, action_id: uuid.UUID, state: str) -> None:
+        self.action_id = action_id
+        self.state = state
+        super().__init__(f"action {action_id} already ended {state}")
 
 
 class ActionInProgress(Exception):
