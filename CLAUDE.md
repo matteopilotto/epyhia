@@ -24,18 +24,29 @@ the newest clean `posts`/`email` artifact and requests the gated action, exactly
 is requested. `scripts/backfill_outreach.py` enqueues the same rows for the four runs
 processed before this landed, without a re-run of ingest, plan or demand.
 
-Remaining: Phase 9's two operator-driven tasks — the quickstart evidence pass (T129) and the
-demo recording (T131). Both need a person at the deployed console; neither is code. The rest
+Remaining: Phase 9's two operator-driven tasks — the rest of the quickstart evidence pass
+(T129, see below) and the demo recording (T131). Both need a person at the deployed console;
+neither is code. The rest
 of Phase 9 has landed: the approval-view polish (T127), `README.md` (T128), and both filed
 defects — T143 (the deploy key and build marker now read the Web Builder's own prompt
 version, so a Web-Builder-only prompt fix republishes) and T144 (a run settles
 `succeeded`/`failed` where its last stage does, in `epyhia/queue/settle.py`, and
 `POST /tasks/{id}/retry` re-opens a settled run).
 
-One thing the checkpoint language can mislead about: **`eval/` is implemented and unit-tested
-against a stubbed record source, but has never been run against the deployed system.** FR-061
-is about asserting over deployed records, so that run — T129 — is what turns the dynamic half
-of the genericity claim from code into evidence. `PRODUCT_EVAL.md` does not exist yet.
+**`eval/` has now been run against the deployed system**, so the dynamic half of the
+genericity claim (FR-061) is evidence rather than code: `PRODUCT_EVAL.md` at the repo root was
+written 2026-08-16 from the stored records of `https://epyhia.fly.dev`, over two briefs an
+operator drove end to end. Every mechanically-checked row passes for both — live deploys whose
+probes read their own brand doc names, grounded packs, a paid order each, both video cuts,
+zero gate actions attributed to the Strategist, and a resubmission that deduplicated to one
+site and one order. The judgement rows carry no score by design, and the demo recording row
+resolves `missing` until T131 lands.
+
+That run is S6 and "The eval" of `quickstart.md`, not all of T129 — the task also asks for the
+S0–S5 evidence tables, which no tracked file records yet, which is why T129 is still unchecked
+in `tasks.md`. Two other things worth knowing before you rely on the file: `PRODUCT_EVAL.md`
+is **untracked**, and the eval reads stored records rather than re-probing the world, so it is
+only as current as the runs behind it.
 
 Commands: `uv run ruff check`, `uv run pytest`, `uv run alembic upgrade head`,
 `docker compose up` (Postgres + Mailpit + web + worker from `.env.example` defaults).
