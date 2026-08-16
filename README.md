@@ -65,3 +65,10 @@ two-brief agency proof (S6) — naming the evidence each step must leave behind.
 Fly.io, one image, `web` + `worker` processes, `release_command = "alembic upgrade head"` —
 see [fly.toml](fly.toml). Secrets go in `fly secrets`; the console authenticates through
 Auth0 with no bypass path.
+
+In production, console access is approval-gated: signing up only *requests* access, and an
+Auth0 post-login Action denies a token until an operator approves the account, so signup
+grants nothing by itself. Spend is capped twice over — `DAILY_CEILING_USD` is armed in
+`fly secrets`, refusing new runs once the day's spend reaches it, and the Anthropic
+workspace behind the deployed key carries its own monthly limit as a provider-side backstop
+that holds even if the app's own ledger is wrong.
