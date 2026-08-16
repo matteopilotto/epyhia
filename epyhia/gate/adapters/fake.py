@@ -26,6 +26,9 @@ class FakeAdapter:
         self.always_fail_verify = always_fail_verify
         self.execute_calls: list[dict] = []
         self.verify_calls: list[dict] = []
+        # What verify() was handed as `result`, so a test can prove a re-drive read the
+        # stored execute() return rather than an empty dict (T146).
+        self.verify_results: list[dict] = []
 
     async def execute(self, request: dict, ctx: GateContext) -> dict:
         self.execute_calls.append(request)
@@ -35,6 +38,7 @@ class FakeAdapter:
 
     async def verify(self, request: dict, result: dict, ctx: GateContext) -> dict:
         self.verify_calls.append(request)
+        self.verify_results.append(result)
         if self.always_fail_verify:
             raise VerificationFailed("fake adapter: verify always fails")
         return {"status": "ok"}

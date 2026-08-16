@@ -9,7 +9,12 @@ from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from epyhia.config import settings
-from epyhia.gate.errors import ActionInProgress, PreconditionFailed, VerificationFailed
+from epyhia.gate.errors import (
+    ActionInProgress,
+    ActionTerminallyFailed,
+    PreconditionFailed,
+    VerificationFailed,
+)
 from epyhia.gate.registry import Adapter, GateContext, get_adapter
 from epyhia.models.actions import Action
 
@@ -155,8 +160,15 @@ async def request(
         existing = (
             await session.execute(select(Action).where(Action.idempotency_key == idempotency_key))
         ).scalar_one()
-        if existing.state in TERMINAL_STATES:
+        if existing.state == "succeeded":
             return _result(existing)
+        if existing.state in ("failed", "denied"):
+            # Only `succeeded` short-circuits silently. Callers ignore this return value, so
+            # handing back a failed result completed the handler and the worker wrote `done`
+            # over an unproved effect (T147) — raising lands the task `failed` naming the
+            # action, which is the state the re-verify affordance acts on. `denied` raising
+            # matches deny's contract: nothing executes, ever, for that key.
+            raise ActionTerminallyFailed(existing.id, existing.state)
         if existing.state == "awaiting_approval":
             # Parked exactly where a fresh request would park it, so the caller parks too —
             # a re-run of a stage waiting on a human is waiting, not failing. Raising
@@ -280,6 +292,11 @@ async def _run(
             await session.commit()
             raise
         action.state = "verifying"
+        # In the same commit that sets `verifying`, so no re-drive path ever finds the state
+        # without the result — before this, `_run` held it in memory only, and every publish
+        # resumed after a crash landed `failed` on "no permalink to fetch" (T146, §7.4). For
+        # a deferred verification this is exactly the handle the webhook needs re-findable.
+        action.result = result
         await session.commit()
         if getattr(adapter, "defer_verification", False):
             # The effect exists; the proof of it does not yet. The row stays `verifying` —
@@ -293,6 +310,10 @@ async def _run(
         await session.commit()
 
     if action.state == "verifying":
+        # Re-entered with nothing in hand — a sweeper re-drive, an approval resume after a
+        # crash, an operator re-verify — the stored result is what execute() returned.
+        # What the caller passed (a webhook's observed handle) still wins over the store.
+        result = result or action.result or {}
         while action.verify_attempts < MAX_VERIFY_ATTEMPTS:
             try:
                 evidence = await adapter.verify(action.request, result, ctx)

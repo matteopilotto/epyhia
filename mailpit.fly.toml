@@ -24,3 +24,12 @@ primary_region = "iad"
 [[vm]]
   memory = "512mb"
   cpus = 1
+
+# The machine stopping is what turned one send_email into a DNS failure — `.internal`
+# resolves only running machines, so a stopped Mailpit reads as "No address associated
+# with hostname" from the worker (2026-08-16). There is no `[http_service]` here to hang
+# `min_machines_running` on, and adding one would mean a public IP this app must not have;
+# for a service-less app the machine only stays down when its process exits past the
+# default policy's retries, so the pin is the restart policy itself.
+[[restart]]
+  policy = "always"

@@ -39,6 +39,11 @@ class Action(Base):
     approved_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     projected_cost_usd: Mapped[float | None] = mapped_column(Numeric)
     cost_usd: Mapped[float | None] = mapped_column(Numeric)
+    # `execute()`'s raw return, persisted in the same commit that sets `verifying`, so every
+    # re-drive path — sweeper orphan pass, approval resume, operator re-verify (T146) — has
+    # something to hand `verify()`. Distinct from `evidence` on purpose: this is the
+    # provider's word for what happened; `evidence` is the probe's proof of it (§7.4).
+    result: Mapped[dict | None] = mapped_column(JSONB(none_as_null=True))
     evidence: Mapped[dict | None] = mapped_column(JSONB(none_as_null=True))
     verify_attempts: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     error: Mapped[str | None] = mapped_column(String)
