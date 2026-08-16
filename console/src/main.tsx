@@ -13,7 +13,8 @@ const queryClient = new QueryClient();
 const audience = import.meta.env.VITE_AUTH0_AUDIENCE;
 
 function Gate() {
-  const { isLoading, isAuthenticated, loginWithRedirect, getAccessTokenSilently } = useAuth0();
+  const { isLoading, isAuthenticated, error, loginWithRedirect, getAccessTokenSilently } =
+    useAuth0();
 
   useEffect(() => {
     setTokenGetter(() => getAccessTokenSilently({ authorizationParams: { audience } }));
@@ -22,7 +23,11 @@ function Gate() {
   if (isLoading) return <p className="p-6 text-ink-muted">Loading…</p>;
   if (!isAuthenticated) {
     return (
-      <div className="flex min-h-screen items-center justify-center">
+      <div className="flex min-h-screen flex-col items-center justify-center gap-4">
+        {/* A login the Auth0 Action denied — an unapproved access request, say — comes back
+            here with the deny message in `error`. Without it a requester cannot tell
+            "pending approval" from "login broken". */}
+        {error && <p className="max-w-sm text-center text-sm text-ink-muted">{error.message}</p>}
         <Button onClick={() => loginWithRedirect()}>Sign in</Button>
       </div>
     );
