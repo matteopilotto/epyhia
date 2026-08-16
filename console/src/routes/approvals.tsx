@@ -1,3 +1,4 @@
+import { Fragment } from "react";
 import { useMutation, useQueries, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api, type ApiError } from "@/lib/api";
 import { formatAmount } from "@/lib/format";
@@ -215,23 +216,82 @@ function ApprovalCard({ action, run }: { action: Action; run: Run | undefined })
 }
 
 /**
- * A card that has been decided: no buttons, ever — the decision line replaces them. The
- * card renders entirely from the row, so a decision made in a previous session (or by
- * another operator) presents the same as one made a moment ago.
+ * The gate's own sequence — approved → executing → verifying → succeeded|failed — with the
+ * current step read from `state`. No path from `executing` straight to `succeeded` is the
+ * gate's central claim; this strip is that claim made visible where the operator is looking.
+ * An approved row still in `awaiting_approval` renders as the `approved` step: the decision
+ * has landed but no worker has picked it up — exactly what "did my approval reach a worker?"
+ * needs answered when the worker is down.
+ */
+function LifecycleStrip({ state }: { state: string }) {
+  const current = state === "awaiting_approval" ? "approved" : state;
+  const steps = ["approved", "executing", "verifying", state === "failed" ? "failed" : "succeeded"];
+  const variant = (step: string): "muted" | "good" | "bad" | "warn" => {
+    if (step !== current) return "muted";
+    if (step === "succeeded") return "good";
+    if (step === "failed") return "bad";
+    return "warn";
+  };
+  return (
+    <div className="mt-3 flex flex-wrap items-center gap-1.5 text-xs text-ink-muted">
+      {steps.map((step, index) => (
+        <Fragment key={step}>
+          {index > 0 && <span>→</span>}
+          <Badge variant={variant(step)}>{step}</Badge>
+        </Fragment>
+      ))}
+      {current === "approved" && <span>waiting for a worker</span>}
+    </div>
+  );
+}
+
+/**
+ * A card that has been decided: the decision line replaces the buttons, and everything on
+ * it is the row's own data — so a decision made in a previous session (or by another
+ * operator) presents the same as one made a moment ago.
  */
 function DecidedCard({ action, run }: { action: Action; run: Run | undefined }) {
+  const denied = action.approval_decision === "denied";
   return (
     <li className="rounded-lg border border-line p-4">
       <div className="flex items-center gap-3">
-        <Badge variant="muted">{action.action_type}</Badge>
+        <Badge variant={denied ? "bad" : "muted"}>{action.action_type}</Badge>
         <span className="text-xs text-ink-muted">requested by {action.requested_by}</span>
         {run && <span className="font-mono text-xs text-ink-muted">{run.alias}</span>}
       </div>
 
       <p className="mt-3 text-sm">
-        {action.approval_decision === "approved" ? "Approved" : "Denied"} by{" "}
-        {action.approved_by ?? "—"} · {action.approved_at ?? "—"}
+        {denied ? "Denied" : "Approved"} by {action.approved_by ?? "—"} ·{" "}
+        {action.approved_at ?? "—"}
       </p>
+
+      {denied ? (
+        // Deny is terminal — nothing will ever execute for that key. That deserves a
+        // visible tombstone more than an approval does.
+        <p className="mt-2 text-xs text-ink-muted">
+          Nothing will execute for this key — deny is terminal.
+        </p>
+      ) : (
+        <LifecycleStrip state={action.state} />
+      )}
+
+      {/* What verify() proved in the world — "deployed" is never self-reported (FR-040). */}
+      {!denied && action.state === "succeeded" && action.evidence && (
+        <dl className="mt-3 grid grid-cols-[8rem_1fr] gap-y-1 text-sm">
+          {Object.entries(action.evidence).map(([key, value]) => (
+            <Fragment key={key}>
+              <dt className="text-ink-muted">{key}</dt>
+              <dd className="font-mono text-xs break-all">
+                {typeof value === "object" && value !== null ? JSON.stringify(value) : String(value)}
+              </dd>
+            </Fragment>
+          ))}
+        </dl>
+      )}
+
+      {!denied && action.state === "failed" && action.error && (
+        <p className="mt-2 text-xs break-all text-red-400">{action.error}</p>
+      )}
     </li>
   );
 }
