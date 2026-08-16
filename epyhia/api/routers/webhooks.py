@@ -1,5 +1,6 @@
 import uuid
 
+import logfire
 import stripe
 from fastapi import APIRouter, Depends, Header, HTTPException, Request
 from sqlalchemy import select
@@ -16,6 +17,7 @@ from epyhia.gate import gate
 from epyhia.gate.adapters.stripe import field
 from epyhia.models.actions import Action
 from epyhia.models.orders import Order
+from epyhia.models.runs import Run
 
 # Unauthenticated in the operator's sense: the signature is the authentication, and it is
 # checked before the body is trusted for anything at all.
@@ -52,6 +54,33 @@ async def stripe_webhook(
         # acknowledged rather than retried forever, and it writes nothing.
         return {"received": True, "recorded": False}
 
+    # Test mode is one Stripe account shared by every environment holding the key, so a
+    # signed event can name a run this database has never had. A legitimate event cannot
+    # precede its run — the session was opened through the gate against a run already here —
+    # so an unknown run means the event belongs to somebody else's stack. It is acknowledged,
+    # because a 500 is retried for days, and it is logged, so "ignored" reads differently
+    # from silence.
+    try:
+        run_id = uuid.UUID(metadata["run_id"])
+    except ValueError:
+        logfire.info(
+            "foreign event ignored",
+            event_id=event["id"],
+            session_id=checkout["id"],
+            run_id=metadata["run_id"],
+            reason="run_id is not a uuid",
+        )
+        return {"received": True, "recorded": False}
+    if await session.get(Run, run_id) is None:
+        logfire.info(
+            "foreign event ignored",
+            event_id=event["id"],
+            session_id=checkout["id"],
+            run_id=str(run_id),
+            reason="no such run",
+        )
+        return {"received": True, "recorded": False}
+
     # The order row and the event id are the same row, so recording that this event was
     # handled and recording the sale cannot come apart. Stripe delivers at least once, and a
     # repeat arriving while the first is still in flight is settled by the unique index
@@ -61,7 +90,7 @@ async def stripe_webhook(
             pg_insert(Order)
             .values(
                 id=uuid.uuid4(),
-                run_id=uuid.UUID(metadata["run_id"]),
+                run_id=run_id,
                 stripe_event_id=event["id"],
                 stripe_session_id=checkout["id"],
                 product_slug=metadata["slug"],
