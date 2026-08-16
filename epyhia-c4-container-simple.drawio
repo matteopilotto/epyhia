@@ -1,0 +1,162 @@
+<mxfile host="65bd71144e">
+    <diagram id="epyhia-c4-container-simple" name="EPYHIA C4 Container (simplified)">
+        <mxGraphModel dx="1406" dy="636" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1660" pageHeight="1019" math="0" shadow="0">
+            <root>
+                <mxCell id="0"/>
+                <mxCell id="1" parent="0"/>
+                <mxCell id="title" value="&lt;b&gt;EPYHIA — system architecture (C4 container view)&lt;/b&gt;" style="text;html=1;align=left;verticalAlign=middle;fontSize=20;fontColor=#333333;" parent="1" vertex="1">
+                    <mxGeometry x="40" y="12" width="900" height="32" as="geometry"/>
+                </mxCell>
+                <mxCell id="subtitle" value="One client brief in → deployed site + marketing pack + test-mode checkout out." style="text;html=1;align=left;verticalAlign=middle;fontSize=11;fontColor=#777777;fontStyle=2;" parent="1" vertex="1">
+                    <mxGeometry x="40" y="46" width="1000" height="20" as="geometry"/>
+                </mxCell>
+                <mxCell id="flyBoundary" value="Fly.io — one image, two processes" style="rounded=0;whiteSpace=wrap;html=1;fillColor=none;strokeColor=#666666;dashed=1;verticalAlign=top;align=left;spacingLeft=8;spacingTop=4;fontColor=#666666;fontStyle=1;fontSize=12;" parent="1" vertex="1">
+                    <mxGeometry x="180" y="300" width="840" height="460" as="geometry"/>
+                </mxCell>
+                <mxCell id="operator" value="Operator" style="shape=actor;whiteSpace=wrap;html=1;fillColor=#08427B;strokeColor=#052E56;fontColor=#08427B;verticalLabelPosition=bottom;verticalAlign=top;labelBackgroundColor=none;fontSize=12;fontStyle=0;" parent="1" vertex="1">
+                    <mxGeometry x="60" y="115" width="70" height="90" as="geometry"/>
+                </mxCell>
+                <mxCell id="buyer" value="Visitor" style="shape=actor;whiteSpace=wrap;html=1;fillColor=#08427B;strokeColor=#052E56;fontColor=#08427B;verticalLabelPosition=bottom;verticalAlign=top;labelBackgroundColor=none;fontSize=12;fontStyle=1;" parent="1" vertex="1">
+                    <mxGeometry x="1550" y="500" width="70" height="90" as="geometry"/>
+                </mxCell>
+                <mxCell id="console" value="&lt;b&gt;Console&lt;/b&gt;&lt;br&gt;&lt;i&gt;[Container: React SPA]&lt;/i&gt;&lt;br&gt;&lt;font style=&quot;font-size:10px&quot;&gt;Operator UI: runs, artifacts, approvals, cost. Served by web, runs in the browser.&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#1168BD;strokeColor=#0B4884;fontColor=#ffffff;verticalAlign=top;arcSize=6;spacing=6;" parent="1" vertex="1">
+                    <mxGeometry x="220" y="110" width="300" height="100" as="geometry"/>
+                </mxCell>
+                <mxCell id="auth0" value="&lt;b&gt;Auth0&lt;/b&gt;&lt;br&gt;&lt;i&gt;[External SaaS]&lt;/i&gt;&lt;br&gt;&lt;font style=&quot;font-size:10px&quot;&gt;OIDC login for the console&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#999999;strokeColor=#707070;fontColor=#ffffff;verticalAlign=top;arcSize=6;spacing=6;" parent="1" vertex="1">
+                    <mxGeometry x="1120" y="120" width="240" height="80" as="geometry"/>
+                </mxCell>
+                <mxCell id="web" value="&lt;b&gt;web&lt;/b&gt;&lt;br&gt;&lt;i&gt;[Container: FastAPI — Fly process]&lt;/i&gt;&lt;br&gt;&lt;font style=&quot;font-size:10px&quot;&gt;REST /api + SSE · brief ingest (hash + grounding set) · Stripe webhook receiver · demand sink · serves the console bundle&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#1168BD;strokeColor=#0B4884;fontColor=#ffffff;verticalAlign=top;arcSize=6;spacing=6;" parent="1" vertex="1">
+                    <mxGeometry x="220" y="350" width="300" height="150" as="geometry"/>
+                </mxCell>
+                <mxCell id="worker" value="&lt;b&gt;worker&lt;/b&gt;&lt;br&gt;&lt;i&gt;[Container: Python asyncio — Fly process, same image]&lt;/i&gt;&lt;br&gt;&lt;font style=&quot;font-size:10px&quot;&gt;Queue loop over the tasks table · grounding checks · Remotion video render&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#1168BD;strokeColor=#0B4884;fontColor=#ffffff;verticalAlign=top;arcSize=6;spacing=6;" parent="1" vertex="1">
+                    <mxGeometry x="580" y="350" width="400" height="390" as="geometry"/>
+                </mxCell>
+                <mxCell id="crew" value="&lt;b&gt;Agent crew&lt;/b&gt; &lt;i&gt;[PydanticAI]&lt;/i&gt;&lt;br&gt;&lt;font style=&quot;font-size:10px&quot;&gt;Strategist (Opus — plans via the brand doc, no gate handles)&lt;br&gt;Web BuilderMarketer (Sonnet)&lt;br&gt;Reviewer, Site Critic, Ops (Haiku)&lt;br&gt;&lt;i&gt;Pipeline fixed in code: copy → site, demand, money; then video + outreach&lt;/i&gt;&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#438DD5;strokeColor=#2E6295;fontColor=#ffffff;verticalAlign=top;arcSize=8;spacing=6;" parent="1" vertex="1">
+                    <mxGeometry x="600" y="420" width="360" height="130" as="geometry"/>
+                </mxCell>
+                <mxCell id="gate" value="&lt;b&gt;ACTION GATE&lt;/b&gt; &lt;i&gt;[credential boundary]&lt;/i&gt;&lt;br&gt;&lt;font style=&quot;font-size:10px&quot;&gt;Sole holder of Vercel / Stripe / SMTP credentials — agents get typed capability handles, no keys. Approval · idempotency (keys from the brief hash) · every action verified in the world before succeeded · refuses deploy while the site is flagged.&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#F8CECC;strokeColor=#B85450;strokeWidth=2;fontColor=#4D1F1C;verticalAlign=top;arcSize=6;spacing=8;" parent="1" vertex="1">
+                    <mxGeometry x="600" y="590" width="360" height="120" as="geometry"/>
+                </mxCell>
+                <mxCell id="postgres" value="&lt;b&gt;Postgres&lt;/b&gt;&lt;br&gt;&lt;i&gt;[Neon — managed]&lt;/i&gt;&lt;br&gt;&lt;font style=&quot;font-size:10px&quot;&gt;runs · briefs · brand docs · artifacts · tasks (the queue)&amp;nbsp; actions (audit + idempotency ledger) · orders · cost ledger&lt;/font&gt;" style="shape=cylinder3;whiteSpace=wrap;html=1;boundedLbl=1;backgroundOutline=1;size=15;fillColor=#1168BD;strokeColor=#0B4884;fontColor=#ffffff;spacing=8;" parent="1" vertex="1">
+                    <mxGeometry x="400" y="830" width="400" height="150" as="geometry"/>
+                </mxCell>
+                <mxCell id="anthropic" value="&lt;b&gt;Anthropic API&lt;/b&gt;&lt;br&gt;&lt;i&gt;[External SaaS]&lt;/i&gt;&lt;br&gt;&lt;font style=&quot;font-size:10px&quot;&gt;Opus 5 / Sonnet 5 / Haiku 4.5. API key in the worker env, outside the gate — inference metered, not gated; one shared budget.&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#999999;strokeColor=#707070;fontColor=#ffffff;verticalAlign=top;arcSize=6;spacing=6;" parent="1" vertex="1">
+                    <mxGeometry x="1120" y="300" width="240" height="110" as="geometry"/>
+                </mxCell>
+                <mxCell id="vercelExt" value="&lt;b&gt;Vercel&lt;/b&gt;&lt;br&gt;&lt;i&gt;[External SaaS]&lt;/i&gt;&lt;br&gt;&lt;font style=&quot;font-size:10px&quot;&gt;hosts the deployed client site&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#999999;strokeColor=#707070;fontColor=#ffffff;verticalAlign=top;arcSize=6;spacing=6;" parent="1" vertex="1">
+                    <mxGeometry x="1120" y="450" width="240" height="80" as="geometry"/>
+                </mxCell>
+                <mxCell id="stripeExt" value="&lt;b&gt;Stripe&lt;/b&gt;&lt;br&gt;&lt;i&gt;[External SaaS — test mode]&lt;/i&gt;&lt;br&gt;&lt;font style=&quot;font-size:10px&quot;&gt;products · Checkout · webhooks&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#999999;strokeColor=#707070;fontColor=#ffffff;verticalAlign=top;arcSize=6;spacing=6;" parent="1" vertex="1">
+                    <mxGeometry x="1120" y="570" width="240" height="80" as="geometry"/>
+                </mxCell>
+                <mxCell id="mailpit" value="&lt;b&gt;Mailpit&lt;/b&gt;&lt;br&gt;&lt;i&gt;[External — separate Fly app]&lt;/i&gt;&lt;br&gt;&lt;font style=&quot;font-size:10px&quot;&gt;SMTP sink; the launch email lands here&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#999999;strokeColor=#707070;fontColor=#ffffff;verticalAlign=top;arcSize=6;spacing=6;" parent="1" vertex="1">
+                    <mxGeometry x="1120" y="690" width="240" height="80" as="geometry"/>
+                </mxCell>
+                <mxCell id="logfire" value="&lt;b&gt;Logfire&lt;/b&gt;&lt;br&gt;&lt;i&gt;[External SaaS]&lt;/i&gt;&lt;br&gt;&lt;font style=&quot;font-size:10px&quot;&gt;tracing; run_id on every span&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#999999;strokeColor=#707070;fontColor=#ffffff;verticalAlign=top;arcSize=6;spacing=6;" parent="1" vertex="1">
+                    <mxGeometry x="1120" y="810" width="240" height="80" as="geometry"/>
+                </mxCell>
+                <mxCell id="eOpConsole" value="uses" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#666666;fontColor=#333333;fontSize=10;endArrow=blockThin;endFill=1;exitX=1;exitY=0.5;entryX=0;entryY=0.5;labelBackgroundColor=#FFFFFF;" parent="1" source="operator" target="console" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="eConsoleAuth0" value="OIDC login → JWT" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#666666;fontColor=#333333;fontSize=10;endArrow=blockThin;endFill=1;exitX=1;exitY=0.5;entryX=0;entryY=0.5;labelBackgroundColor=#FFFFFF;" parent="1" source="console" target="auth0" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="eConsoleWeb" value="REST /api + SSE (bearer)" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#666666;fontColor=#333333;fontSize=10;endArrow=blockThin;endFill=1;exitX=0.5;exitY=1;entryX=0.5;entryY=0;labelBackgroundColor=#FFFFFF;" parent="1" source="console" target="web" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="eWebPg" value="writes runs + briefs, enqueues tasks" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#666666;fontColor=#333333;fontSize=10;endArrow=blockThin;endFill=1;exitX=0.5;exitY=1;entryX=0.2;entryY=0;labelBackgroundColor=#FFFFFF;" parent="1" source="web" target="postgres" edge="1">
+                    <mxGeometry x="0.8636" relative="1" as="geometry">
+                        <Array as="points">
+                            <mxPoint x="370" y="780"/>
+                            <mxPoint x="480" y="780"/>
+                        </Array>
+                        <mxPoint as="offset"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="eWorkerPg" value="claims tasks · writes artifacts, actions, costs" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#666666;fontColor=#333333;fontSize=10;endArrow=blockThin;endFill=1;exitX=0.5;exitY=1;entryX=0.8;entryY=0;labelBackgroundColor=#FFFFFF;" parent="1" source="worker" target="postgres" edge="1">
+                    <mxGeometry x="0.6" relative="1" as="geometry">
+                        <Array as="points">
+                            <mxPoint x="780" y="780"/>
+                            <mxPoint x="720" y="780"/>
+                        </Array>
+                        <mxPoint as="offset"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="eCrewAnthropic" value="inference" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#666666;fontColor=#333333;fontSize=10;endArrow=blockThin;endFill=1;exitX=1;exitY=0.3;entryX=0;entryY=0.5;labelBackgroundColor=#FFFFFF;" parent="1" source="crew" target="anthropic" edge="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <Array as="points">
+                            <mxPoint x="1060" y="459"/>
+                            <mxPoint x="1060" y="355"/>
+                        </Array>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="eCrewGate" value="capability handles (typed, no keys)" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#666666;fontColor=#333333;fontSize=10;endArrow=blockThin;endFill=1;exitX=0.5;exitY=1;entryX=0.5;entryY=0;labelBackgroundColor=#FFFFFF;" parent="1" source="crew" target="gate" edge="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <mxPoint as="offset"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="eGateVercel" value="deploy → verify probe" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#666666;fontColor=#333333;fontSize=10;endArrow=blockThin;endFill=1;exitX=1;exitY=0.25;entryX=0;entryY=0.5;labelBackgroundColor=#FFFFFF;" parent="1" source="gate" target="vercelExt" edge="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <Array as="points">
+                            <mxPoint x="1050" y="610"/>
+                            <mxPoint x="1050" y="490"/>
+                        </Array>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="eGateStripe" value="products + charges → verify" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#666666;fontColor=#333333;fontSize=10;endArrow=blockThin;endFill=1;exitX=1;exitY=0.5;entryX=0;entryY=0.5;labelBackgroundColor=#FFFFFF;" parent="1" source="gate" target="stripeExt" edge="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <Array as="points">
+                            <mxPoint x="1070" y="640"/>
+                            <mxPoint x="1070" y="610"/>
+                        </Array>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="eGateMailpit" value="SMTP send → verify" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#666666;fontColor=#333333;fontSize=10;endArrow=blockThin;endFill=1;exitX=1;exitY=0.75;entryX=0;entryY=0.5;labelBackgroundColor=#FFFFFF;" parent="1" source="gate" target="mailpit" edge="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <Array as="points">
+                            <mxPoint x="1050" y="670"/>
+                            <mxPoint x="1050" y="730"/>
+                        </Array>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="eStripeWebhook" value="webhook: checkout completed → orders" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#666666;fontColor=#333333;fontSize=10;endArrow=blockThin;endFill=1;exitX=0.5;exitY=0;entryX=0;entryY=0.3;labelBackgroundColor=#FFFFFF;" parent="1" source="stripeExt" target="web" edge="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <Array as="points">
+                            <mxPoint x="1240" y="260"/>
+                            <mxPoint x="150" y="260"/>
+                            <mxPoint x="150" y="395"/>
+                        </Array>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="eBuyerVercel" value="visits the site" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#666666;fontColor=#333333;fontSize=10;endArrow=blockThin;endFill=1;entryX=1;entryY=0.5;labelBackgroundColor=#FFFFFF;exitX=0;exitY=0.75;exitDx=0;exitDy=0;" parent="1" source="buyer" target="vercelExt" edge="1">
+                    <mxGeometry x="0.4019" relative="1" as="geometry">
+                        <Array as="points">
+                            <mxPoint x="1525" y="568"/>
+                            <mxPoint x="1525" y="490"/>
+                        </Array>
+                        <mxPoint x="1540" y="590" as="sourcePoint"/>
+                        <mxPoint x="1" as="offset"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="eBuyerStripe" value="pays via Checkout" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#666666;fontColor=#333333;fontSize=10;endArrow=blockThin;endFill=1;entryX=1;entryY=0.5;labelBackgroundColor=#FFFFFF;exitX=0;exitY=0.75;exitDx=0;exitDy=0;" parent="1" source="buyer" target="stripeExt" edge="1">
+                    <mxGeometry x="0.3118" relative="1" as="geometry">
+                        <Array as="points">
+                            <mxPoint x="1525" y="568"/>
+                            <mxPoint x="1525" y="610"/>
+                        </Array>
+                        <mxPoint x="1550" y="570" as="sourcePoint"/>
+                        <mxPoint as="offset"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="eFlyLogfire" value="OTel traces from web + worker" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#999999;dashed=1;fontColor=#333333;fontSize=10;endArrow=blockThin;endFill=1;exitX=1;exitY=0.95;entryX=0;entryY=0.5;labelBackgroundColor=#FFFFFF;" parent="1" source="flyBoundary" target="logfire" edge="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <Array as="points">
+                            <mxPoint x="1060" y="737"/>
+                            <mxPoint x="1060" y="850"/>
+                        </Array>
+                    </mxGeometry>
+                </mxCell>
+            </root>
+        </mxGraphModel>
+    </diagram>
+</mxfile>
