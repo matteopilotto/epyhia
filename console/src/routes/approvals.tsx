@@ -1,4 +1,4 @@
-import { Fragment } from "react";
+import { Fragment, useState } from "react";
 import { useMutation, useQueries, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api, type ApiError } from "@/lib/api";
 import { formatAmount } from "@/lib/format";
@@ -279,7 +279,15 @@ function LifecycleStrip({ state }: { state: string }) {
  * it is the row's own data — so a decision made in a previous session (or by another
  * operator) presents the same as one made a moment ago.
  */
-function DecidedCard({ action, run }: { action: Action; run: Run | undefined }) {
+function DecidedCard({
+  action,
+  run,
+  onDismiss,
+}: {
+  action: Action;
+  run: Run | undefined;
+  onDismiss?: () => void;
+}) {
   const denied = action.approval_decision === "denied";
   return (
     <li className="rounded-lg border border-line p-4">
@@ -287,6 +295,13 @@ function DecidedCard({ action, run }: { action: Action; run: Run | undefined }) 
         <Badge variant={denied ? "bad" : "muted"}>{action.action_type}</Badge>
         <span className="text-xs text-ink-muted">requested by {action.requested_by}</span>
         {run && <span className="font-mono text-xs text-ink-muted">{run.alias}</span>}
+        {/* Only a settled card can be cleared — an in-flight one is still becoming
+            something. Session-local: leaving the route brings it back from server truth. */}
+        {onDismiss && (
+          <Button variant="ghost" size="sm" className="ml-auto text-xs" onClick={onDismiss}>
+            clear
+          </Button>
+        )}
       </div>
 
       <p className="mt-3 text-sm">
@@ -328,6 +343,10 @@ function DecidedCard({ action, run }: { action: Action; run: Run | undefined }) 
 export function ApprovalsRoute() {
   const runs = useQuery({ queryKey: ["runs"], queryFn: () => api.get<Run[]>("/runs") });
 
+  // Settled cards stay until dismissed — auto-clearing would hide the succeeded +
+  // evidence moment, which is the payoff of the verify step. Session-local by design.
+  const [dismissed, setDismissed] = useState<Set<string>>(new Set());
+
   // No cross-run actions endpoint exists, so the queue is assembled from the per-run ones
   // (contracts/rest-api.md). One query per run keeps each cache entry independently
   // invalidated by a decision.
@@ -350,7 +369,7 @@ export function ApprovalsRoute() {
   // Everything that carries a decision: still in flight (approved → executing → verifying)
   // or settled. Actions that never paused for approval don't belong on this page.
   const decided = all
-    .filter(({ action }) => action.approval_decision !== null)
+    .filter(({ action }) => action.approval_decision !== null && !dismissed.has(action.id))
     .sort((a, b) => a.action.created_at.localeCompare(b.action.created_at));
 
   return (
@@ -382,7 +401,16 @@ export function ApprovalsRoute() {
           <h2 className="mt-8 mb-4 text-lg font-semibold">Decided</h2>
           <ul className="space-y-3">
             {decided.map(({ action, run }) => (
-              <DecidedCard key={action.id} action={action} run={run} />
+              <DecidedCard
+                key={action.id}
+                action={action}
+                run={run}
+                onDismiss={
+                  TERMINAL.includes(action.state)
+                    ? () => setDismissed((prev) => new Set(prev).add(action.id))
+                    : undefined
+                }
+              />
             ))}
           </ul>
         </>
