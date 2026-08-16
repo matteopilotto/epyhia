@@ -224,11 +224,11 @@ artifact matches an entry of any currency; a currency-tagged numeral must match 
 currency.
 
 **Rationale**: Items 1–4 are §5.2's list made concrete. Item 5 is the one §5.2 implies without
-stating: a product with `currency_display: EDDIE` and `currency_charge: USD` legitimately
-appears as both `€$120` and `$120` in copy, and those are one fact. Crucially this performs
+stating: a product with `currency_display: EUR` and `currency_charge: USD` legitimately
+appears as both `€18.00` and `$18` in copy, and those are one fact. Crucially this performs
 **no FX conversion** — inventing a rate would be exactly the fabrication the whole check exists
 to prevent, and no rate exists anywhere in the brief to use. The currency-compatibility rule is
-what lets bare `120` match without weakening the tagged case.
+what lets bare `18` match without weakening the tagged case.
 
 **Alternatives considered**: A tolerance window on values — rejected; a price is exact or it is
 wrong. A configurable derivation set — rejected by FR-005 and Principle VI ("never extended by

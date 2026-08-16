@@ -50,9 +50,9 @@ marketing pack (landing copy, 3–5 posts, launch email, launch video + vertical
 Stripe test-mode checkout come out. Every action that deploys, charges, or sends passes
 through one Action Gate.
 
-**EPYHIA is the product. GRAFT — the ripperdoc clinic in `DESIGN.md` §1.3 and Part B of the
-decisions file — is one row of input data.** A different client is a different brief, not a
-different codebase.
+**EPYHIA is the product. A client — one of the demo briefs in `tests/fixtures/briefs/`,
+listed in `DESIGN.md` §1.3 — is one row of input data.** A different client is a different
+brief, not a different codebase.
 
 ### The invariant that governs every decision here
 
