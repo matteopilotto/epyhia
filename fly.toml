@@ -9,9 +9,16 @@ primary_region = "iad"
 
 [env]
   PORT = "8000"
+  # The service port is reachable only from fly-proxy over private networking, so there is no
+  # path for an outside client to inject forwarded headers. Set here rather than as
+  # `--forwarded-allow-ips='*'` because process commands are exec'd without a shell.
+  FORWARDED_ALLOW_IPS = "*"
 
 [processes]
-  web = "uvicorn epyhia.api.app:app --host 0.0.0.0 --port 8000"
+  # `--proxy-headers` so uvicorn honors X-Forwarded-Proto: the sink derives each permalink
+  # from the live request, and without it `url_for` emits http://, which force_https answers
+  # with a 301 that the publish adapter's verify (correctly) refuses to follow.
+  web = "uvicorn epyhia.api.app:app --host 0.0.0.0 --port 8000 --proxy-headers"
   worker = "python -m epyhia.queue.worker"
 
 [deploy]
