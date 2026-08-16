@@ -341,6 +341,48 @@ async def test_a_replayed_webhook_writes_exactly_one_order(
     assert action.evidence["order_id"] == str(orders[0].id)
 
 
+async def test_a_signed_webhook_for_a_run_this_database_lacks_is_acknowledged(
+    integration_session: AsyncSession,
+) -> None:
+    """Stripe test mode is one account shared by every environment holding the key, so a
+    signed event can name a run that only exists elsewhere. It is acknowledged rather than
+    500ed and retried for days, and the foreign key that caught the incident is untouched
+    because nothing is inserted."""
+    register_stripe(FakeStripe())
+    run = await open_run(integration_session, load_brief())
+    row = run.resolved_catalogue[0]
+
+    foreign = completed_event(
+        event_id="evt_test_foreign",
+        session_id="cs_test_foreign",
+        run_id=uuid.uuid4(),
+        row=row,
+        key="cs-key-from-another-stack",
+    )
+    garbage = completed_event(
+        event_id="evt_test_garbage",
+        session_id="cs_test_garbage",
+        run_id=uuid.uuid4(),
+        row=row,
+        key="cs-key-from-another-stack",
+    )
+    garbage["data"]["object"]["metadata"]["run_id"] = "not-a-uuid"
+
+    async with client_for(integration_session) as client:
+        for event in (foreign, garbage):
+            payload, headers = signed(event)
+            response = await client.post(
+                "/webhooks/stripe", content=payload, headers=headers
+            )
+            assert response.status_code == 200
+            assert response.json() == {"received": True, "recorded": False}
+
+    orders = (
+        await integration_session.execute(select(func.count()).select_from(Order))
+    ).scalar_one()
+    assert orders == 0
+
+
 async def test_an_unsigned_webhook_writes_nothing(
     integration_session: AsyncSession,
 ) -> None:
