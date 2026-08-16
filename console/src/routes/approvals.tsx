@@ -15,7 +15,24 @@ type Action = {
   request: Record<string, unknown>;
   projected_cost_usd: number | null;
   created_at: string;
+  approval_decision: "approved" | "denied" | null;
+  approved_by: string | null;
+  approved_at: string | null;
+  evidence: Record<string, unknown> | null;
+  error: string | null;
 };
+
+// Mirrors the gate's TERMINAL_STATES (epyhia/gate/gate.py).
+const TERMINAL = ["succeeded", "failed", "denied"];
+
+/**
+ * A card is an open decision only while the row is undecided. The gate deliberately leaves
+ * an approved row in `awaiting_approval` for a worker to resume, so state alone cannot tell
+ * "waiting on the operator" from "waiting on a worker" — the decision column can.
+ */
+function isOpen(action: Action): boolean {
+  return action.state === "awaiting_approval" && action.approval_decision === null;
+}
 
 /**
  * What the operator is actually authorising, in the concrete (contracts/action-gate.md §6).
@@ -197,6 +214,28 @@ function ApprovalCard({ action, run }: { action: Action; run: Run | undefined })
   );
 }
 
+/**
+ * A card that has been decided: no buttons, ever — the decision line replaces them. The
+ * card renders entirely from the row, so a decision made in a previous session (or by
+ * another operator) presents the same as one made a moment ago.
+ */
+function DecidedCard({ action, run }: { action: Action; run: Run | undefined }) {
+  return (
+    <li className="rounded-lg border border-line p-4">
+      <div className="flex items-center gap-3">
+        <Badge variant="muted">{action.action_type}</Badge>
+        <span className="text-xs text-ink-muted">requested by {action.requested_by}</span>
+        {run && <span className="font-mono text-xs text-ink-muted">{run.alias}</span>}
+      </div>
+
+      <p className="mt-3 text-sm">
+        {action.approval_decision === "approved" ? "Approved" : "Denied"} by{" "}
+        {action.approved_by ?? "—"} · {action.approved_at ?? "—"}
+      </p>
+    </li>
+  );
+}
+
 export function ApprovalsRoute() {
   const runs = useQuery({ queryKey: ["runs"], queryFn: () => api.get<Run[]>("/runs") });
 
@@ -211,11 +250,18 @@ export function ApprovalsRoute() {
     })),
   });
 
-  const pending = actionQueries
-    .flatMap((query, index) =>
-      (query.data ?? []).map((action) => ({ action, run: runs.data?.[index] })),
-    )
-    .filter(({ action }) => action.state === "awaiting_approval")
+  const all = actionQueries.flatMap((query, index) =>
+    (query.data ?? []).map((action) => ({ action, run: runs.data?.[index] })),
+  );
+
+  const open = all
+    .filter(({ action }) => isOpen(action))
+    .sort((a, b) => a.action.created_at.localeCompare(b.action.created_at));
+
+  // Everything that carries a decision: still in flight (approved → executing → verifying)
+  // or settled. Actions that never paused for approval don't belong on this page.
+  const decided = all
+    .filter(({ action }) => action.approval_decision !== null)
     .sort((a, b) => a.action.created_at.localeCompare(b.action.created_at));
 
   return (
@@ -232,15 +278,26 @@ export function ApprovalsRoute() {
         </p>
       )}
 
-      {!runs.isLoading && !runs.isError && pending.length === 0 && (
+      {!runs.isLoading && !runs.isError && open.length === 0 && (
         <p className="text-sm text-ink-muted">Nothing is waiting on a decision.</p>
       )}
 
       <ul className="space-y-3">
-        {pending.map(({ action, run }) => (
+        {open.map(({ action, run }) => (
           <ApprovalCard key={action.id} action={action} run={run} />
         ))}
       </ul>
+
+      {decided.length > 0 && (
+        <>
+          <h2 className="mt-8 mb-4 text-lg font-semibold">Decided</h2>
+          <ul className="space-y-3">
+            {decided.map(({ action, run }) => (
+              <DecidedCard key={action.id} action={action} run={run} />
+            ))}
+          </ul>
+        </>
+      )}
     </div>
   );
 }
