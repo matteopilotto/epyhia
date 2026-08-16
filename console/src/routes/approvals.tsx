@@ -149,6 +149,35 @@ function ApprovalCard({ action, run }: { action: Action; run: Run | undefined })
   const decide = useMutation({
     mutationFn: (decision: "approve" | "deny") =>
       api.post<{ state: string }>(`/actions/${action.id}/${decision}`),
+    // Flip the cached row on click so the card moves to Decided instantly instead of after
+    // the 5s poll. `run` can be undefined (its query not yet landed) — then there is no
+    // per-run cache entry to write, and the invalidation below carries the update alone.
+    onMutate: async (decision) => {
+      if (!run) return {};
+      await queryClient.cancelQueries({ queryKey: ["actions", run.id] });
+      const snapshot = queryClient.getQueryData<Action[]>(["actions", run.id]);
+      queryClient.setQueryData<Action[]>(["actions", run.id], (rows) =>
+        rows?.map((row) =>
+          row.id === action.id
+            ? {
+                ...row,
+                approval_decision: decision === "approve" ? "approved" : "denied",
+                approved_by: "you",
+                approved_at: new Date().toISOString(),
+              }
+            : row,
+        ),
+      );
+      return { snapshot };
+    },
+    onError: (mutationError, _decision, context) => {
+      // A 409 is not an error but stale state — the row was already decided, so the flip
+      // is correct; the refetch replaces the guesses with the true decision.
+      if ((mutationError as unknown as ApiError).error === "not_awaiting_approval") return;
+      if (run && context?.snapshot) {
+        queryClient.setQueryData(["actions", run.id], context.snapshot);
+      }
+    },
     onSettled: () => queryClient.invalidateQueries({ queryKey: ["actions"] }),
   });
 
