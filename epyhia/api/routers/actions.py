@@ -1,6 +1,6 @@
 import uuid
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -77,6 +77,51 @@ async def approve_action(
     action = await session.get(Action, action_id)
     await _enqueue_resume(session, action)
     return {"state": result["state"], "approval_decision": "approved"}
+
+
+@router.post("/actions/{action_id}/reverify")
+async def reverify_action(
+    action_id: uuid.UUID, session: AsyncSession = Depends(get_session)
+) -> dict:
+    """Re-open verification on an action that failed at verify (T146, FR-041's remedy).
+
+    T142/T145's shape one layer down: `failed` is deliberately terminal at the gate —
+    `request()` refuses it and `resume()` returns it untouched — and this is the operator
+    affordance out of it. Verification only, never re-execution: the enqueued `resume` finds
+    the row `verifying` and skips `execute()` by construction, so a re-verified `publish`
+    probes the permalink the sink already holds rather than writing a duplicate post (§7.2).
+
+    Refused unless `execute()`'s result is on the row — a failure at `execute()` (nothing in
+    the world) or a pre-`actions.result` row with nothing recorded has nothing to prove, and
+    re-opening it would burn five attempts to say `failed` again with a different error.
+
+    The `resume` task's `_settle` then flips the original stage `done`/`failed` off the
+    probe's verdict, which is what keeps a healed action from leaving its task lying.
+    """
+    action = await session.get(Action, action_id)
+    if action is None:
+        raise HTTPException(
+            status_code=404, detail={"error": "not_found", "detail": "action not found"}
+        )
+    if action.state != "failed" or action.result is None:
+        raise HTTPException(
+            status_code=409,
+            detail={
+                "error": "not_reverifiable",
+                "state": action.state,
+                "detail": (
+                    "only a failed action whose execute() result is recorded can be "
+                    "re-verified; this one is "
+                    + (action.state if action.state != "failed" else "missing its result")
+                ),
+            },
+        )
+    action.state = "verifying"
+    action.verify_attempts = 0
+    action.error = None
+    await session.commit()
+    await _enqueue_resume(session, action)
+    return {"state": "verifying"}
 
 
 @router.post("/actions/{action_id}/deny")
