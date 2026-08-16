@@ -292,6 +292,11 @@ async def _run(
             await session.commit()
             raise
         action.state = "verifying"
+        # In the same commit that sets `verifying`, so no re-drive path ever finds the state
+        # without the result — before this, `_run` held it in memory only, and every publish
+        # resumed after a crash landed `failed` on "no permalink to fetch" (T146, §7.4). For
+        # a deferred verification this is exactly the handle the webhook needs re-findable.
+        action.result = result
         await session.commit()
         if getattr(adapter, "defer_verification", False):
             # The effect exists; the proof of it does not yet. The row stays `verifying` —
@@ -305,6 +310,10 @@ async def _run(
         await session.commit()
 
     if action.state == "verifying":
+        # Re-entered with nothing in hand — a sweeper re-drive, an approval resume after a
+        # crash, an operator re-verify — the stored result is what execute() returned.
+        # What the caller passed (a webhook's observed handle) still wins over the store.
+        result = result or action.result or {}
         while action.verify_attempts < MAX_VERIFY_ATTEMPTS:
             try:
                 evidence = await adapter.verify(action.request, result, ctx)
