@@ -1,3 +1,4 @@
+import { Fragment, useState } from "react";
 import { useMutation, useQueries, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api, type ApiError } from "@/lib/api";
 import { formatAmount } from "@/lib/format";
@@ -15,7 +16,24 @@ type Action = {
   request: Record<string, unknown>;
   projected_cost_usd: number | null;
   created_at: string;
+  approval_decision: "approved" | "denied" | null;
+  approved_by: string | null;
+  approved_at: string | null;
+  evidence: Record<string, unknown> | null;
+  error: string | null;
 };
+
+// Mirrors the gate's TERMINAL_STATES (epyhia/gate/gate.py).
+const TERMINAL = ["succeeded", "failed", "denied"];
+
+/**
+ * A card is an open decision only while the row is undecided. The gate deliberately leaves
+ * an approved row in `awaiting_approval` for a worker to resume, so state alone cannot tell
+ * "waiting on the operator" from "waiting on a worker" — the decision column can.
+ */
+function isOpen(action: Action): boolean {
+  return action.state === "awaiting_approval" && action.approval_decision === null;
+}
 
 /**
  * What the operator is actually authorising, in the concrete (contracts/action-gate.md §6).
@@ -131,6 +149,35 @@ function ApprovalCard({ action, run }: { action: Action; run: Run | undefined })
   const decide = useMutation({
     mutationFn: (decision: "approve" | "deny") =>
       api.post<{ state: string }>(`/actions/${action.id}/${decision}`),
+    // Flip the cached row on click so the card moves to Decided instantly instead of after
+    // the 5s poll. `run` can be undefined (its query not yet landed) — then there is no
+    // per-run cache entry to write, and the invalidation below carries the update alone.
+    onMutate: async (decision) => {
+      if (!run) return {};
+      await queryClient.cancelQueries({ queryKey: ["actions", run.id] });
+      const snapshot = queryClient.getQueryData<Action[]>(["actions", run.id]);
+      queryClient.setQueryData<Action[]>(["actions", run.id], (rows) =>
+        rows?.map((row) =>
+          row.id === action.id
+            ? {
+                ...row,
+                approval_decision: decision === "approve" ? "approved" : "denied",
+                approved_by: "you",
+                approved_at: new Date().toISOString(),
+              }
+            : row,
+        ),
+      );
+      return { snapshot };
+    },
+    onError: (mutationError, _decision, context) => {
+      // A 409 is not an error but stale state — the row was already decided, so the flip
+      // is correct; the refetch replaces the guesses with the true decision.
+      if ((mutationError as unknown as ApiError).error === "not_awaiting_approval") return;
+      if (run && context?.snapshot) {
+        queryClient.setQueryData(["actions", run.id], context.snapshot);
+      }
+    },
     onSettled: () => queryClient.invalidateQueries({ queryKey: ["actions"] }),
   });
 
@@ -197,8 +244,108 @@ function ApprovalCard({ action, run }: { action: Action; run: Run | undefined })
   );
 }
 
+/**
+ * The gate's own sequence — approved → executing → verifying → succeeded|failed — with the
+ * current step read from `state`. No path from `executing` straight to `succeeded` is the
+ * gate's central claim; this strip is that claim made visible where the operator is looking.
+ * An approved row still in `awaiting_approval` renders as the `approved` step: the decision
+ * has landed but no worker has picked it up — exactly what "did my approval reach a worker?"
+ * needs answered when the worker is down.
+ */
+function LifecycleStrip({ state }: { state: string }) {
+  const current = state === "awaiting_approval" ? "approved" : state;
+  const steps = ["approved", "executing", "verifying", state === "failed" ? "failed" : "succeeded"];
+  const variant = (step: string): "muted" | "good" | "bad" | "warn" => {
+    if (step !== current) return "muted";
+    if (step === "succeeded") return "good";
+    if (step === "failed") return "bad";
+    return "warn";
+  };
+  return (
+    <div className="mt-3 flex flex-wrap items-center gap-1.5 text-xs text-ink-muted">
+      {steps.map((step, index) => (
+        <Fragment key={step}>
+          {index > 0 && <span>→</span>}
+          <Badge variant={variant(step)}>{step}</Badge>
+        </Fragment>
+      ))}
+      {current === "approved" && <span>waiting for a worker</span>}
+    </div>
+  );
+}
+
+/**
+ * A card that has been decided: the decision line replaces the buttons, and everything on
+ * it is the row's own data — so a decision made in a previous session (or by another
+ * operator) presents the same as one made a moment ago.
+ */
+function DecidedCard({
+  action,
+  run,
+  onDismiss,
+}: {
+  action: Action;
+  run: Run | undefined;
+  onDismiss?: () => void;
+}) {
+  const denied = action.approval_decision === "denied";
+  return (
+    <li className="rounded-lg border border-line p-4">
+      <div className="flex items-center gap-3">
+        <Badge variant={denied ? "bad" : "muted"}>{action.action_type}</Badge>
+        <span className="text-xs text-ink-muted">requested by {action.requested_by}</span>
+        {run && <span className="font-mono text-xs text-ink-muted">{run.alias}</span>}
+        {/* Only a settled card can be cleared — an in-flight one is still becoming
+            something. Session-local: leaving the route brings it back from server truth. */}
+        {onDismiss && (
+          <Button variant="ghost" size="sm" className="ml-auto text-xs" onClick={onDismiss}>
+            clear
+          </Button>
+        )}
+      </div>
+
+      <p className="mt-3 text-sm">
+        {denied ? "Denied" : "Approved"} by {action.approved_by ?? "—"} ·{" "}
+        {action.approved_at ?? "—"}
+      </p>
+
+      {denied ? (
+        // Deny is terminal — nothing will ever execute for that key. That deserves a
+        // visible tombstone more than an approval does.
+        <p className="mt-2 text-xs text-ink-muted">
+          Nothing will execute for this key — deny is terminal.
+        </p>
+      ) : (
+        <LifecycleStrip state={action.state} />
+      )}
+
+      {/* What verify() proved in the world — "deployed" is never self-reported (FR-040). */}
+      {!denied && action.state === "succeeded" && action.evidence && (
+        <dl className="mt-3 grid grid-cols-[8rem_1fr] gap-y-1 text-sm">
+          {Object.entries(action.evidence).map(([key, value]) => (
+            <Fragment key={key}>
+              <dt className="text-ink-muted">{key}</dt>
+              <dd className="font-mono text-xs break-all">
+                {typeof value === "object" && value !== null ? JSON.stringify(value) : String(value)}
+              </dd>
+            </Fragment>
+          ))}
+        </dl>
+      )}
+
+      {!denied && action.state === "failed" && action.error && (
+        <p className="mt-2 text-xs break-all text-red-400">{action.error}</p>
+      )}
+    </li>
+  );
+}
+
 export function ApprovalsRoute() {
   const runs = useQuery({ queryKey: ["runs"], queryFn: () => api.get<Run[]>("/runs") });
+
+  // Settled cards stay until dismissed — auto-clearing would hide the succeeded +
+  // evidence moment, which is the payoff of the verify step. Session-local by design.
+  const [dismissed, setDismissed] = useState<Set<string>>(new Set());
 
   // No cross-run actions endpoint exists, so the queue is assembled from the per-run ones
   // (contracts/rest-api.md). One query per run keeps each cache entry independently
@@ -211,11 +358,18 @@ export function ApprovalsRoute() {
     })),
   });
 
-  const pending = actionQueries
-    .flatMap((query, index) =>
-      (query.data ?? []).map((action) => ({ action, run: runs.data?.[index] })),
-    )
-    .filter(({ action }) => action.state === "awaiting_approval")
+  const all = actionQueries.flatMap((query, index) =>
+    (query.data ?? []).map((action) => ({ action, run: runs.data?.[index] })),
+  );
+
+  const open = all
+    .filter(({ action }) => isOpen(action))
+    .sort((a, b) => a.action.created_at.localeCompare(b.action.created_at));
+
+  // Everything that carries a decision: still in flight (approved → executing → verifying)
+  // or settled. Actions that never paused for approval don't belong on this page.
+  const decided = all
+    .filter(({ action }) => action.approval_decision !== null && !dismissed.has(action.id))
     .sort((a, b) => a.action.created_at.localeCompare(b.action.created_at));
 
   return (
@@ -232,15 +386,35 @@ export function ApprovalsRoute() {
         </p>
       )}
 
-      {!runs.isLoading && !runs.isError && pending.length === 0 && (
+      {!runs.isLoading && !runs.isError && open.length === 0 && (
         <p className="text-sm text-ink-muted">Nothing is waiting on a decision.</p>
       )}
 
       <ul className="space-y-3">
-        {pending.map(({ action, run }) => (
+        {open.map(({ action, run }) => (
           <ApprovalCard key={action.id} action={action} run={run} />
         ))}
       </ul>
+
+      {decided.length > 0 && (
+        <>
+          <h2 className="mt-8 mb-4 text-lg font-semibold">Decided</h2>
+          <ul className="space-y-3">
+            {decided.map(({ action, run }) => (
+              <DecidedCard
+                key={action.id}
+                action={action}
+                run={run}
+                onDismiss={
+                  TERMINAL.includes(action.state)
+                    ? () => setDismissed((prev) => new Set(prev).add(action.id))
+                    : undefined
+                }
+              />
+            ))}
+          </ul>
+        </>
+      )}
     </div>
   );
 }
