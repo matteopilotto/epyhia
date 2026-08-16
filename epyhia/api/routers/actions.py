@@ -8,6 +8,7 @@ from epyhia.api.auth import require_operator
 from epyhia.api.db import get_session
 from epyhia.gate import gate
 from epyhia.models.actions import Action
+from epyhia.models.runs import Run
 from epyhia.models.tasks import Task
 
 router = APIRouter(dependencies=[Depends(require_operator)])
@@ -119,6 +120,15 @@ async def reverify_action(
     action.state = "verifying"
     action.verify_attempts = 0
     action.error = None
+    # A settled run re-opens with its action, exactly as `POST /tasks/{id}/retry` re-opens
+    # one with its stage (T144). Without this the heal is unfinishable: `settle_run` guards
+    # its write on `status = 'running'`, so a run already sitting `failed` can never be
+    # settled again by the resume enqueued below — and once every stage is `done` there is
+    # no further task completion to call `settle_run` at all. `halted_budget` is deliberately
+    # not re-opened; that status stays authoritative.
+    run = await session.get(Run, action.run_id)
+    if run is not None and run.status in ("succeeded", "failed"):
+        run.status = "running"
     await session.commit()
     await _enqueue_resume(session, action)
     return {"state": "verifying"}

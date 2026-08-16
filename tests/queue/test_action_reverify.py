@@ -4,6 +4,7 @@ import pytest
 from sqlalchemy import select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from epyhia.cost.budget import HALTED
 from epyhia.gate import registry
 from epyhia.gate.adapters.fake import FakeAdapter
 from epyhia.models.actions import Action
@@ -112,6 +113,86 @@ async def test_the_resume_heals_the_action_and_flips_its_task_off_the_probe(
         )
     ).scalar_one()
     assert task_state == "done"
+    registry.clear()
+
+
+async def test_re_verifying_re_opens_a_settled_run_and_it_settles_again(
+    queue_session: AsyncSession,
+) -> None:
+    """T144's contract, which re-verify has to honour as the retry button does.
+
+    `settle_run` guards its write on `status = 'running'`, so a run already sitting `failed`
+    can never be settled by the resume this enqueues — and once every stage is `done` there
+    is no further task completion to call it at all. Observed on the four outreach runs
+    (2026-08-16): every stage healed to `done` over a proved action and all four runs stayed
+    terminally `failed`, unreachable by anything.
+    """
+    registry.register(FakeAdapter("test_reverify_settle"))
+    run_id = await make_run(queue_session)
+    task_id = await _insert_task(queue_session, run_id, kind="publish", state="failed")
+    action_id = await _insert_action(
+        queue_session,
+        run_id,
+        action_type="test_reverify_settle",
+        result={"handle": "stored-by-execute"},
+        task_id=task_id,
+    )
+    await queue_session.execute(
+        text("UPDATE runs SET status = 'failed' WHERE id = :id"), {"id": run_id}
+    )
+    await queue_session.commit()
+
+    async with client_for(queue_session) as client:
+        assert (await client.post(f"/actions/{action_id}/reverify")).status_code == 200
+
+    status = (
+        await queue_session.execute(
+            text("SELECT status FROM runs WHERE id = :id"), {"id": run_id}
+        )
+    ).scalar_one()
+    assert status == "running"
+
+    assert await run_once(queue_session, kind="resume")
+
+    # And it settles again off the healed stage, rather than being left open.
+    status = (
+        await queue_session.execute(
+            text("SELECT status FROM runs WHERE id = :id"), {"id": run_id}
+        )
+    ).scalar_one()
+    assert status == "succeeded"
+    registry.clear()
+
+
+async def test_re_verifying_leaves_a_halted_run_halted(
+    queue_session: AsyncSession,
+) -> None:
+    """`halted_budget` stays authoritative — settling never resurrects it, and neither does
+    this. The resume still drives, because `run_once` exempts `resume` from the budget
+    check: an action the gate already began must not be left unproved in the world."""
+    registry.register(FakeAdapter("test_reverify_halted"))
+    run_id = await make_run(queue_session)
+    action_id = await _insert_action(
+        queue_session,
+        run_id,
+        action_type="test_reverify_halted",
+        result={"handle": "stored-by-execute"},
+    )
+    await queue_session.execute(
+        text("UPDATE runs SET status = :status WHERE id = :id"),
+        {"id": run_id, "status": HALTED},
+    )
+    await queue_session.commit()
+
+    async with client_for(queue_session) as client:
+        assert (await client.post(f"/actions/{action_id}/reverify")).status_code == 200
+
+    status = (
+        await queue_session.execute(
+            text("SELECT status FROM runs WHERE id = :id"), {"id": run_id}
+        )
+    ).scalar_one()
+    assert status == HALTED
     registry.clear()
 
 
