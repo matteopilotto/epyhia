@@ -288,7 +288,17 @@ function DecidedCard({
   run: Run | undefined;
   onDismiss?: () => void;
 }) {
+  const queryClient = useQueryClient();
   const denied = action.approval_decision === "denied";
+
+  // T146: re-open verification only — the server refuses (409) unless the action is failed
+  // with execute()'s result recorded, so this can never re-execute an effect. The refetch
+  // walks the card's strip back to `verifying` and the resume's probe decides from there.
+  const reverify = useMutation({
+    mutationFn: () => api.post<{ state: string }>(`/actions/${action.id}/reverify`),
+    onSettled: () => queryClient.invalidateQueries({ queryKey: ["actions"] }),
+  });
+  const reverifyError = reverify.error as ApiError | null;
   return (
     <li className="rounded-lg border border-line p-4">
       <div className="flex items-center gap-3">
@@ -335,6 +345,25 @@ function DecidedCard({
 
       {!denied && action.state === "failed" && action.error && (
         <p className="mt-2 text-xs break-all text-red-400">{action.error}</p>
+      )}
+
+      {!denied && action.state === "failed" && (
+        <div className="mt-3">
+          <Button
+            size="sm"
+            disabled={reverify.isPending || reverify.isSuccess}
+            onClick={() => reverify.mutate()}
+          >
+            Re-verify
+          </Button>
+          {reverifyError && (
+            <p className="mt-2 text-xs text-red-400">
+              {reverifyError.error === "not_reverifiable"
+                ? "Nothing recorded to prove — this action holds no execute() result to verify from."
+                : reverifyError.error}
+            </p>
+          )}
+        </div>
       )}
     </li>
   );
